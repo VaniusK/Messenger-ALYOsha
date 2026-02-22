@@ -18,8 +18,7 @@ Task<HttpResponsePtr> auth::registerUser(HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    UserService service;
-    co_return co_await service.registerUser(std::move(request_json), response_json);
+    co_return co_await UserService::registerUser(std::move(request_json), response_json, user_repo);
 }
 
 Task<HttpResponsePtr> auth::loginUser(HttpRequestPtr req) {
@@ -30,6 +29,5 @@ Task<HttpResponsePtr> auth::loginUser(HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    UserService service;
-    co_return co_await service.loginUser(std::move(request_json), response_json);
+    co_return co_await UserService::loginUser(std::move(request_json), response_json, user_repo);
 }

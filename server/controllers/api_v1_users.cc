@@ -13,16 +13,14 @@ Task<HttpResponsePtr>
 users::getUserById(const HttpRequestPtr req, int64_t &&user_id) {
     Json::Value request_json = *(req->getJsonObject());
     Json::Value response_json;
-    UserService service;
-    co_return co_await service.getUserById(std::move(request_json), response_json, user_id);
+    co_return co_await UserService::getUserById(std::move(request_json), response_json, user_id, user_repo);
 }
 
 Task<HttpResponsePtr>
 users::getUserByHandle(const HttpRequestPtr req, std::string &&user_handle) {
     Json::Value request_json = *(req->getJsonObject());
     Json::Value response_json;
-    UserService service;
-    co_return co_await service.getUserByHandle(std::move(request_json), response_json, std::move(user_handle));
+    co_return co_await UserService::getUserByHandle(std::move(request_json), response_json, std::move(user_handle), user_repo);
 }
 
 Task<HttpResponsePtr> users::searchUser(const HttpRequestPtr req) {
@@ -33,6 +31,5 @@ Task<HttpResponsePtr> users::searchUser(const HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    UserService service;
-    co_return co_await service.searchUser(std::move(request_json), response_json);
+    co_return co_await UserService::searchUser(std::move(request_json), response_json, user_repo);
 }
