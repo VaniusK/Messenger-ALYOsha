@@ -1,5 +1,4 @@
 #include <drogon/drogon.h>
-#include <iostream>
 
 int main() {
     setbuf(stdout, nullptr); // disabling stdout buffer for real-time logs in console(comment on realease and turn on file logs)

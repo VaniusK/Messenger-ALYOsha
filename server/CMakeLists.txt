@@ -57,21 +57,12 @@ endif ()
 aux_source_directory(src SRC_SRC) # get all files from src
 aux_source_directory(src/repositories REPO_SRC) # get all files from src/repositories
 aux_source_directory(src/utils UTILS_SRC) # get all files from src/utils
+aux_source_directory(services SERVICES_SRC) # get all files from services
 
 aux_source_directory(controllers CTL_SRC) # get all files from controllers
 aux_source_directory(filters FILTER_SRC) # get all files from filters
 aux_source_directory(plugins PLUGIN_SRC) # get all files from plugins
 aux_source_directory(models MODEL_SRC) # get all files from models
-
-drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
-                    ${CMAKE_CURRENT_BINARY_DIR})
-# use the following line to create views with namespaces.
-# drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
-#                     ${CMAKE_CURRENT_BINARY_DIR} TRUE)
-# use the following line to create views with namespace CHANGE_ME prefixed
-# and path namespaces.
-# drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
-#                     ${CMAKE_CURRENT_BINARY_DIR} TRUE CHANGE_ME)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${bcrypt_SOURCE_DIR}/include) # include bcrypt headers
 target_include_directories(${PROJECT_NAME}
@@ -82,15 +73,11 @@ target_sources(${PROJECT_NAME}
                ${SRC_SRC}
                ${REPO_SRC}
                ${UTILS_SRC}
+               ${SERVICES_SRC}
                ${CTL_SRC}
                ${FILTER_SRC}
                ${PLUGIN_SRC}
                ${MODEL_SRC}) # add all sources to the executable
-# ##############################################################################
-# uncomment the following line for dynamically loading views 
-# set_property(TARGET ${PROJECT_NAME} PROPERTY ENABLE_EXPORTS ON)
-
-# ##############################################################################
 
 # Google Test setup
 option(BUILD_TESTS "Build tests" ON)
@@ -122,13 +109,14 @@ if(BUILD_TESTS)
     add_executable(server_tests 
         tests/test_user_repository.cpp
     )
-    target_sources(server_tests PRIVATE ${REPO_SRC})
-    target_include_directories(${PROJECT_NAME} PRIVATE ${bcrypt_SOURCE_DIR}/include) # include bcrypt headers
-    target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include) # include project headers
     target_link_libraries(server_tests GTest::gtest_main)
     target_link_libraries(server_tests Drogon::Drogon jwt-cpp::jwt-cpp bcrypt)
+    target_sources(server_tests PRIVATE ${REPO_SRC})
     aux_source_directory(models DROGON_MODELS)
-    target_sources(server_tests PRIVATE ${DROGON_MODELS})
+    aux_source_directory(services SERVICES_SRC) 
+    target_include_directories(server_tests PRIVATE ${bcrypt_SOURCE_DIR}/include) # include bcrypt headers
+    target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include) # include project headers
+    target_sources(server_tests PRIVATE ${DROGON_MODELS} ${SERVICES_SRC})
     
     include(GoogleTest)
     gtest_discover_tests(server_tests)

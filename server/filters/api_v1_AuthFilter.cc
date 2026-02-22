@@ -6,7 +6,6 @@
 
 #include "api_v1_AuthFilter.h"
 #include <jwt-cpp/jwt.h>
-#include <iostream>
 
 using namespace drogon;
 using namespace api::v1;

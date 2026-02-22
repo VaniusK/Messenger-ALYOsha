@@ -17,7 +17,7 @@ class users : public drogon::HttpController<users>
     METHOD_ADD(users::searchUser, "/search", Get);
 
     METHOD_LIST_END
-    Task<HttpResponsePtr> getUserById(const HttpRequestPtr req, std::string &&user_id);
+    Task<HttpResponsePtr> getUserById(const HttpRequestPtr req, int64_t &&user_id);
     Task<HttpResponsePtr> getUserByHandle(const HttpRequestPtr req, std::string &&user_handle);
     Task<HttpResponsePtr> searchUser(const HttpRequestPtr req);
 
