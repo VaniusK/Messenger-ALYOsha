@@ -54,7 +54,8 @@ Task<Message> MessageRepository::send(
         if (forwarded_from_id.has_value()) {
             message.setForwardedFromUserId(forwarded_from_id.value());
         }
-        co_await mapper.insert(message);
+        message = co_await mapper.insert(message);
+        co_return message;
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }
