@@ -1,9 +1,12 @@
 #include "repositories/MessageRepository.hpp"
 #include <drogon/orm/Criteria.h>
 #include <stdexcept>
+#include "repositories/UserRepository.hpp"
 
 using Message = drogon_model::messenger_db::Messages;
+using User = drogon_model::messenger_db::Users;
 using MessageRepository = messenger::repositories::MessageRepository;
+using UserRepository = messenger::repositories::UserRepository;
 
 using namespace drogon;
 using namespace drogon::orm;
@@ -53,6 +56,12 @@ Task<Message> MessageRepository::send(
         }
         if (forwarded_from_id.has_value()) {
             message.setForwardedFromUserId(forwarded_from_id.value());
+            UserRepository user_repo = UserRepository();
+            User forwarded_from_user =
+                (co_await user_repo.getById(forwarded_from_id.value())).value();
+            message.setForwardedFromUserName(
+                forwarded_from_user.getValueOfDisplayName()
+            );
         }
         message = co_await mapper.insert(message);
         co_return message;
