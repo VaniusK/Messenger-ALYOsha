@@ -6,7 +6,7 @@
 ---
 
 ## WebSocket
-'ws://server-address/api/v1/chat'
+'ws://server-address/ws/chat'
 ### handleNewConnection - Открытие подключения
 При открытии подключения нужно передавать токен в таком же формате, как для защищенных http-запросов. После этого сможем получать новые уведомления о событиях от сервера.
 ### handleConnectionClosed - Закрытие подключения
