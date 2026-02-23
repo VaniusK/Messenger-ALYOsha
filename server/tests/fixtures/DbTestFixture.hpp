@@ -4,12 +4,11 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include <vector>
-#include "repositories/UserRepository.hpp"
 
 using namespace drogon;
 using namespace drogon::orm;
 
-void runDrogon() {
+inline void runDrogon() {
     app().addListener("0.0.0.0", 5555);
     app().run();
 }

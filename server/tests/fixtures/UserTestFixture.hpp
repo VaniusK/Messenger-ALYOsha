@@ -1,8 +1,8 @@
 #pragma once
 #include "DbTestFixture.hpp"
+#include "repositories/UserRepository.hpp"
 
 using UserRepository = messenger::repositories::UserRepository;
-using User = drogon_model::messenger_db::Users;
 
 class UserTestFixture : public DbTestFixture {
 protected:
