@@ -5,12 +5,12 @@
 namespace api::v1::utils {
 bool find_missed_fields(
     Json::Value &resp_json,
-    Json::Value &req_json,
+    const std::shared_ptr<Json::Value> req_json,
     std::vector<std::string> &&necessary_fields
 ) {
     std::vector<std::string> unfinded_fields;
     for (const auto &required_field : necessary_fields) {
-        if (!(req_json.isMember(required_field))) {
+        if (!(req_json->isMember(required_field))) {
             unfinded_fields.push_back(required_field);
         }
     }

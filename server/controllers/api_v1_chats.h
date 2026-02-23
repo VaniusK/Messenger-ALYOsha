@@ -1,7 +1,6 @@
 #pragma once
 
 #include <drogon/HttpController.h>
-#include "filters/api_v1_AuthFilter.h"
 
 using namespace drogon;
 

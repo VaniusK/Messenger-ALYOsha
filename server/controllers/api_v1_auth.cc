@@ -10,7 +10,7 @@
 using namespace api::v1;
 
 Task<HttpResponsePtr> auth::registerUser(HttpRequestPtr req) {
-    Json::Value request_json = *(req->getJsonObject());
+    auto request_json = req->getJsonObject();
     Json::Value response_json;
 
     if (utils::find_missed_fields(
@@ -18,16 +18,16 @@ Task<HttpResponsePtr> auth::registerUser(HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    co_return co_await UserService::registerUser(std::move(request_json), response_json, user_repo);
+    co_return co_await UserService::registerUser(request_json, user_repo);
 }
 
 Task<HttpResponsePtr> auth::loginUser(HttpRequestPtr req) {
-    Json::Value request_json = *(req->getJsonObject());
+    auto request_json = req->getJsonObject();
     Json::Value response_json;
     if (utils::find_missed_fields(
             response_json, request_json, {"handle", "password"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    co_return co_await UserService::loginUser(std::move(request_json), response_json, user_repo);
+    co_return co_await UserService::loginUser(request_json, user_repo);
 }

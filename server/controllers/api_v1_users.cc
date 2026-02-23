@@ -11,25 +11,23 @@ using namespace api::v1;
 
 Task<HttpResponsePtr>
 users::getUserById(const HttpRequestPtr req, int64_t &&user_id) {
-    Json::Value request_json = *(req->getJsonObject());
     Json::Value response_json;
-    co_return co_await UserService::getUserById(std::move(request_json), response_json, user_id, user_repo);
+    co_return co_await UserService::getUserById(user_id, user_repo);
 }
 
 Task<HttpResponsePtr>
 users::getUserByHandle(const HttpRequestPtr req, std::string &&user_handle) {
-    Json::Value request_json = *(req->getJsonObject());
     Json::Value response_json;
-    co_return co_await UserService::getUserByHandle(std::move(request_json), response_json, std::move(user_handle), user_repo);
+    co_return co_await UserService::getUserByHandle(std::move(user_handle), user_repo);
 }
 
 Task<HttpResponsePtr> users::searchUser(const HttpRequestPtr req) {
-    Json::Value request_json = *(req->getJsonObject());
+    auto request_json = req->getJsonObject();
     Json::Value response_json;
     if (utils::find_missed_fields(
             response_json, request_json, {"query", "limit"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    co_return co_await UserService::searchUser(std::move(request_json), response_json, user_repo);
+    co_return co_await UserService::searchUser(request_json, user_repo);
 }

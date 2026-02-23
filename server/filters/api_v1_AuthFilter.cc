@@ -14,8 +14,8 @@ void AuthFilter::doFilter(const HttpRequestPtr &req,
                          FilterCallback &&fcb,
                          FilterChainCallback &&fccb)
 {
-    auto header = req->getHeader("Authorization");
     try{
+        auto header = req->getHeader("Authorization");
         std::string token = header.substr(7);
         auto decoded = jwt::decode(token);
         LOG_INFO << "Token decoded";
