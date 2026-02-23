@@ -52,7 +52,7 @@
 | Метод                                                   | Описание                                   | Возвращает            |
 | ------------------------------------------------------- | ------------------------------------------ | --------------------- |
 | `getById(chat_id)`                                  | Получить чат по ID                         | `Chat?`               |
-| `getUserChats(user_id)`                                 | Список чатов пользователя                  | `vector<ChatPreview>` |
+| `getByUser(user_id)`                                 | Список чатов пользователя                  | `vector<ChatPreview>` |
 | `getOrCreateDirect(user1_id, user2_id)`             | Получить или создать личку (идемпотентно!) | `Chat`                |
 | `getDirect(user1_id, user2_id)`             | Получить личку | `Chat?`                |
 | `createGroup(name, creator_id, member_ids(vector<id>))`         | Создать групповой чат                      | `Chat`                |
@@ -98,11 +98,11 @@
 
 | Метод                                                                | Описание                      | Возвращает        |
 | -------------------------------------------------------------------- | ----------------------------- | ----------------- |
-| `getById(message_id)`                                         | Получить сообщение            | `Message?`        |
+| `getMessageById(message_id)`                                         | Получить сообщение            | `Message?`        |
 | `getChatMessages(chat_id, before_id?, limit)`                        | Сообщения чата с пагинацией   | `vector<Message>` |
 | `send(chat_id, sender_id, text, reply_to_id?, forward_info?)` | Отправить сообщение           | `Message`         |
-| `edit(message_id, new_text)`                                  | Редактировать сообщение       | `bool`            |
-| `delete(message_id)`                                          | Удалить сообщение             | `bool`            |
+| `editMessage(message_id, new_text)`                                  | Редактировать сообщение       | `bool`            |
+| `deleteMessage(message_id)`                                          | Удалить сообщение             | `bool`            |
 | `markAsRead(chat_id, user_id, last_read_message_id)`                 | Обновить last_read_message_id | `void`            |
 
 Пагинация через before_id` + `limit`
@@ -136,7 +136,7 @@
 | ------------------------------------------------------------- | ---------------------------------------- | ----------------------- |
 | `getById(channel_id)`                                  | Получить канал по ID                     | `Channel?`              |
 | `getByHandle(handle)`                                  | Получить канал по @handle                | `Channel?`              |
-| `getUserChannels(user_id)`                                    | Каналы, на которые подписан пользователь | `vector<Channel>`       |
+| `getByUser(user_id)`                                    | Каналы, на которые подписан пользователь | `vector<Channel>`       |
 | `create(handle, name, owner_id, is_private?)`          | Создать канал                            | `Channel`               |
 | `getMembers(channel_id, offset?, limit?)`              | Подписчики канала                        | `vector<ChannelMember>` |
 | `getMemberCount(channel_id)`                           | Количество подписчиков                   | `int64`                 |
@@ -195,8 +195,8 @@
 | `addMessageReaction(message_id, user_id, emoji)` | Поставить реакцию на сообщение | `Reaction`         |
 | `addPostReaction(post_id, user_id, emoji)`       | Поставить реакцию на пост      | `Reaction`         |
 | `remove(reaction_id)`                    | Убрать реакцию                 | `bool`             |
-| `getMessageReactions(message_id)`                | Реакции на сообщение           | `vector<Reaction>` |
-| `getPostReactions(post_id)`                      | Реакции на пост                | `vector<Reaction>` |
+| `getByMessage(message_id)`                | Реакции на сообщение           | `vector<Reaction>` |
+| `getByPost(post_id)`                      | Реакции на пост                | `vector<Reaction>` |
 
 ---
 
