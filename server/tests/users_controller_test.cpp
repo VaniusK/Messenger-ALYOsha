@@ -7,7 +7,7 @@
 #include <optional>
 #include "controllers/api_v1_auth.h"
 #include "controllers/api_v1_users.h"
-#include "mocks/MockUserRepositrory.hpp"
+#include "mocks/MockUserRepository.hpp"
 
 using User = drogon_model::messenger_db::Users;
 using ::testing::Invoke;
