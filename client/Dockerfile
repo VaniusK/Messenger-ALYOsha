@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-dev \
     libxkbcommon-dev \
     libvulkan-dev \
+    qt6-websockets-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/client

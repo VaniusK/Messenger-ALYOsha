@@ -11,13 +11,14 @@ Rectangle {
         spacing: 0
 
         Sidebar {
+            id: sidebar
             Layout.preferredWidth: Math.max(250, root.width * 0.34)
             Layout.fillHeight: true
-        }
 
-        ChatArea {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            onChatSelected: function(chatId, chatName) {
+                chatArea.acriveChatId = chatId
+                chatArea.acriveChatName = chatName
+            }
 
             onLogoutRequested: {
                 console.log("[Chat] exit to LogIn window")
@@ -28,6 +29,12 @@ Rectangle {
                     loader.source = "sign_in.qml"
                 }
             }
+        }
+
+        ChatArea {
+            id: chatArea
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
     }
 }
