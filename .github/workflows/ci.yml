@@ -40,8 +40,9 @@ jobs:
           QML_SOURCES_PATHS: client/src
           OUTPUT: Messenger-Linux.AppImage
         run: |
+          # Создаем пустую прозрачную 1x1 PNG-картинку (linuxdeploy падает от пустых файлов)
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps/
-          touch AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
+          echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" | base64 -d > AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
 
           cat << 'EOF' > AppDir/messenger.desktop
           [Desktop Entry]
