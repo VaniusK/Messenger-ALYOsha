@@ -10,7 +10,6 @@ jobs:
 
   build-client:
     runs-on: ubuntu-22.04
-    container: ubuntu:20.04
     steps:
       - uses: actions/checkout@v4
 
@@ -42,24 +41,29 @@ jobs:
             libxcb-render-util0-dev \
             libxcb-shape0-dev \
             libxcb-xkb-dev \
+            libxcb-cursor0 \
             libxkbcommon-x11-dev \
             libgl-dev \
             libssl-dev \
+            libglib2.0-dev \
             imagemagick \
             libfuse2
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt.outputs.cache-hit != 'true'
         run: |
-          pip install aqtinstall
+          python3 -m pip install aqtinstall
           aqt install-qt linux desktop 6.7.3 gcc_64 \
             --outputdir ~/Qt \
-            -m qtwebsockets qtquick3d
+            -m qtwebsockets
+
+      - name: Export Qt path
+        run: echo "QT_ROOT=$HOME/Qt/6.7.3/gcc_64" >> $GITHUB_ENV
 
       - name: Build client
         run: |
           cmake -B build/client -S client \
-            -DCMAKE_PREFIX_PATH=~/Qt/6.7.3/gcc_64 \
+            -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --parallel
 
@@ -76,13 +80,12 @@ jobs:
         env:
           QML_SOURCES_PATHS: client/src
           OUTPUT: Messenger-Linux.AppImage
-          QMAKE: ~/Qt/6.7.3/gcc_64/bin/qmake
-          LD_LIBRARY_PATH: ~/Qt/6.7.3/gcc_64/lib
+          QMAKE: ${{ env.QT_ROOT }}/bin/qmake
         run: |
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps/
           convert alesha_logo.png -resize 256x256\! AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
 
-          cat << 'EOF' > AppDir/messenger.desktop
+          cat > AppDir/messenger.desktop << 'EOF'
           [Desktop Entry]
           Type=Application
           Name=Messenger
