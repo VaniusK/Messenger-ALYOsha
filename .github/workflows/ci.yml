@@ -9,56 +9,75 @@ on:
 jobs:
 
   build-client:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
+
       - name: Cache client dependencies
         uses: actions/cache@v4
         with:
           path: build/client/_deps
-          key: client-deps-v2-${{ hashFiles('client/CMakeLists.txt') }}
-          restore-keys: client-deps-v2-
-      - name: Install Qt
+          key: client-deps-v3-${{ hashFiles('client/CMakeLists.txt') }}
+          restore-keys: client-deps-v3-
+
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ~/Qt
+          key: qt-6.7.3-linux-gcc
+
+      - name: Install system build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            qt6-base-dev \
-            qt6-declarative-dev \
-            qt6-websockets-dev \
-            qml6-module-qtquick \
-            qml6-module-qtquick-controls \
-            qml6-module-qtquick-layouts \
-            qml6-module-qtquick-window \
-            qml6-module-qtqml-workerscript \
-            qml6-module-qtwebsockets \
-            qt6-wayland \
-            libxcb-icccm4 \
-            libxcb-image0 \
-            libxcb-keysyms1 \
-            libxcb-render-util0 \
-            libxcb-xinerama0
+            build-essential \
+            cmake \
+            ninja-build \
+            libxcb-xinerama0-dev \
+            libxcb-icccm4-dev \
+            libxcb-image0-dev \
+            libxcb-keysyms1-dev \
+            libxcb-render-util0-dev \
+            libxcb-shape0-dev \
+            libxcb-xkb-dev \
+            libxkbcommon-x11-dev \
+            libgl-dev \
+            libssl-dev \
+            imagemagick \
+            libfuse2
+
+      - name: Install Qt via aqtinstall
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          pip install aqtinstall
+          aqt install-qt linux desktop 6.7.3 gcc_64 \
+            --outputdir ~/Qt \
+            -m qtwebsockets qtquick3d
+
       - name: Build client
         run: |
-          cmake -B build/client -S client
-          cmake --build build/client
+          cmake -B build/client -S client \
+            -DCMAKE_PREFIX_PATH=~/Qt/6.7.3/gcc_64 \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/client --parallel
+
       - name: Test client
         run: ctest --test-dir build/client --output-on-failure
-        
+
       - name: Download linuxdeploy
         run: |
           wget -c -nv https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -c -nv https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy*.AppImage
-          
-      - name: Install imagemagick
-        run: sudo apt-get install -y imagemagick
 
       - name: Build AppImage (Portable Linux Executable)
         env:
           QML_SOURCES_PATHS: client/src
           OUTPUT: Messenger-Linux.AppImage
+          QMAKE: ~/Qt/6.7.3/gcc_64/bin/qmake
+          LD_LIBRARY_PATH: ~/Qt/6.7.3/gcc_64/lib
         run: |
-          # Конвертируем логотип в 256x256 PNG для иконки AppImage
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps/
           convert alesha_logo.png -resize 256x256\! AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
 
@@ -73,7 +92,14 @@ jobs:
 
           CLIENT_BIN=$(find build/client -type f -name "client" -executable | head -n 1)
           if [ -z "$CLIENT_BIN" ]; then echo "Client binary not found!"; exit 1; fi
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --executable "$CLIENT_BIN" --desktop-file AppDir/messenger.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png --plugin qt --output appimage
+
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --executable "$CLIENT_BIN" \
+            --desktop-file AppDir/messenger.desktop \
+            --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png \
+            --plugin qt \
+            --output appimage
 
       - name: Upload Linux AppImage Artifact
         uses: actions/upload-artifact@v4
