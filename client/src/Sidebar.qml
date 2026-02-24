@@ -1,11 +1,39 @@
 import QtQuick
 import QtQuick.Layouts
+import Messenger 1.0
 
 Rectangle {
     id: sidebarRoot
     color: "#ffffff"
     border.color: "#e0e0e0"
     border.width: 1
+
+    property var chatDataList: []
+    property bool isSearching: false
+    signal logoutRequested()
+    signal chatSelected(string chatId, string chatName)
+
+    Connections {
+        target: ChatLayer
+
+        function onChatsUpdated(chats) {
+            if (!isSearching) {
+                chatDataList = chats
+                chatList.model = chatDataList
+            }
+        }
+
+        function onUsersFound(users) {
+            if (isSearching) {
+                chatDataList = users
+                chatList.model = chatDataList
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        ChatLayer.fetchChats()
+    }
 
     Rectangle {
         id:searchHeader
@@ -39,7 +67,7 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     onPressed: parent.color = "#d0d0d0"
                     onReleased: parent.color = "#e0e0e0"
-                    onClicked: console.log("[Sidebar] settings click")
+                    onClicked:sidebarRoot.logoutRequested()
                 }
             }
 
@@ -63,6 +91,16 @@ Rectangle {
                         visible: !parent.text && !parent.activeFocus
                         anchors.verticalCenter: parent.verticalCenter
                     }
+
+                    onTextChanged: {
+                        if (text.trim() === "") {
+                            isSearching = false
+                            ChatLayer.fetchChats()
+                        } else {
+                            isSearching = true
+                            ChatLayer.searchUsers(text)
+                        }
+                    }
                 }
             }
         }
@@ -73,9 +111,8 @@ Rectangle {
         width: parent.width
         anchors.top: searchHeader.bottom
         anchors.bottom: parent.bottom
-
         clip: true
-        model: 20
+        model: []
 
         delegate: Rectangle {
             id: chatItem
@@ -84,13 +121,18 @@ Rectangle {
             color: index % 2 == 0 ? "#ffffff" : "#fafafa"
             border.color: "#f0f0f0"
             border.width: 1
+            property var itemData: modelData
 
             MouseArea {
                 id: hoverArea
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: console.log("[Sidebar] open chat " + index)
+                onClicked: {
+                    console.log("[Sidebar] open chat/user " + itemData.id)
+                    sidebarRoot.chatSelected(itemData.id, itemData.name ? itemData.name : "Unknown user")
+                    ChatLayer.fetchChatHistory(itemData.id)
+                }
             }
 
             Row { 
@@ -106,7 +148,7 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
 
                     Text {
-                        text: "Ч"
+                        text: itemData.name ? itemData.name.charAt(0).toUpperCase() : "?"
                         color: "white"
                         font.bold: true
                         font.pixelSize: parent.height * 0.5
@@ -117,12 +159,12 @@ Rectangle {
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
                     Text {
-                        text: "Чат с пользователем " + index
+                        text: itemData.name ? itemData.name : "Unknow User"
                         font.bold: true
                         font.pixelSize: Math.max(12, Math.min(16, chatItem.height * 0.2))
                     }
                     Text { 
-                        text: "Последнее сообщение..."
+                        text: itemData.last_message ? itemData.last_message : (isSearching ? "Начать диалог!" : "")
                         color: "#777"
                         font.pixelSize: Math.max(10, Math.min(14, chatItem.height * 0.15))
                     }

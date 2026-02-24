@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Network)
+find_package(Qt6 REQUIRED COMPONENTS Quick Network WebSockets)
 
 # Client executable
 qt_add_executable(client 
@@ -17,6 +17,8 @@ qt_add_executable(client
     include/AuthManager.hpp
     src/StateManager.cpp
     include/StateManager.hpp
+    src/ChatManager.cpp
+    include/ChatManager.hpp
 )
 
 qt_add_qml_module(client
@@ -31,7 +33,7 @@ qt_add_qml_module(client
         src/ChatArea.qml
 )
 target_include_directories(client PRIVATE include)
-target_link_libraries(client PRIVATE Qt6::Quick Qt6::Network)
+target_link_libraries(client PRIVATE Qt6::Quick Qt6::Network Qt6::WebSockets)
 
 # Tests (optional, Qt Test or GTest)
 option(BUILD_TESTS "Build tests" OFF)

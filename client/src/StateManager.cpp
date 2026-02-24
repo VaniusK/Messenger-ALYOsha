@@ -29,11 +29,23 @@ void StateManager::setCurrentUserHandle(const QString &handle) {
     }
 }
 
-bool StateManager::isLoggedIn() const {
-    return !m_token.isEmpty();
+int StateManager::getUserId() const {
+    return m_userId;
+}
+
+void StateManager::setUserId(int id) {
+    if (m_userId != id) {
+        m_userId = id;
+        emit userIdChanged();
+    }
 }
 
 void StateManager::clearState() {
     setToken("");
     setCurrentUserHandle("");
+    setUserId(-1);
+}
+
+bool StateManager::isLoggedIn() const {
+    return !m_token.isEmpty();
 }

@@ -6,11 +6,55 @@ Rectangle {
     id:chatAreaRoot
     color: "#e5ddd5"
 
-    signal logoutRequested()
+    property bool isChatActive: activeChatId !== ""
+    property string activeChatId: ""
+    property string activeChatName: "Выберите чат"
+    property var currentMessages: []
+
+    Connections {
+        target: ChatLayer
+
+        function onChatsHistoryLoaded(messages) {
+            currentMessages = messages
+            messageList.model = currentMessages
+
+            if (messageList.count > 0) {
+                messageList.positionViewAtIndex(messageList.count - 1, ListView.End)
+            }
+        }
+
+        function onMessageSentSuccess() {
+            messageInput.text = ""
+        }
+
+        function onIncomingWebSocketMessage(data) {
+            console.log("QML WS Event " + JSON.stringify(data))
+        }
+    }
+
+    Rectangle {
+        anchors.centerIn: parent
+        width: placeholderText.width + 30
+        height: 32
+        radius: 16
+        color: "#4d000000"
+        visible: !isChatActive
+
+        Text {
+            id: placeholderText
+            text: "Select a chat to start messaging"
+            color: "white"
+            font.pixelSize: 14
+            font.bold: true
+            anchors.centerIn: parent
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+
+        visible: isChatActive
 
         Rectangle {
             Layout.fillWidth: true
@@ -31,7 +75,7 @@ Rectangle {
                     color: "#007bff"
                     
                     Text {
-                        text: "C"
+                        text: activeChatName.charAt(0).toUpperCase()
                         color: "white"
                         font.bold: true
                         anchors.centerIn: parent
@@ -43,35 +87,15 @@ Rectangle {
                     Layout.alignment: Qt.AlignVCenter
                         
                     Text {
-                        text: "Собеседник "
+                        text: activeChatName
                         font.bold: true
                         font.pixelSize: 16
                     }
 
                     Text {
-                        text: "В сети"
+                        text: isChatActive ? "В сети" : ""
                         color: "#007bff"
                         font.pixelSize: 12
-                    }
-                }
-
-                Rectangle {
-                    width: 100
-                    height: 36
-                    radius: 18
-                    color: "#dc3545"
-
-                    Text { 
-                        text: "LogOut"
-                        color: "white"
-                        font.bold: true
-                        anchors.centerIn: parent
-                    }
-
-                    MouseArea { 
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: chatAreaRoot.logoutRequested()
                     }
                 }
             }
@@ -82,14 +106,15 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            model: 15
+            model: currentMessages
             spacing: 10
 
             topMargin: 15
             bottomMargin: 15
 
             delegate: Rectangle {
-                property bool isMe: index % 2 == 0
+                property var msgData: modelData
+                property bool isMe: msgData.is_me
 
                 width: Math.min(300, messageList.width * 0.7)
                 height: Math.max(40, messageText.contentHeight + 20)
@@ -103,7 +128,7 @@ Rectangle {
 
                 Text {
                     id: messageText
-                    text: isMe ? "Это мое сообщение " + index : "А это ответ настоящего собеседника " + index
+                    text: msgData.text
                     anchors.fill: parent
                     anchors.margins: 10
                     wrapMode: Text.Wrap
@@ -132,6 +157,7 @@ Rectangle {
                     border.color: "#ccc"
 
                     TextInput {
+                        id: messageInput
                         anchors.fill: parent
                         anchors.leftMargin: 15
                         anchors.rightMargin: 15
@@ -139,7 +165,7 @@ Rectangle {
                         font.pixelSize: 14
                         
                         Text {
-                            text: "Write a message..."
+                            text: isChatActive ? "Write a message..." : "Выберите чат"
                             color: "#999"
                             visible: !parent.text && !parent.activeFocus
                             anchors.verticalCenter: parent.verticalCenter
@@ -164,7 +190,10 @@ Rectangle {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            console.log("[ChatArea] Sending message...")
+                            if (messageInput.text.trim() != "" && isChatActive) {
+                                console.log("[ChatArea] Sending message...")
+                                ChatLayer.sendMessage(activeChatId, messageInput.text.trim())
+                            }
                         }
                     }
                 }
