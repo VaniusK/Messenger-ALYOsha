@@ -35,12 +35,15 @@ jobs:
           wget -c -nv https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy*.AppImage
           
+      - name: Install imagemagick
+        run: sudo apt-get install -y imagemagick
+
       - name: Build AppImage (Portable Linux Executable)
         env:
           QML_SOURCES_PATHS: client/src
           OUTPUT: Messenger-Linux.AppImage
         run: |
-          # Используем предоставленный логотип и меняем его размер на 256x256 (linuxdeployqt требует иконку валидного размера)
+          # Конвертируем логотип в 256x256 PNG для иконки AppImage
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps/
           convert alesha_logo.png -resize 256x256\! AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
 
