@@ -102,11 +102,9 @@ jobs:
           QML_SOURCES_PATHS: client/src
           OUTPUT: Messenger-Linux.AppImage
         run: |
-          # Создаем структуру папок
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps/
           touch AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
-          
-          # Создаем ярлык (обязательно для AppImage)
+
           cat << 'EOF' > AppDir/messenger.desktop
           [Desktop Entry]
           Type=Application
@@ -115,12 +113,7 @@ jobs:
           Icon=messenger
           Categories=Network;
           EOF
-          
-          # Пакуем клиент и все библиотеки Qt6 в один файл
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --executable build/client/client --desktop-file AppDir/messenger.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png --plugin qt --output appimage
-          
-      - name: Upload Linux AppImage Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Messenger-Linux-AppImage
-          path: Messenger-Linux.AppImage
+
+          CLIENT_BIN=$(find build/client -type f -name "client" -executable | head -n 1)
+          if [ -z "$CLIENT_BIN" ]; then echo "Client binary not found!"; exit 1; fi
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --executable "$CLIENT_BIN" --desktop-file AppDir/messenger.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png --plugin qt --output appimage
