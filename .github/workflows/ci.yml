@@ -90,3 +90,37 @@ jobs:
       
       - name: Cleanup
         run: docker compose down -v
+      
+      - name: Download linuxdeploy
+        run: |
+          wget -c -nv https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -c -nv https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+          
+      - name: Build AppImage (Portable Linux Executable)
+        env:
+          QML_SOURCES_PATHS: client/src
+          OUTPUT: Messenger-Linux.AppImage
+        run: |
+          # Создаем структуру папок
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps/
+          touch AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
+          
+          # Создаем ярлык (обязательно для AppImage)
+          cat << 'EOF' > AppDir/messenger.desktop
+          [Desktop Entry]
+          Type=Application
+          Name=Messenger
+          Exec=client
+          Icon=messenger
+          Categories=Network;
+          EOF
+          
+          # Пакуем клиент и все библиотеки Qt6 в один файл
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --executable build/client/client --desktop-file AppDir/messenger.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png --plugin qt --output appimage
+          
+      - name: Upload Linux AppImage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Messenger-Linux-AppImage
+          path: Messenger-Linux.AppImage
