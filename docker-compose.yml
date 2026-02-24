@@ -25,6 +25,14 @@ services:
     profiles:
       - build
 
+  test-server:
+    build: ./server
+    command: ["./server_tests"]
+    env_file: .env
+    depends_on:
+      - db
+    profiles:
+      - test
 
 volumes:
   postgres_data:

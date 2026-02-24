@@ -6,3 +6,6 @@ build/
 .env
 artifacts/
 client/output
+model.json
+artifacts/
+server/drogon/
