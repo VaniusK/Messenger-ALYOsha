@@ -16,7 +16,8 @@ private:
     MessageRepository message_repo_ = MessageRepository();
 
 protected:
-    ChatRepository repo_ = ChatRepository();
+    ChatRepository repo_ =
+        ChatRepository(std::make_unique<MessageRepository>());
     User dummy_user1_;
     User dummy_user2_;
     Message dummy_message1_;
