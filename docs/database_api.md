@@ -98,11 +98,11 @@
 
 | Метод                                                                | Описание                      | Возвращает        |
 | -------------------------------------------------------------------- | ----------------------------- | ----------------- |
-| `getMessageById(message_id)`                                         | Получить сообщение            | `Message?`        |
-| `getChatMessages(chat_id, before_id?, limit)`                        | Сообщения чата с пагинацией   | `vector<Message>` |
+| `getById(message_id)`                                         | Получить сообщение            | `Message?`        |
+| `getByChat(chat_id, before_id?, limit)`                        | Сообщения чата с пагинацией   | `vector<Message>` |
 | `send(chat_id, sender_id, text, reply_to_id?, forwarded_from_id?)` | Отправить сообщение           | `Message`         |
-| `editMessage(message_id, new_text)`                                  | Редактировать сообщение       | `bool`            |
-| `deleteMessage(message_id)`                                          | Удалить сообщение             | `bool`            |
+| `edit(message_id, new_text)`                                  | Редактировать сообщение       | `bool`            |
+| `delete(message_id)`                                          | Удалить сообщение             | `bool`            |
 | `markAsRead(chat_id, user_id, last_read_message_id)`                 | Обновить last_read_message_id | `void`            |
 
 Пагинация через before_id` + `limit`
