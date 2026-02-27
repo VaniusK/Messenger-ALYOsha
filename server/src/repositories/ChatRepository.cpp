@@ -168,6 +168,27 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
         std::vector<Chat> chats = co_await mapper.findBy(
             Criteria(Chat::Cols::_id, CompareOperator::In, chat_ids)
         );
+        std::unordered_map<int64_t, User> chat_id_to_other_user;
+        std::unordered_map<int64_t, int64_t> other_user_id_to_chat_id;
+        std::unordered_map<int64_t, User> id_other_user;
+        std::vector<int64_t> other_user_ids;
+        for (const auto &chat : chats) {
+            if (chat.getValueOfType() == messenger::models::ChatType::Direct) {
+                int64_t other_user_id = chat.getValueOfDirectUser1Id();
+                if (other_user_id == user_id) {
+                    other_user_id = chat.getValueOfDirectUser2Id();
+                }
+                other_user_ids.push_back(other_user_id);
+                other_user_id_to_chat_id[other_user_id] = chat.getValueOfId();
+            }
+        }
+        std::vector<User> other_users =
+            co_await user_repo_->getByIds(other_user_ids);
+        for (const User &other_user : other_users) {
+            chat_id_to_other_user
+                [other_user_id_to_chat_id[other_user.getValueOfId()]] =
+                    other_user;
+        }
         std::vector<ChatPreview> previews;
         previews.reserve(chats.size());
         for (const auto &chat : chats) {
@@ -193,10 +214,20 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
                                    member.getValueOfLastReadMessageId()
                                );
             }
+            std::string new_title;
+            std::string new_avatar_path;
+            const User &other_user = chat_id_to_other_user[chat.getValueOfId()];
+            if (chat.getValueOfType() == models::ChatType::Direct) {
+                new_title = other_user.getValueOfDisplayName();
+                new_avatar_path = other_user.getValueOfAvatarPath();
+            } else {
+                new_title = chat.getValueOfName();
+                new_avatar_path = chat.getValueOfAvatarPath();
+            }
             previews.push_back(ChatPreview{
                 .chat_id = chat.getValueOfId(),
-                .title = chat.getValueOfName(),
-                .avatar_path = chat.getValueOfAvatarPath(),
+                .title = new_title,
+                .avatar_path = new_avatar_path,
                 .last_message = last_message,
                 .unread_count =
                     static_cast<int64_t>(co_await message_mapper.count(crit))

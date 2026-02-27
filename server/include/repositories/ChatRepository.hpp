@@ -8,6 +8,7 @@
 #include "models/Messages.h"
 #include "models/Users.h"
 #include "repositories/MessageRepository.hpp"
+#include "repositories/UserRepository.hpp"
 
 namespace messenger::repositories {
 
@@ -22,9 +23,11 @@ public:
     virtual ~ChatRepositoryInterface() = default;
 
     ChatRepositoryInterface(
-        std::unique_ptr<MessageRepositoryInterface> message_repo
+        std::unique_ptr<MessageRepositoryInterface> message_repo,
+        std::unique_ptr<UserRepositoryInterface> user_repo
     )
-        : message_repo_(std::move(message_repo)) {
+        : message_repo_(std::move(message_repo)),
+          user_repo_(std::move(user_repo)) {
     }
 
     virtual drogon::Task<std::optional<Message>> getMessageById(int64_t id) = 0;
@@ -58,6 +61,7 @@ public:
 
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
+    std::unique_ptr<UserRepositoryInterface> user_repo_;
 };
 
 class ChatRepository : public ChatRepositoryInterface {

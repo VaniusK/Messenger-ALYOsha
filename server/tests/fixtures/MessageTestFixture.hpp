@@ -12,8 +12,10 @@ using Chat = messenger::repositories::Chat;
 
 class MessageTestFixture : public DbTestFixture {
 private:
-    ChatRepository chat_repo_ =
-        ChatRepository(std::make_unique<MessageRepository>());
+    ChatRepository chat_repo_ = ChatRepository(
+        std::make_unique<MessageRepository>(),
+        std::make_unique<UserRepository>()
+    );
 
 protected:
     MessageRepository repo_ = MessageRepository();
