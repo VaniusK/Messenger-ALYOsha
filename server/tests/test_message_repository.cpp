@@ -193,3 +193,31 @@ TEST_F(MessageTestFixture, TestGetByChatOptionals) {
         1
     );
 }
+
+TEST_F(MessageTestFixture, TestEdit) {
+    /* When message exists,
+    edit() should return false
+    and the text should be updated*/
+    Message message1 = sync_wait(repo_.send(
+        dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
+        std::nullopt, std::nullopt
+    ));
+    bool result = sync_wait(repo_.edit(message1.getValueOfId(), "new text"));
+    EXPECT_TRUE(result);
+    Message message_updated =
+        sync_wait(repo_.getById(message1.getValueOfId())).value();
+    EXPECT_EQ(message_updated.getValueOfText(), "new text");
+}
+
+TEST_F(MessageTestFixture, TestFail) {
+    /* When message exists,
+    edit() should return false
+    and the text should be updated*/
+    Message message1 = sync_wait(repo_.send(
+        dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
+        std::nullopt, std::nullopt
+    ));
+    bool result =
+        sync_wait(repo_.edit(message1.getValueOfId() - 1, "new text"));
+    EXPECT_FALSE(result);
+}
