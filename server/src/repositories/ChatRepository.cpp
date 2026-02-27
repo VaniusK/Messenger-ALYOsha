@@ -1,14 +1,20 @@
 #include "repositories/ChatRepository.hpp"
 #include <drogon/orm/Criteria.h>
 #include <drogon/orm/Exception.h>
+#include <algorithm>
+#include <iterator>
 #include <stdexcept>
 #include "repositories/MessageRepository.hpp"
+#include "repositories/UserRepository.hpp"
 #include "utils/Enum.hpp"
 
 using Chat = drogon_model::messenger_db::Chats;
+using User = drogon_model::messenger_db::Users;
 using Message = drogon_model::messenger_db::Messages;
 using ChatMember = drogon_model::messenger_db::ChatMembers;
 using ChatRepository = messenger::repositories::ChatRepository;
+using UserRepository = messenger::repositories::UserRepository;
+using ChatPreview = messenger::dto::ChatPreview;
 
 using namespace drogon;
 using namespace drogon::orm;
@@ -132,6 +138,77 @@ Task<std::optional<Chat>> ChatRepository::getById(int64_t id) {
         co_return chat;
     } catch (UnexpectedRows &e) {
         co_return std::nullopt;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+    auto message_mapper = getMessageMapper();
+    auto user_mapper = getUserMapper();
+
+    try {
+        User user = co_await user_mapper.findByPrimaryKey(user_id);
+        std::vector<ChatMember> members = co_await chat_member_mapper.findBy(
+            Criteria(ChatMember::Cols::_user_id, CompareOperator::EQ, user_id)
+        );
+        std::vector<int64_t> chat_ids;
+        chat_ids.reserve(members.size());
+        std::transform(
+            members.begin(), members.end(), std::back_inserter(chat_ids),
+            [](const ChatMember &m) { return m.getValueOfChatId(); }
+        );
+        std::vector<Chat> chats = co_await mapper.findBy(
+            Criteria(Chat::Cols::_id, CompareOperator::In, chat_ids)
+        );
+        std::vector<ChatPreview> previews;
+        previews.reserve(chats.size());
+        for (const auto &chat : chats) {
+            ChatMember member = co_await chat_member_mapper.findOne(
+                Criteria(
+                    ChatMember::Cols::_chat_id, CompareOperator::EQ,
+                    chat.getValueOfId()
+                ) &&
+                Criteria(
+                    ChatMember::Cols::_user_id, CompareOperator::EQ, user_id
+                )
+            );
+            auto messages = co_await message_mapper
+                                .orderBy(Message::Cols::_id, SortOrder::DESC)
+                                .limit(1)
+                                .findBy(Criteria(
+                                    Message::Cols::_chat_id,
+                                    CompareOperator::EQ, chat.getValueOfId()
+                                ));
+            std::optional<Message> last_message;
+            if (messages.size() > 0) {
+                last_message = messages[0];
+            }
+            previews.push_back(ChatPreview{
+                .chat_id = chat.getValueOfId(),
+                .title = chat.getValueOfName(),
+                .avatar_path = chat.getValueOfAvatarPath(),
+                .last_message = last_message,
+                .unread_count = static_cast<int64_t>(
+                    (co_await message_mapper.limit(999)
+                         .orderBy(Message::Cols::_id, SortOrder::DESC)
+                         .findBy(
+                             Criteria(
+                                 Message::Cols::_chat_id, CompareOperator::EQ,
+                                 chat.getValueOfId()
+                             ) &&
+                             Criteria(
+                                 Message::Cols::_id, CompareOperator::GT,
+                                 member.getValueOfLastReadMessageId()
+                             )
+                         ))
+                        .size()
+                )  // Логику оставляю тебе
+            });
+        }
+        co_return previews;
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }

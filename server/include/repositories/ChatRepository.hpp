@@ -2,17 +2,20 @@
 #include <drogon/drogon.h>
 #include <drogon/orm/CoroMapper.h>
 #include <drogon/utils/coroutine.h>
+#include "dto/ChatPreview.hpp"
 #include "models/ChatMembers.h"
 #include "models/Chats.h"
 #include "models/Messages.h"
+#include "models/Users.h"
 #include "repositories/MessageRepository.hpp"
-#include "repositories/UserRepository.hpp"
 
 namespace messenger::repositories {
 
 using Chat = drogon_model::messenger_db::Chats;
+using User = drogon_model::messenger_db::Users;
 using ChatMember = drogon_model::messenger_db::ChatMembers;
 using Message = drogon_model::messenger_db::Messages;
+using ChatPreview = messenger::dto::ChatPreview;
 
 class ChatRepositoryInterface {
 public:
@@ -45,6 +48,8 @@ public:
     virtual drogon::Task<std::optional<Chat>>
     getDirect(int64_t user1_id, int64_t user2_id) = 0;
     virtual drogon::Task<std::optional<Chat>> getById(int64_t id) = 0;
+    virtual drogon::Task<std::vector<ChatPreview>> getByUser(int64_t user_id
+    ) = 0;
 
 private:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
@@ -76,6 +81,7 @@ public:
     drogon::Task<std::optional<Chat>>
     getDirect(int64_t user1_id, int64_t user2_id) override;
     drogon::Task<std::optional<Chat>> getById(int64_t id) override;
+    drogon::Task<std::vector<ChatPreview>> getByUser(int64_t user_id) override;
 
 private:
     drogon::orm::CoroMapper<Chat> getMapper() {
@@ -84,6 +90,14 @@ private:
 
     drogon::orm::CoroMapper<ChatMember> getChatMemberMapper() {
         return drogon::orm::CoroMapper<ChatMember>(drogon::app().getDbClient());
+    }
+
+    drogon::orm::CoroMapper<Message> getMessageMapper() {
+        return drogon::orm::CoroMapper<Message>(drogon::app().getDbClient());
+    }
+
+    drogon::orm::CoroMapper<User> getUserMapper() {
+        return drogon::orm::CoroMapper<User>(drogon::app().getDbClient());
     }
 
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
