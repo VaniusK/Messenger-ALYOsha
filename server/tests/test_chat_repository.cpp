@@ -1,8 +1,10 @@
 #include <drogon/orm/Result.h>
+#include "dto/ChatPreview.hpp"
 #include "fixtures/ChatTestFixture.hpp"
 
 using ChatRepository = messenger::repositories::ChatRepository;
 using Chat = drogon_model::messenger_db::Chats;
+using ChatPreview = messenger::dto::ChatPreview;
 
 using namespace drogon;
 using namespace drogon::orm;
@@ -74,4 +76,41 @@ TEST_F(ChatTestFixture, TestGetByIdFail) {
     ));
     auto chat_result = sync_wait(repo_.getById(chat.getValueOfId() - 1));
     EXPECT_FALSE(chat_result.has_value());
+}
+
+TEST_F(ChatTestFixture, TestGetByUser) {
+    /* When valid data is provided,
+    getByUser() should return vector of chats
+    which the user is a member of*/
+    Chat chat1 = sync_wait(repo_.getOrCreateDirect(
+        dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
+    ));
+    Chat chat2 = sync_wait(repo_.getOrCreateDirect(
+        dummy_user1_.getValueOfId(), dummy_user3_.getValueOfId()
+    ));
+    Chat chat3 = sync_wait(repo_.getOrCreateDirect(
+        dummy_user2_.getValueOfId(), dummy_user3_.getValueOfId()
+    ));
+    std::vector<ChatPreview> chatPreviews =
+        sync_wait(repo_.getByUser(dummy_user1_.getValueOfId()));
+    EXPECT_EQ(chatPreviews.size(), 2);
+    EXPECT_EQ(
+        std::count_if(
+            chatPreviews.begin(), chatPreviews.end(),
+            [&chat1](const ChatPreview &u) {
+                return chat1.getValueOfId() == u.chat_id;
+            }
+        ),
+        1
+    );
+
+    EXPECT_EQ(
+        std::count_if(
+            chatPreviews.begin(), chatPreviews.end(),
+            [&chat2](const ChatPreview &u) {
+                return chat2.getValueOfId() == u.chat_id;
+            }
+        ),
+        1
+    );
 }

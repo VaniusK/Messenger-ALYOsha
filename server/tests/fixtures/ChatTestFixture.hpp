@@ -20,6 +20,7 @@ protected:
         ChatRepository(std::make_unique<MessageRepository>());
     User dummy_user1_;
     User dummy_user2_;
+    User dummy_user3_;
     Message dummy_message1_;
 
 public:
@@ -37,5 +38,10 @@ public:
         );
         dummy_user2_ =
             drogon::sync_wait(user_repo_.getByHandle("dummy_user2")).value();
+        drogon::sync_wait(
+            user_repo_.create("dummy_user3", "dummy_user3", "hash")
+        );
+        dummy_user3_ =
+            drogon::sync_wait(user_repo_.getByHandle("dummy_user3")).value();
     }
 };
