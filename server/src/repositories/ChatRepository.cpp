@@ -215,11 +215,13 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
                                );
             }
             std::string new_title;
-            std::string new_avatar_path;
+            std::optional<std::string> new_avatar_path;
             const User &other_user = chat_id_to_other_user[chat.getValueOfId()];
             if (chat.getValueOfType() == models::ChatType::Direct) {
                 new_title = other_user.getValueOfDisplayName();
-                new_avatar_path = other_user.getValueOfAvatarPath();
+                if (other_user.getAvatarPath()) {
+                    new_avatar_path = other_user.getValueOfAvatarPath();
+                }
             } else {
                 new_title = chat.getValueOfName();
                 new_avatar_path = chat.getValueOfAvatarPath();
