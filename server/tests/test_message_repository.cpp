@@ -196,7 +196,7 @@ TEST_F(MessageTestFixture, TestGetByChatOptionals) {
 
 TEST_F(MessageTestFixture, TestEdit) {
     /* When message exists,
-    edit() should return false
+    edit() should return true
     and the text should be updated*/
     Message message1 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
@@ -209,8 +209,8 @@ TEST_F(MessageTestFixture, TestEdit) {
     EXPECT_EQ(message_updated.getValueOfText(), "new text");
 }
 
-TEST_F(MessageTestFixture, TestFail) {
-    /* When message exists,
+TEST_F(MessageTestFixture, TestEditFail) {
+    /* When message does not exist,
     edit() should return false
     and the text should be updated*/
     Message message1 = sync_wait(repo_.send(
@@ -219,5 +219,30 @@ TEST_F(MessageTestFixture, TestFail) {
     ));
     bool result =
         sync_wait(repo_.edit(message1.getValueOfId() - 1, "new text"));
+    EXPECT_FALSE(result);
+}
+
+TEST_F(MessageTestFixture, TestRemove) {
+    /* When message exists,
+    remove() should return true
+    and the message should be deleted*/
+    Message message1 = sync_wait(repo_.send(
+        dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
+        std::nullopt, std::nullopt
+    ));
+    bool result = sync_wait(repo_.remove(message1.getValueOfId()));
+    EXPECT_TRUE(result);
+    auto message_result = sync_wait(repo_.getById(message1.getValueOfId()));
+    EXPECT_FALSE(message_result.has_value());
+}
+
+TEST_F(MessageTestFixture, TestRemoveFail) {
+    /* When message does not exist,
+    remove() should return false*/
+    Message message1 = sync_wait(repo_.send(
+        dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
+        std::nullopt, std::nullopt
+    ));
+    bool result = sync_wait(repo_.remove(message1.getValueOfId() - 1));
     EXPECT_FALSE(result);
 }
