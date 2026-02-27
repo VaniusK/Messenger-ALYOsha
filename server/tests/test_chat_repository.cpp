@@ -52,3 +52,26 @@ TEST_F(ChatTestFixture, TestGetDirectFail) {
     ));
     EXPECT_FALSE(result.has_value());
 }
+
+TEST_F(ChatTestFixture, TestGetById) {
+    /* When valid data is provided,
+    and chat exists,
+    getById() should return it*/
+    Chat chat = sync_wait(repo_.getOrCreateDirect(
+        dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
+    ));
+    auto chat_result = sync_wait(repo_.getById(chat.getValueOfId()));
+    EXPECT_TRUE(chat_result.has_value());
+    EXPECT_EQ(chat_result.value().getValueOfId(), chat.getValueOfId());
+}
+
+TEST_F(ChatTestFixture, TestGetByIdFail) {
+    /* When valid data is provided,
+    and chat does not exist,
+    getById() should return nullopt*/
+    Chat chat = sync_wait(repo_.getOrCreateDirect(
+        dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
+    ));
+    auto chat_result = sync_wait(repo_.getById(chat.getValueOfId() - 1));
+    EXPECT_FALSE(chat_result.has_value());
+}
