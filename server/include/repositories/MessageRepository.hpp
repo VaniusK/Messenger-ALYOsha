@@ -20,6 +20,11 @@ public:
         std::optional<int64_t> reply_to_id,
         std::optional<int64_t> forwarded_from_id
     ) = 0;
+    virtual drogon::Task<std::vector<Message>> getByChat(
+        int64_t chat_id,
+        std::optional<int64_t> before_id,
+        int64_t limit
+    ) = 0;
 };
 
 class MessageRepository : public MessageRepositoryInterface {
@@ -32,6 +37,11 @@ public:
         std::string text,
         std::optional<int64_t> reply_to_id,
         std::optional<int64_t> forwarded_from_id
+    ) override;
+    drogon::Task<std::vector<Message>> getByChat(
+        int64_t chat_id,
+        std::optional<int64_t> before_id,
+        int64_t limit
     ) override;
 
 private:

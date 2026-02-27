@@ -69,3 +69,27 @@ Task<Message> MessageRepository::send(
         throw std::runtime_error("Database error");
     }
 }
+
+Task<std::vector<Message>> MessageRepository::getByChat(
+    int64_t chat_id,
+    std::optional<int64_t> before_id,
+    int64_t limit
+) {
+    auto mapper = getMapper();
+    try {
+        mapper.limit(limit);
+        mapper.orderBy(Message::Cols::_id, SortOrder::DESC);
+        auto crit =
+            Criteria(Message::Cols::_chat_id, CompareOperator::EQ, chat_id);
+        if (before_id.has_value()) {
+            crit = crit &&
+                   Criteria(Message::Cols::_id, CompareOperator::LE, before_id);
+        }
+        std::vector<Message> messages = co_await mapper.findBy(crit
+
+        );
+        co_return messages;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
