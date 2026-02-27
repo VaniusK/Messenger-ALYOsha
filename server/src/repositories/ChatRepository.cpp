@@ -150,7 +150,6 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
     auto mapper = getMapper();
     auto chat_member_mapper = getChatMemberMapper();
     auto message_mapper = getMessageMapper();
-    auto user_mapper = getUserMapper();
 
     try {
         std::vector<ChatMember> members = co_await chat_member_mapper.findBy(
@@ -203,6 +202,31 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
             });
         }
         co_return previews;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<bool> ChatRepository::markAsRead(
+    int64_t chat_id,
+    int64_t user_id,
+    int64_t last_read_message_id
+) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+
+    try {
+        ChatMember member = co_await chat_member_mapper.findOne(
+            Criteria(
+                ChatMember::Cols::_chat_id, CompareOperator::EQ, chat_id
+            ) &&
+            Criteria(ChatMember::Cols::_user_id, CompareOperator::EQ, user_id)
+        );
+        member.setLastReadMessageId(last_read_message_id);
+        co_await chat_member_mapper.update(member);
+        co_return true;
+    } catch (UnexpectedRows &e) {
+        co_return false;
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }

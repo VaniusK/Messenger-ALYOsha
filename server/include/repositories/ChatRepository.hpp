@@ -50,8 +50,13 @@ public:
     virtual drogon::Task<std::optional<Chat>> getById(int64_t id) = 0;
     virtual drogon::Task<std::vector<ChatPreview>> getByUser(int64_t user_id
     ) = 0;
+    virtual drogon::Task<bool> markAsRead(
+        int64_t chat_id,
+        int64_t user_id,
+        int64_t last_read_message_id
+    ) = 0;
 
-private:
+protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
 };
 
@@ -82,6 +87,11 @@ public:
     getDirect(int64_t user1_id, int64_t user2_id) override;
     drogon::Task<std::optional<Chat>> getById(int64_t id) override;
     drogon::Task<std::vector<ChatPreview>> getByUser(int64_t user_id) override;
+    drogon::Task<bool> markAsRead(
+        int64_t chat_id,
+        int64_t user_id,
+        int64_t last_read_message_id
+    ) override;
 
 private:
     drogon::orm::CoroMapper<Chat> getMapper() {
@@ -99,8 +109,6 @@ private:
     drogon::orm::CoroMapper<User> getUserMapper() {
         return drogon::orm::CoroMapper<User>(drogon::app().getDbClient());
     }
-
-    std::unique_ptr<MessageRepositoryInterface> message_repo_;
 };
 
 }  // namespace messenger::repositories
