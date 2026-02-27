@@ -150,15 +150,18 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
     auto user_mapper = getUserMapper();
 
     try {
-        User user = co_await user_mapper.findByPrimaryKey(user_id);
         std::vector<ChatMember> members = co_await chat_member_mapper.findBy(
             Criteria(ChatMember::Cols::_user_id, CompareOperator::EQ, user_id)
         );
         std::vector<int64_t> chat_ids;
         chat_ids.reserve(members.size());
+        std::unordered_map<int64_t, ChatMember> chat_id_to_member;
         std::transform(
             members.begin(), members.end(), std::back_inserter(chat_ids),
-            [](const ChatMember &m) { return m.getValueOfChatId(); }
+            [chat_id_to_member](const ChatMember &m) mutable {
+                chat_id_to_member[m.getValueOfChatId()] = m;
+                return m.getValueOfChatId();
+            }
         );
         std::vector<Chat> chats = co_await mapper.findBy(
             Criteria(Chat::Cols::_id, CompareOperator::In, chat_ids)
@@ -166,15 +169,7 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
         std::vector<ChatPreview> previews;
         previews.reserve(chats.size());
         for (const auto &chat : chats) {
-            ChatMember member = co_await chat_member_mapper.findOne(
-                Criteria(
-                    ChatMember::Cols::_chat_id, CompareOperator::EQ,
-                    chat.getValueOfId()
-                ) &&
-                Criteria(
-                    ChatMember::Cols::_user_id, CompareOperator::EQ, user_id
-                )
-            );
+            ChatMember member = chat_id_to_member[chat.getValueOfId()];
             auto messages = co_await message_mapper
                                 .orderBy(Message::Cols::_id, SortOrder::DESC)
                                 .limit(1)
