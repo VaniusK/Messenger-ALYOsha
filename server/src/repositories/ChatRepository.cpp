@@ -183,22 +183,23 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
             if (messages.size() > 0) {
                 last_message = messages[0];
             }
+            auto crit = Criteria(
+                Message::Cols::_chat_id, CompareOperator::EQ,
+                chat.getValueOfId()
+            );
+            if (member.getLastReadMessageId()) {
+                crit = crit && Criteria(
+                                   Message::Cols::_id, CompareOperator::GT,
+                                   member.getValueOfLastReadMessageId()
+                               );
+            }
             previews.push_back(ChatPreview{
                 .chat_id = chat.getValueOfId(),
                 .title = chat.getValueOfName(),
                 .avatar_path = chat.getValueOfAvatarPath(),
                 .last_message = last_message,
                 .unread_count =
-                    static_cast<int64_t>(co_await message_mapper.count(
-                        Criteria(
-                            Message::Cols::_chat_id, CompareOperator::EQ,
-                            chat.getValueOfId()
-                        ) &&
-                        Criteria(
-                            Message::Cols::_id, CompareOperator::GT,
-                            member.getValueOfLastReadMessageId()
-                        )
-                    ))
+                    static_cast<int64_t>(co_await message_mapper.count(crit))
             });
         }
         co_return previews;
