@@ -188,14 +188,16 @@ Task<ChatPreview> ChatRepository::buildChatPreview(
             new_avatar_path = chat.getValueOfAvatarPath();
         }
     }
-    ChatPreview preview = ChatPreview{
-        .chat_id = chat.getValueOfId(),
-        .title = new_title,
-        .avatar_path = new_avatar_path,
-        .last_message = last_message,
-        .unread_count =
-            static_cast<int64_t>(co_await message_mapper.count(crit))
-    };
+    int64_t unread_count =
+        static_cast<int64_t>(co_await message_mapper.count(crit));
+
+    ChatPreview preview;
+    preview.chat_id = chat.getValueOfId();
+    preview.title = new_title;
+    preview.avatar_path = new_avatar_path;
+    preview.last_message = last_message;
+    preview.unread_count = unread_count;
+
     co_return preview;
 }
 
