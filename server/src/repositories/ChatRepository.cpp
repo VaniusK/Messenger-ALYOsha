@@ -170,7 +170,6 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
         );
         std::unordered_map<int64_t, User> chat_id_to_other_user;
         std::unordered_map<int64_t, int64_t> other_user_id_to_chat_id;
-        std::unordered_map<int64_t, User> id_other_user;
         std::vector<int64_t> other_user_ids;
         for (const auto &chat : chats) {
             if (chat.getValueOfType() == messenger::models::ChatType::Direct) {
@@ -216,8 +215,9 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
             }
             std::string new_title;
             std::optional<std::string> new_avatar_path;
-            const User &other_user = chat_id_to_other_user[chat.getValueOfId()];
             if (chat.getValueOfType() == models::ChatType::Direct) {
+                const User &other_user =
+                    chat_id_to_other_user[chat.getValueOfId()];
                 new_title = other_user.getValueOfDisplayName();
                 if (other_user.getAvatarPath()) {
                     new_avatar_path = other_user.getValueOfAvatarPath();
