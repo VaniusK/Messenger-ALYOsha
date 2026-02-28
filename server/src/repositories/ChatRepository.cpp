@@ -152,17 +152,20 @@ Task<ChatPreview> ChatRepository::buildChatPreview(
     std::optional<User> other_user
 ) {
     auto message_mapper = getMessageMapper();
+    Criteria find_crit(
+        Message::Cols::_chat_id, CompareOperator::EQ, chat.getValueOfId()
+    );
+
     auto messages =
         co_await message_mapper.orderBy(Message::Cols::_id, SortOrder::DESC)
             .limit(1)
-            .findBy(Criteria(
-                Message::Cols::_chat_id, CompareOperator::EQ,
-                chat.getValueOfId()
-            ));
+            .findBy(find_crit);
+
     std::optional<Message> last_message;
     if (messages.size() > 0) {
         last_message = messages[0];
     }
+
     auto crit = Criteria(
         Message::Cols::_chat_id, CompareOperator::EQ, chat.getValueOfId()
     );
@@ -205,6 +208,9 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
         std::vector<ChatMember> members = co_await chat_member_mapper.findBy(
             Criteria(ChatMember::Cols::_user_id, CompareOperator::EQ, user_id)
         );
+        if (members.empty()) {
+            co_return std::vector<ChatPreview>{};
+        }
         std::vector<int64_t> chat_ids;
         chat_ids.reserve(members.size());
         std::unordered_map<int64_t, ChatMember> chat_id_to_member;
@@ -231,8 +237,10 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
                 other_user_id_to_chat_id[other_user_id] = chat.getValueOfId();
             }
         }
-        std::vector<User> other_users =
-            co_await user_repo_->getByIds(other_user_ids);
+        std::vector<User> other_users;
+        if (!other_user_ids.empty()) {
+            other_users = co_await user_repo_->getByIds(other_user_ids);
+        }
         for (const User &other_user : other_users) {
             chat_id_to_other_user
                 [other_user_id_to_chat_id[other_user.getValueOfId()]] =
@@ -240,10 +248,19 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
         }
         std::vector<ChatPreview> previews;
         previews.reserve(chats.size());
-        for (const auto &chat : chats) {
+        Chat chat_copy;
+        ChatMember member_copy;
+        std::optional<User> other_user_opt;
+        for (size_t i = 0; i < chats.size(); ++i) {
+            chat_copy = chats[i];
+            member_copy = chat_id_to_member[chat_copy.getValueOfId()];
+            other_user_opt = std::nullopt;
+            auto it = chat_id_to_other_user.find(chat_copy.getValueOfId());
+            if (it != chat_id_to_other_user.end()) {
+                other_user_opt = it->second;
+            }
             previews.push_back(co_await buildChatPreview(
-                chat, chat_id_to_member[chat.getValueOfId()],
-                chat_id_to_other_user[chat.getValueOfId()]
+                chat_copy, member_copy, other_user_opt
             ));
         }
         co_return previews;
