@@ -146,6 +146,56 @@ Task<std::optional<Chat>> ChatRepository::getById(int64_t id) {
 // TODO: Сейчас это 2N запросов. Можно написать очень страшный запрос на сыром
 // SQL, чтобы получить 2 запроса. Выиграем немного задержки на пинге.
 
+Task<ChatPreview> ChatRepository::buildChatPreview(
+    Chat chat,
+    ChatMember member,
+    std::optional<User> other_user
+) {
+    auto message_mapper = getMessageMapper();
+    auto messages =
+        co_await message_mapper.orderBy(Message::Cols::_id, SortOrder::DESC)
+            .limit(1)
+            .findBy(Criteria(
+                Message::Cols::_chat_id, CompareOperator::EQ,
+                chat.getValueOfId()
+            ));
+    std::optional<Message> last_message;
+    if (messages.size() > 0) {
+        last_message = messages[0];
+    }
+    auto crit = Criteria(
+        Message::Cols::_chat_id, CompareOperator::EQ, chat.getValueOfId()
+    );
+    if (member.getLastReadMessageId()) {
+        crit = crit && Criteria(
+                           Message::Cols::_id, CompareOperator::GT,
+                           member.getValueOfLastReadMessageId()
+                       );
+    }
+    std::string new_title;
+    std::optional<std::string> new_avatar_path;
+    if (chat.getValueOfType() == models::ChatType::Direct) {
+        new_title = other_user.value().getValueOfDisplayName();
+        if (other_user.value().getAvatarPath()) {
+            new_avatar_path = other_user.value().getValueOfAvatarPath();
+        }
+    } else {
+        new_title = chat.getValueOfName();
+        if (chat.getAvatarPath()) {
+            new_avatar_path = chat.getValueOfAvatarPath();
+        }
+    }
+    ChatPreview preview = ChatPreview{
+        .chat_id = chat.getValueOfId(),
+        .title = new_title,
+        .avatar_path = new_avatar_path,
+        .last_message = last_message,
+        .unread_count =
+            static_cast<int64_t>(co_await message_mapper.count(crit))
+    };
+    co_return preview;
+}
+
 Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
     auto mapper = getMapper();
     auto chat_member_mapper = getChatMemberMapper();
@@ -191,51 +241,10 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
         std::vector<ChatPreview> previews;
         previews.reserve(chats.size());
         for (const auto &chat : chats) {
-            ChatMember member = chat_id_to_member[chat.getValueOfId()];
-            auto messages = co_await message_mapper
-                                .orderBy(Message::Cols::_id, SortOrder::DESC)
-                                .limit(1)
-                                .findBy(Criteria(
-                                    Message::Cols::_chat_id,
-                                    CompareOperator::EQ, chat.getValueOfId()
-                                ));
-            std::optional<Message> last_message;
-            if (messages.size() > 0) {
-                last_message = messages[0];
-            }
-            auto crit = Criteria(
-                Message::Cols::_chat_id, CompareOperator::EQ,
-                chat.getValueOfId()
-            );
-            if (member.getLastReadMessageId()) {
-                crit = crit && Criteria(
-                                   Message::Cols::_id, CompareOperator::GT,
-                                   member.getValueOfLastReadMessageId()
-                               );
-            }
-            std::string new_title;
-            std::optional<std::string> new_avatar_path;
-            if (chat.getValueOfType() == models::ChatType::Direct) {
-                const User &other_user =
-                    chat_id_to_other_user[chat.getValueOfId()];
-                new_title = other_user.getValueOfDisplayName();
-                if (other_user.getAvatarPath()) {
-                    new_avatar_path = other_user.getValueOfAvatarPath();
-                }
-            } else {
-                new_title = chat.getValueOfName();
-                if (chat.getAvatarPath()) {
-                    new_avatar_path = chat.getValueOfAvatarPath();
-                }
-            }
-            previews.push_back(ChatPreview{
-                .chat_id = chat.getValueOfId(),
-                .title = new_title,
-                .avatar_path = new_avatar_path,
-                .last_message = last_message,
-                .unread_count =
-                    static_cast<int64_t>(co_await message_mapper.count(crit))
-            });
+            previews.push_back(co_await buildChatPreview(
+                chat, chat_id_to_member[chat.getValueOfId()],
+                chat_id_to_other_user[chat.getValueOfId()]
+            ));
         }
         co_return previews;
     } catch (const DrogonDbException &e) {
