@@ -79,8 +79,8 @@ TEST_F(ChatTestFixture, TestGetByIdFail) {
     EXPECT_FALSE(chat_result.has_value());
 }
 
-TEST_F(ChatTestFixture, TestGetByUser) {
-    /* When valid data is provided,
+TEST_F(ChatTestFixture, TestGetByUserDirect) {
+    /* When valid data with direct chat is provided,
     getByUser() should return vector of chats
     which the user is a member of*/
     Chat chat1 = sync_wait(repo_.getOrCreateDirect(
@@ -126,6 +126,48 @@ TEST_F(ChatTestFixture, TestGetByUser) {
         }
     );
     EXPECT_EQ(chat1_preview.unread_count, 1);
+    EXPECT_EQ(
+        chat1_preview.avatar_path.value(), dummy_user2_.getValueOfAvatarPath()
+    );
+    EXPECT_EQ(chat1_preview.chat_id, chat1.getValueOfId());
+    EXPECT_EQ(
+        chat1_preview.last_message.value().getValueOfId(),
+        message.getValueOfId()
+    );
+    EXPECT_EQ(chat1_preview.title, dummy_user2_.getValueOfDisplayName());
+}
+
+TEST_F(ChatTestFixture, TestGetByUserEmptyDirect) {
+    /* When valid data with empty direct chat is provided,
+    getByUser() should return vector of chats
+    which the user is a member of*/
+    Chat chat1 = sync_wait(repo_.getOrCreateDirect(
+        dummy_user1_.getValueOfId(), dummy_user3_.getValueOfId()
+    ));
+    std::vector<ChatPreview> chatPreviews =
+        sync_wait(repo_.getByUser(dummy_user1_.getValueOfId()));
+    EXPECT_EQ(chatPreviews.size(), 1);
+    EXPECT_EQ(
+        std::count_if(
+            chatPreviews.begin(), chatPreviews.end(),
+            [&chat1](const ChatPreview &u) {
+                return chat1.getValueOfId() == u.chat_id;
+            }
+        ),
+        1
+    );
+
+    ChatPreview chat1_preview = *std::find_if(
+        chatPreviews.begin(), chatPreviews.end(),
+        [&chat1](const ChatPreview &u) {
+            return chat1.getValueOfId() == u.chat_id;
+        }
+    );
+    EXPECT_EQ(chat1_preview.unread_count, 0);
+    EXPECT_FALSE(chat1_preview.avatar_path.has_value());
+    EXPECT_EQ(chat1_preview.chat_id, chat1.getValueOfId());
+    EXPECT_FALSE(chat1_preview.last_message.has_value());
+    EXPECT_EQ(chat1_preview.title, dummy_user3_.getValueOfDisplayName());
 }
 
 TEST_F(ChatTestFixture, TestMarkAsRead) {

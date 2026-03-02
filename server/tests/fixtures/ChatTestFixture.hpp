@@ -33,11 +33,23 @@ public:
         );
         dummy_user1_ =
             drogon::sync_wait(user_repo_.getByHandle("dummy_user1")).value();
+        sync_wait(user_repo_.updateProfile(
+            dummy_user1_.getValueOfId(), std::nullopt, "img1.png", std::nullopt
+        ));
+        dummy_user1_ =
+            drogon::sync_wait(user_repo_.getByHandle("dummy_user1")).value();
+
         drogon::sync_wait(
             user_repo_.create("dummy_user2", "dummy_user2", "hash")
         );
         dummy_user2_ =
             drogon::sync_wait(user_repo_.getByHandle("dummy_user2")).value();
+        sync_wait(user_repo_.updateProfile(
+            dummy_user2_.getValueOfId(), std::nullopt, "img2.png", std::nullopt
+        ));
+        dummy_user2_ =
+            drogon::sync_wait(user_repo_.getByHandle("dummy_user2")).value();
+
         drogon::sync_wait(
             user_repo_.create("dummy_user3", "dummy_user3", "hash")
         );
