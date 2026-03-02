@@ -80,11 +80,11 @@ jobs:
       - name: Build AppImage (Portable Linux Executable)
         env:
           QML_SOURCES_PATHS: client/src
-          OUTPUT: Messenger-Linux.AppImage
+          OUTPUT: Messenger-Alesha.AppImage
           QMAKE: ${{ env.QT_ROOT }}/bin/qmake
         run: |
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps/
-          convert alesha_logo.png -resize 256x256\! AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
+          convert common/alesha_logo.png -resize 256x256\! AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
 
           cat > AppDir/messenger.desktop << 'EOF'
           [Desktop Entry]
@@ -109,8 +109,80 @@ jobs:
       - name: Upload Linux AppImage Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Messenger-Linux-AppImage
-          path: Messenger-Linux.AppImage
+          name: Messenger-Alesha-Linux
+          path: Messenger-Alesha.AppImage
+
+  build-client-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Qt (Windows)
+        id: cache-qt-win
+        uses: actions/cache@v4
+        with:
+          path: C:\Qt
+          key: qt-6.7.3-windows-msvc2019
+
+      - name: Install Qt via aqtinstall
+        if: steps.cache-qt-win.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install aqtinstall
+          aqt install-qt windows desktop 6.7.3 win64_msvc2019_64 `
+            --outputdir C:\Qt `
+            -m qtwebsockets
+
+      - name: Configure & Build client
+        run: |
+          cmake -B build/client -S client `
+            -DCMAKE_PREFIX_PATH="C:\Qt\6.7.3\msvc2019_64" `
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/client --config Release
+
+      - name: Bundle Qt DLLs with windeployqt
+        run: |
+          mkdir deploy
+          copy build\client\Release\client.exe deploy\Messenger-Alesha.exe
+          C:\Qt\6.7.3\msvc2019_64\bin\windeployqt.exe `
+            --qmldir client\src `
+            --release `
+            --no-translations `
+            deploy\Messenger-Alesha.exe
+
+      - name: Copy icon
+        run: copy common\alesha_logo.png deploy\alesha_logo.png
+
+      - name: Create Inno Setup installer
+        run: |
+          $iss = @"
+          [Setup]
+          AppName=Messenger Alesha
+          AppVersion=1.0
+          DefaultDirName={autopf}\Messenger-Alesha
+          DefaultGroupName=Messenger-Alesha
+          OutputDir=installer
+          OutputBaseFilename=Messenger-Alesha
+          Compression=lzma2
+          SolidCompression=yes
+
+          [Files]
+          Source: "deploy\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+
+          [Icons]
+          Name: "{group}\Messenger Alesha"; Filename: "{app}\Messenger-Alesha.exe"
+          Name: "{commondesktop}\Messenger Alesha"; Filename: "{app}\Messenger-Alesha.exe"
+
+          [Run]
+          Filename: "{app}\Messenger-Alesha.exe"; Description: "Launch Messenger Alesha"; Flags: postinstall
+          "@
+          $iss | Out-File -Encoding UTF8 messenger.iss
+          iscc messenger.iss
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Messenger-Alesha-Windows
+          path: installer\Messenger-Alesha.exe
     
   run-format:
     runs-on: ubuntu-latest
