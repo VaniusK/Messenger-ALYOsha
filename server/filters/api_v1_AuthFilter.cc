@@ -24,7 +24,8 @@ void AuthFilter::doFilter(const HttpRequestPtr &req,
             .with_issuer("alesha_messenger");
         verifier.verify(decoded);
         LOG_INFO << "Token verified";
-        std::string user_id = decoded.get_payload_claim("user_id").as_string();
+        std::string user_id_str = decoded.get_payload_claim("user_id").as_string();
+        int64_t user_id = std::stoll(user_id_str);
         LOG_INFO << "Successfully got user_id " << user_id << " from token";
         req->getAttributes()->insert("user_id", user_id);
         fccb();
