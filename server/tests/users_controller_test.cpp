@@ -100,3 +100,5 @@ TEST_F(UsersControllerTest, RegisterUserMissedFields) {
         "Invalid JSON: couldn't find some fields. Missing fields: password"
     );
 }
+
+// TODO: параметризованные тесты TEST_P

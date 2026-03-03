@@ -21,9 +21,7 @@ class users : public drogon::HttpController<users>
     Task<HttpResponsePtr> getUserById(const HttpRequestPtr req, int64_t &&user_id);
     Task<HttpResponsePtr> getUserByHandle(const HttpRequestPtr req, std::string &&user_handle);
     Task<HttpResponsePtr> searchUser(const HttpRequestPtr req);
-    users(){
-      user_repo = std::make_shared<messenger::repositories::UserRepository>();
-    }
+    users(): user_repo(std::make_shared<messenger::repositories::UserRepository>()) {}
     void setRepo(std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo) {
         this->user_repo = user_repo;
     }

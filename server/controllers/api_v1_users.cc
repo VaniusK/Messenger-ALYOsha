@@ -11,13 +11,11 @@ using namespace api::v1;
 
 Task<HttpResponsePtr>
 users::getUserById(const HttpRequestPtr req, int64_t &&user_id) {
-    Json::Value response_json;
     co_return co_await UserService::getUserById(user_id, user_repo);
 }
 
 Task<HttpResponsePtr>
 users::getUserByHandle(const HttpRequestPtr req, std::string &&user_handle) {
-    Json::Value response_json;
     co_return co_await UserService::getUserByHandle(std::move(user_handle), user_repo);
 }
 

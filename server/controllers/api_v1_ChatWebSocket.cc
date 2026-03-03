@@ -19,6 +19,7 @@ void ChatWebSocket::handleNewConnection(const HttpRequestPtr &req, const WebSock
     std::string header = req->getHeader("Authorization");
     if (header.empty() || header.substr(0, 7) != "Bearer "){
         LOG_WARN << "No token provided or invalid token format";
+        wsConnPtr->send("Failed to connect. No token provided or invalid token format");
         wsConnPtr->forceClose();
         return;
     }
@@ -36,6 +37,7 @@ void ChatWebSocket::handleNewConnection(const HttpRequestPtr &req, const WebSock
     }
     catch(const std::exception &e){
         LOG_WARN << "Accession failed: " << e.what();
+        wsConnPtr->send("Failed during token decoding");
         wsConnPtr->forceClose();
         return;
     }
@@ -44,6 +46,7 @@ void ChatWebSocket::handleNewConnection(const HttpRequestPtr &req, const WebSock
         std::unique_lock<std::shared_mutex> lock(clients_mutex_);
         clients_[user_id] = wsConnPtr;
     }
+    wsConnPtr->send("Successfully connected");
     LOG_INFO << "User " << user_id << " connected";
 }
 

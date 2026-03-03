@@ -10,6 +10,10 @@ namespace api::v1::utils {
     HttpResponsePtr resp = HttpResponse::newHttpJsonResponse(response_json); \
     resp->setStatusCode(drogon::k401Unauthorized);                           \
     co_return resp;
+#define RETURN_RESPONSE_CODE_403(response_json)                              \
+    HttpResponsePtr resp = HttpResponse::newHttpJsonResponse(response_json); \
+    resp->setStatusCode(drogon::k403Forbidden);                              \
+    co_return resp;
 #define RETURN_RESPONSE_CODE_404(response_json)                              \
     HttpResponsePtr resp = HttpResponse::newHttpJsonResponse(response_json); \
     resp->setStatusCode(drogon::k404NotFound);                               \
