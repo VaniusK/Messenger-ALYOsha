@@ -16,12 +16,12 @@ class chats : public drogon::HttpController<chats>
 {
   public:
     METHOD_LIST_BEGIN
-    METHOD_ADD(chats::getUserChats, "/user/{1:user_id}", Get, "api::v1::AuthFilter");
-    METHOD_ADD(chats::createOrGetDirectChat, "/direct", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
-    METHOD_ADD(chats::getChatMessages, "/{1:chat_id}/messages", Get, "api::v1::AuthFilter");
-    METHOD_ADD(chats::sendMessage, "/{1:chat_id}/messages", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
-    METHOD_ADD(chats::readMessages, "/{1:chat_id}/read", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
-    METHOD_ADD(chats::getMessageById, "/messages/{1:message_id}", Get, "api::v1::AuthFilter");
+    METHOD_ADD(chats::getUserChats, "/user/{1:user_id}", Get, "api::v1::AuthFilter", "api::v1::IpFilter");
+    METHOD_ADD(chats::createOrGetDirectChat, "/direct", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter", "api::v1::IpFilter");
+    METHOD_ADD(chats::getChatMessages, "/{1:chat_id}/messages", Get, "api::v1::AuthFilter", "api::v1::IpFilter");
+    METHOD_ADD(chats::sendMessage, "/{1:chat_id}/messages", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter", "api::v1::IpFilter");
+    METHOD_ADD(chats::readMessages, "/{1:chat_id}/read", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter", "api::v1::IpFilter");
+    METHOD_ADD(chats::getMessageById, "/messages/{1:message_id}", Get, "api::v1::AuthFilter", "api::v1::IpFilter");
     METHOD_LIST_END
     Task<HttpResponsePtr> getUserChats(const HttpRequestPtr req, int64_t user_id);
     Task<HttpResponsePtr> createOrGetDirectChat(const HttpRequestPtr req);

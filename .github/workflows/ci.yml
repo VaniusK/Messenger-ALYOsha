@@ -208,6 +208,10 @@ jobs:
           echo "POSTGRES_PASSWORD=test_password" >> .env
           echo "POSTGRES_DB=test_db" >> .env
           echo "POSTGRES_HOST=db" >> .env
+          echo "JWT_KEY=cool_key_sosite" >> .env
+          echo "SERVER_WINDOW_FOR_REQUESTS_SECONDS=10" >> .env
+          echo "SERVER_MAX_REQUESTS_PER_WINDOW=10" >> .env
+          echo "SERVER_IP_LIST_CLEANING_SECONDS_COOLDOWN=60" >> .env
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

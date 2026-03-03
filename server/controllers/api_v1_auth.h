@@ -3,6 +3,7 @@
 #include <drogon/HttpController.h>
 #include "repositories/UserRepository.hpp"
 #include <memory>
+#include <shared_mutex>
 
 using namespace drogon;
 
@@ -10,17 +11,26 @@ namespace api
 {
 namespace v1
 {
+
+struct UserLastAuthTry{
+  int try_count = 0;
+  std::chrono::steady_clock::time_point window_start;
+};
+
 class auth : public drogon::HttpController<auth>
 {
   public:
     METHOD_LIST_BEGIN
-    METHOD_ADD(auth::registerUser, "/register", Post, "api::v1::JsonValidatorFilter");
-    METHOD_ADD(auth::loginUser, "/login", Post, "api::v1::JsonValidatorFilter");
+    METHOD_ADD(auth::registerUser, "/register", Post, "api::v1::JsonValidatorFilter", "api::v1::IpFilter");
+    METHOD_ADD(auth::loginUser, "/login", Post, "api::v1::JsonValidatorFilter", "api::v1::IpFilter");
     METHOD_LIST_END
     Task<HttpResponsePtr> registerUser(const HttpRequestPtr req);
     Task<HttpResponsePtr> loginUser(const HttpRequestPtr req);
 
     auth(){
+      drogon::app().getLoop()->runEvery(std::stoi(std::getenv("SERVER_IP_LIST_CLEANING_SECONDS_COOLDOWN")), [this](){
+        this->cleanUpOldUsersAuthTries();
+      });
       user_repo = std::make_shared<messenger::repositories::UserRepository>();
     }
     void setRepo(std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo) {
@@ -28,6 +38,14 @@ class auth : public drogon::HttpController<auth>
     }
   private:
     std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo;
+    std::unordered_map<std::string, UserLastAuthTry> users_last_auth_try;
+    std::shared_mutex users_last_auth_try_mutex;
+
+    bool checkUserAuthTries(const std::string &user_handle);
+    void cleanUpOldUsersAuthTries();
+
+    const int MAX_REQUESTS = std::stoi(std::getenv("SERVER_MAX_REQUESTS_PER_WINDOW"));
+    const int WINDOW_SECONDS = std::stoi(std::getenv("SERVER_WINDOW_FOR_REQUESTS_SECONDS"));
 };
 }
 }

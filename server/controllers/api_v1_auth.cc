@@ -29,5 +29,45 @@ Task<HttpResponsePtr> auth::loginUser(HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
+    std::string user_handle = (*request_json)["handle"].asString();
+    if (!checkUserAuthTries(user_handle)) {
+        LOG_WARN << "Too many auth tries to user " << user_handle;
+        RETURN_RESPONSE_CODE_429(response_json)
+    }
     co_return co_await UserService::loginUser(request_json, user_repo);
 }
+
+bool auth::checkUserAuthTries(const std::string &user_handle) {
+    auto now = std::chrono::steady_clock::now();
+    std::unique_lock<std::shared_mutex> lock(users_last_auth_try_mutex);
+    auto &client = users_last_auth_try[user_handle];
+    auto time_diff = std::chrono::duration_cast<std::chrono::seconds>(
+        now - client.window_start
+    );
+    if (time_diff > std::chrono::seconds(WINDOW_SECONDS)) {
+        client.try_count = 1;
+        client.window_start = now;
+    } else {
+        client.try_count++;
+        if (client.try_count > MAX_REQUESTS) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void auth::cleanUpOldUsersAuthTries(){
+    auto now = std::chrono::steady_clock::now();
+
+    std::unique_lock<std::shared_mutex> lock(users_last_auth_try_mutex);
+
+    std::size_t size_before = users_last_auth_try.size();
+    std::erase_if(users_last_auth_try, [now, this](const auto& item){
+        auto [user_handle, client] = item;
+        auto time_diff = std::chrono::duration_cast<std::chrono::seconds>(now - client.window_start);
+
+        return time_diff > std::chrono::seconds(WINDOW_SECONDS);
+    });
+    LOG_INFO << "Cleaned " << (size_before - users_last_auth_try.size()) << " old users auth tries.";
+}
+

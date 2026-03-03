@@ -13,9 +13,9 @@ class users : public drogon::HttpController<users>
 {
   public:
     METHOD_LIST_BEGIN
-    METHOD_ADD(users::getUserById, "/{1:user_id}", Get);
-    METHOD_ADD(users::getUserByHandle, "/handle/{1:user_handle}", Get);
-    METHOD_ADD(users::searchUser, "/search", Get, "api::v1::JsonValidatorFilter");
+    METHOD_ADD(users::getUserById, "/{1:user_id}", Get, "api::v1::IpFilter");
+    METHOD_ADD(users::getUserByHandle, "/handle/{1:user_handle}", Get, "api::v1::IpFilter");
+    METHOD_ADD(users::searchUser, "/search", Get, "api::v1::JsonValidatorFilter", "api::v1::IpFilter");
 
     METHOD_LIST_END
     Task<HttpResponsePtr> getUserById(const HttpRequestPtr req, int64_t &&user_id);
