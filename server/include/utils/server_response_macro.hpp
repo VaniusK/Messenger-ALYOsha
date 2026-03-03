@@ -22,6 +22,10 @@ namespace api::v1::utils {
     HttpResponsePtr resp = HttpResponse::newHttpJsonResponse(response_json); \
     resp->setStatusCode(drogon::k409Conflict);                               \
     co_return resp;
+#define RETURN_RESPONSE_CODE_429(response_json)                              \
+    HttpResponsePtr resp = HttpResponse::newHttpJsonResponse(response_json); \
+    resp->setStatusCode(drogon::k429TooManyRequests);                        \
+    co_return resp;
 #define RETURN_RESPONSE_CODE_500(response_json)                              \
     HttpResponsePtr resp = HttpResponse::newHttpJsonResponse(response_json); \
     resp->setStatusCode(drogon::k500InternalServerError);                    \
