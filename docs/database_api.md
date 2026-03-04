@@ -60,7 +60,7 @@
 | `getByUser(user_id)` ✅                                 | Список чатов пользователя                  | `vector<ChatPreview>` |
 | `getOrCreateDirect(user1_id, user2_id)` ✅             | Получить или создать личку (идемпотентно!) | `Chat`                |
 | `getDirect(user1_id, user2_id)` ✅             | Получить личку | `Chat?`                |
-| `createGroup(name, creator_id, member_ids(vector<id>))`         | Создать групповой чат                      | `Chat`                |
+| `createGroup(name, creator_id, member_ids(vector<id>))` ✅         | Создать групповой чат                      | `Chat`                |
 | `getMembers(chat_id)`                               | Список участников чата                     | `vector<ChatMember>`  |
 | `addMember(chat_id, user_id, role)`                 | Добавить участника                         | `bool`                |
 | `removeMember(chat_id, user_id)`                    | Удалить участника                          | `bool`                |
