@@ -63,6 +63,8 @@ public:
         int64_t creator_id,
         std::vector<int64_t> member_ids
     ) = 0;
+    virtual drogon::Task<std::vector<ChatMember>> getMembers(int64_t chat_id
+    ) = 0;
 
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
@@ -106,6 +108,7 @@ public:
         int64_t creator_id,
         std::vector<int64_t> member_ids
     ) override;
+    drogon::Task<std::vector<ChatMember>> getMembers(int64_t chat_id) override;
 
 private:
     drogon::orm::CoroMapper<Chat> getMapper() {

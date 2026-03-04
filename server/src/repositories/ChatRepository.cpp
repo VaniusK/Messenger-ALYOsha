@@ -326,3 +326,17 @@ Task<Chat> ChatRepository::createGroup(
         throw std::runtime_error("Database error");
     }
 }
+
+Task<std::vector<ChatMember>> ChatRepository::getMembers(int64_t chat_id) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        std::vector<ChatMember> chat_members =
+            co_await chat_member_mapper.findBy(Criteria(
+                ChatMember::Cols::_chat_id, CompareOperator::EQ, chat_id
+            ));
+        co_return chat_members;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
