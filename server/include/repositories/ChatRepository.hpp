@@ -62,13 +62,6 @@ public:
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
     std::unique_ptr<UserRepositoryInterface> user_repo_;
-
-private:
-    virtual drogon::Task<messenger::dto::ChatPreview> buildChatPreview(
-        Chat chat,
-        ChatMember member,
-        std::optional<User> other_user
-    ) = 0;
 };
 
 class ChatRepository : public ChatRepositoryInterface {
@@ -125,7 +118,7 @@ private:
         Chat chat,
         ChatMember member,
         std::optional<User> other_user
-    ) override;
+    );
 };
 
 }  // namespace messenger::repositories
