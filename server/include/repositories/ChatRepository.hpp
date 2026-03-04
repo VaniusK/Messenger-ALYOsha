@@ -58,6 +58,11 @@ public:
         int64_t user_id,
         int64_t last_read_message_id
     ) = 0;
+    virtual drogon::Task<Chat> createGroup(
+        std::string name,
+        int64_t creator_id,
+        std::vector<int64_t> member_ids
+    ) = 0;
 
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
@@ -95,6 +100,11 @@ public:
         int64_t chat_id,
         int64_t user_id,
         int64_t last_read_message_id
+    ) override;
+    drogon::Task<Chat> createGroup(
+        std::string name,
+        int64_t creator_id,
+        std::vector<int64_t> member_ids
     ) override;
 
 private:

@@ -295,3 +295,34 @@ Task<bool> ChatRepository::markAsRead(
         throw std::runtime_error("Database error");
     }
 }
+
+Task<Chat> ChatRepository::createGroup(
+    std::string name,
+    int64_t creator_id,
+    std::vector<int64_t> member_ids
+) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+
+    try {
+        Chat chat;
+        chat.setType(messenger::models::ChatType::Group);
+        chat.setName(name);
+        chat = co_await mapper.insert(chat);
+        for (auto id : member_ids) {
+            ChatMember chat_member;
+            chat_member.setChatId(chat.getValueOfId());
+            chat_member.setUserId(id);
+            chat_member.setRole(messenger::models::ChatRole::Member);
+            co_await chat_member_mapper.insert(chat_member);
+        }
+        ChatMember creator = co_await chat_member_mapper.findOne(Criteria(
+            ChatMember::Cols::_user_id, CompareOperator::EQ, creator_id
+        ));
+        creator.setRole(messenger::models::ChatRole::Owner);
+        co_await chat_member_mapper.update(creator);
+        co_return chat;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
