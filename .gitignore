@@ -1,4 +1,5 @@
 .vscode/
+.agents/
 experiments/
 */build/
 build/
