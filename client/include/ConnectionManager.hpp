@@ -11,7 +11,10 @@ class ConnectionManager : public QObject {
     Q_OBJECT
 
 public:
-    explicit ConnectionManager(StateManager *stateManager, QObject *parent = nullptr);
+    explicit ConnectionManager(
+        StateManager *stateManager,
+        QObject *parent = nullptr
+    );
 
     QString baseUrl() const;
     void setBaseUrl(const QString &url);
@@ -22,7 +25,8 @@ public:
     QNetworkReply *get(const QString &endpoint);
     QNetworkReply *post(const QString &endpoint, const QByteArray &body);
     QNetworkReply *getWithBody(const QString &endpoint, const QByteArray &body);
-private: 
+
+private:
     QNetworkAccessManager *m_networkManager;
     StateManager *m_stateManager;
     QString m_baseUrl = "http://127.0.0.1:5555/api/v1";

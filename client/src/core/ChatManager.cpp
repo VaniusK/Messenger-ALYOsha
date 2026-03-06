@@ -44,7 +44,9 @@ void ChatManager::searchUsers(const QString &query) {
     json["query"] = query;
     json["limit"] = 20;
 
-    QNetworkReply *reply = m_connection->getWithBody("/users/search", QJsonDocument(json).toJson());
+    QNetworkReply *reply = m_connection->getWithBody(
+        "/users/search", QJsonDocument(json).toJson()
+    );
 
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         reply->deleteLater();
@@ -61,17 +63,18 @@ void ChatManager::searchUsers(const QString &query) {
 void ChatManager::fetchChats() {
     StateManager *sm = m_connection->stateManager();
     if (!sm || sm->getUserId() <= 0) {
-        #ifdef QT_DEBAG
+#ifdef QT_DEBAG
         qDebug() << "[ChatManager] fetchChats skipped. Invalid state manager "
                     "or userId:"
                  << (sm ? sm->getUserId() : -1);
-        #endif
+#endif
         return;
     }
 
-    #ifdef QT_DEBAG
-    qDebug() << "[ChatManager] fetchChats called for user ID:" << sm->getUserId();
-    #endif
+#ifdef QT_DEBAG
+    qDebug() << "[ChatManager] fetchChats called for user ID:"
+             << sm->getUserId();
+#endif
 
     QNetworkReply *reply =
         m_connection->get("/chats/user/" + QString::number(sm->getUserId()));
@@ -80,9 +83,9 @@ void ChatManager::fetchChats() {
         reply->deleteLater();
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray responseData = reply->readAll();
-            #ifdef QT_DEBAG
+#ifdef QT_DEBAG
             qDebug() << "[ChatManager] fetchChats RAW JSON: " << responseData;
-            #endif
+#endif
             QJsonDocument doc = QJsonDocument::fromJson(responseData);
             emit chatsUpdated(doc.object()["chats"].toArray());
         } else {
@@ -98,10 +101,10 @@ void ChatManager::fetchChatHistory(const QString &chatId) {
         reply->deleteLater();
         if (reply->error() == QNetworkReply::NoError) {
             QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-            #ifdef QT_DEBAG
+#ifdef QT_DEBAG
             qDebug() << "[ChatManager] fetchChatHistory RAW JSON: "
                      << doc.toJson(QJsonDocument::Compact);
-            #endif
+#endif
             QJsonArray raw = doc.object()["messages"].toArray();
 
             int currentUserId = m_connection->stateManager()->getUserId();
@@ -158,10 +161,10 @@ void ChatManager::openDirectChat(
         reply->deleteLater();
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray responseData = reply->readAll();
-            #ifdef QT_DEBAG
+#ifdef QT_DEBAG
             qDebug() << "[ChatManager] openDirectChat RAW JSON: "
                      << responseData;
-            #endif
+#endif
             QJsonObject chat = QJsonDocument::fromJson(responseData)
                                    .object()["chat"]
                                    .toObject();

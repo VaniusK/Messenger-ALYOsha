@@ -10,7 +10,10 @@ class AuthManager : public QObject {
     Q_OBJECT
 
 public:
-    explicit AuthManager(ConnectionManager *connection, QObject *parent = nullptr);
+    explicit AuthManager(
+        ConnectionManager *connection,
+        QObject *parent = nullptr
+    );
     Q_INVOKABLE void registerUser(
         const QString &handle,
         const QString &displayName,

@@ -22,7 +22,8 @@ void AuthManager::registerUser(
 
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         reply->deleteLater();
-        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        int statusCode =
+            reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
         if (statusCode == 201) {
             emit registerSuccess();
@@ -51,7 +52,8 @@ void AuthManager::loginUser(const QString &handle, const QString &password) {
             QString token = obj["token"].toString();
 
             if (token.isEmpty()) {
-                emit loginFailed("Error: Server didn't return an access token.");
+                emit loginFailed("Error: Server didn't return an access token."
+                );
                 return;
             }
 
@@ -70,9 +72,11 @@ void AuthManager::fetchUserId(const QString &handle) {
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         reply->deleteLater();
         if (reply->error() == QNetworkReply::NoError) {
-            QJsonObject obj = QJsonDocument::fromJson(reply->readAll()).object();
+            QJsonObject obj =
+                QJsonDocument::fromJson(reply->readAll()).object();
             QJsonValue idValue = obj["id"];
-            int userId = idValue.isString() ? idValue.toString().toInt() : idValue.toInt();
+            int userId = idValue.isString() ? idValue.toString().toInt()
+                                            : idValue.toInt();
             m_connection->stateManager()->setUserId(userId);
             emit userIdFetched(userId);
         }

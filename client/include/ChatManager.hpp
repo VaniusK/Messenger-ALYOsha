@@ -23,7 +23,8 @@ public:
     Q_INVOKABLE void fetchChatHistory(const QString &chatId);
     Q_INVOKABLE void sendMessage(const QString &chatId, const QString &text);
     Q_INVOKABLE void connectWebSocket();
-    Q_INVOKABLE void openDirectChat(int targetUserId, const QString &targetUserName = "");
+    Q_INVOKABLE void
+    openDirectChat(int targetUserId, const QString &targetUserName = "");
 
 signals:
     void usersFound(const QJsonArray &users);
