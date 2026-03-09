@@ -401,3 +401,15 @@ TEST_F(ChatTestFixture, TestUpdateInfoFail) {
     ));
     EXPECT_FALSE(result);
 }
+
+TEST_F(ChatTestFixture, TestCreateSaved) {
+    /* When valid data is provided,
+    createSaved should create Saved Messages chat
+    and return it*/
+    Chat chat = sync_wait(repo_.createSaved(dummy_user1_.getValueOfId()));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Saved);
+    auto members = sync_wait(repo_.getMembers(chat.getValueOfId()));
+    EXPECT_EQ(members.size(), 1);
+    auto member = members[0];
+    EXPECT_EQ(member.getValueOfChatType(), messenger::models::ChatType::Saved);
+}
