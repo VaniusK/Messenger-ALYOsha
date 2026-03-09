@@ -29,6 +29,6 @@ public:
 private:
     QNetworkAccessManager *m_networkManager;
     StateManager *m_stateManager;
-    QString m_baseUrl = "http://127.0.0.1:5555/api/v1";
-    QString m_wsUrl = "ws://127.0.0.1:5555/ws/chat";
+    QString m_baseUrl = "http://158.160.224.148:5555/api/v1";
+    QString m_wsUrl = "ws://158.160.224.148:5555/ws/chat";
 };
