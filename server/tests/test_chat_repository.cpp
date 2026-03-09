@@ -332,3 +332,42 @@ TEST_F(ChatTestFixture, TestRemoveMember) {
         repo_.removeMember(chat.getValueOfId(), dummy_user2_.getValueOfId())
     ));
 }
+
+TEST_F(ChatTestFixture, TestUpdateMemberRole) {
+    /* When valid data is provided,
+    updateMemberRole should update member's role
+    and return true*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    auto result = sync_wait(repo_.updateMemberRole(
+        chat.getValueOfId(), dummy_user2_.getValueOfId(),
+        messenger::models::ChatRole::Moderator
+    ));
+    EXPECT_TRUE(result);
+    auto members = sync_wait(repo_.getMembers(chat.getValueOfId()));
+    auto chat_member2 = *std::find_if(
+        members.begin(), members.end(),
+        [this](const ChatMember &m) {
+            return m.getValueOfUserId() == dummy_user2_.getValueOfId();
+        }
+    );
+    EXPECT_EQ(
+        chat_member2.getValueOfRole(), messenger::models::ChatRole::Moderator
+    );
+}
+
+TEST_F(ChatTestFixture, TestUpdateMemberRoleFail) {
+    /* When member does not exist,
+    updateMemberRole should return false*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    auto result = sync_wait(repo_.updateMemberRole(
+        chat.getValueOfId(), dummy_user3_.getValueOfId(),
+        messenger::models::ChatRole::Moderator
+    ));
+    EXPECT_FALSE(result);
+}
