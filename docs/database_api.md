@@ -65,7 +65,7 @@
 | `addMember(chat_id, user_id, role)` ✅                 | Добавить участника                         | `ChatMember`                |
 | `removeMember(chat_id, user_id)` ✅                    | Удалить участника                          | `bool`                |
 | `updateMemberRole(chat_id, user_id, new_role)` ✅          | Изменить роль участника                    | `bool`                |
-| `updateInfo(chat_id, name?, avatar?, description?)` | Обновить инфо чата                         | `bool`                |
+| `updateInfo(chat_id, name?, avatar?, description?)` ✅ | Обновить инфо чата                         | `bool`                |
 | `markAsRead(chat_id, user_id, last_read_message_id)` ✅                 | Обновить last_read_message_id | `bool`            |
 | `createSaved(user_id)` | Создать сохранёнки для пользователя                         | `bool`                |
 ### ChatPreview

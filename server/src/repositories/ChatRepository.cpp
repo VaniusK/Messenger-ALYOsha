@@ -403,3 +403,30 @@ Task<bool> ChatRepository::updateMemberRole(
         throw std::runtime_error("Database error");
     }
 }
+
+Task<bool> ChatRepository::updateInfo(
+    int64_t chat_id,
+    std::optional<std::string> name,
+    std::optional<std::string> avatar,
+    std::optional<std::string> description
+) {
+    auto mapper = getMapper();
+    try {
+        Chat chat = co_await mapper.findByPrimaryKey(chat_id);
+        if (name.has_value()) {
+            chat.setName(name.value());
+        }
+        if (avatar.has_value()) {
+            chat.setAvatarPath(avatar.value());
+        }
+        if (description.has_value()) {
+            chat.setDescription(description.value());
+        }
+        co_await mapper.update(chat);
+        co_return true;
+    } catch (const UnexpectedRows &e) {
+        co_return false;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}

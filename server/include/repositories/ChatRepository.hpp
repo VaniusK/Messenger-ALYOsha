@@ -80,6 +80,12 @@ public:
         int64_t user_id,
         std::string new_role
     ) = 0;
+    drogon::Task<bool> virtual updateInfo(
+        int64_t chat_id,
+        std::optional<std::string> name,
+        std::optional<std::string> avatar,
+        std::optional<std::string> description
+    ) = 0;
 
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
@@ -131,6 +137,12 @@ public:
         int64_t chat_id,
         int64_t user_id,
         std::string new_role
+    ) override;
+    drogon::Task<bool> updateInfo(
+        int64_t chat_id,
+        std::optional<std::string> name,
+        std::optional<std::string> avatar,
+        std::optional<std::string> description
     ) override;
 
 private:
