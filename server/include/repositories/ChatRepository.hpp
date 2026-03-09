@@ -58,17 +58,38 @@ public:
         int64_t user_id,
         int64_t last_read_message_id
     ) = 0;
+    virtual drogon::Task<Chat> createGroup(
+        std::string name,
+        int64_t creator_id,
+        std::vector<int64_t> member_ids
+    ) = 0;
+    virtual drogon::Task<std::vector<ChatMember>> getMembers(int64_t chat_id
+    ) = 0;
+    drogon::Task<ChatMember> virtual addMember(
+        int64_t chat_id,
+        int64_t user_id,
+        std::string role
+    ) = 0;
+    drogon::Task<bool> virtual removeMember(
+        int64_t chat_id,
+        int64_t user_id
+    ) = 0;
+    drogon::Task<bool> virtual updateMemberRole(
+        int64_t chat_id,
+        int64_t user_id,
+        std::string new_role
+    ) = 0;
+    drogon::Task<bool> virtual updateInfo(
+        int64_t chat_id,
+        std::optional<std::string> name,
+        std::optional<std::string> avatar,
+        std::optional<std::string> description
+    ) = 0;
+    drogon::Task<Chat> virtual createSaved(int64_t user_id) = 0;
 
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
     std::unique_ptr<UserRepositoryInterface> user_repo_;
-
-private:
-    virtual drogon::Task<messenger::dto::ChatPreview> buildChatPreview(
-        Chat chat,
-        ChatMember member,
-        std::optional<User> other_user
-    ) = 0;
 };
 
 class ChatRepository : public ChatRepositoryInterface {
@@ -103,6 +124,27 @@ public:
         int64_t user_id,
         int64_t last_read_message_id
     ) override;
+    drogon::Task<Chat> createGroup(
+        std::string name,
+        int64_t creator_id,
+        std::vector<int64_t> member_ids
+    ) override;
+    drogon::Task<std::vector<ChatMember>> getMembers(int64_t chat_id) override;
+    drogon::Task<ChatMember>
+    addMember(int64_t chat_id, int64_t user_id, std::string role) override;
+    drogon::Task<bool> removeMember(int64_t chat_id, int64_t user_id) override;
+    drogon::Task<bool> updateMemberRole(
+        int64_t chat_id,
+        int64_t user_id,
+        std::string new_role
+    ) override;
+    drogon::Task<bool> updateInfo(
+        int64_t chat_id,
+        std::optional<std::string> name,
+        std::optional<std::string> avatar,
+        std::optional<std::string> description
+    ) override;
+    drogon::Task<Chat> createSaved(int64_t user_id) override;
 
 private:
     drogon::orm::CoroMapper<Chat> getMapper() {
@@ -125,7 +167,7 @@ private:
         Chat chat,
         ChatMember member,
         std::optional<User> other_user
-    ) override;
+    );
 };
 
 }  // namespace messenger::repositories

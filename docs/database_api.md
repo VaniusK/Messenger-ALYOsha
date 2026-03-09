@@ -25,7 +25,7 @@
 
 ---
 
-## Chats(TODO)
+## Chats
 
 ### Model: Chat
 | Поле | Тип | Описание |
@@ -51,23 +51,23 @@
 
 | Метод                                                   | Описание                                   | Возвращает            |
 | ------------------------------------------------------- | ------------------------------------------ | --------------------- |
-| `getMessageById(message_id)` ✅                                         | Получить сообщение            | `Message?`        |
-| `getMessagesByChat(chat_id, before_id?, limit)` ✅                        | Сообщения чата с пагинацией   | `vector<Message>` |
-| `sendMessage(chat_id, sender_id, text, reply_to_id?, forwarded_from_id?)` ✅ | Отправить сообщение           | `Message`         |
-| `editMessage(message_id, new_text)` ✅                                  | Редактировать сообщение       | `bool`            |
-| `removeMessage(message_id)` ✅                                         | Удалить сообщение             | `bool`            |
-| `getById(chat_id)` ✅                                  | Получить чат по ID                         | `Chat?`               |
-| `getByUser(user_id)` ✅                                 | Список чатов пользователя                  | `vector<ChatPreview>` |
-| `getOrCreateDirect(user1_id, user2_id)` ✅             | Получить или создать личку (идемпотентно!) | `Chat`                |
-| `getDirect(user1_id, user2_id)` ✅             | Получить личку | `Chat?`                |
+| `getMessageById(message_id)`                                         | Получить сообщение            | `Message?`        |
+| `getMessagesByChat(chat_id, before_id?, limit)`                        | Сообщения чата с пагинацией   | `vector<Message>` |
+| `sendMessage(chat_id, sender_id, text, reply_to_id?, forwarded_from_id?)` | Отправить сообщение           | `Message`         |
+| `editMessage(message_id, new_text)`                                  | Редактировать сообщение       | `bool`            |
+| `removeMessage(message_id)`                                         | Удалить сообщение             | `bool`            |
+| `getById(chat_id)`                                  | Получить чат по ID                         | `Chat?`               |
+| `getByUser(user_id)`                                 | Список чатов пользователя                  | `vector<ChatPreview>` |
+| `getOrCreateDirect(user1_id, user2_id)`             | Получить или создать личку (идемпотентно!) | `Chat`                |
+| `getDirect(user1_id, user2_id)`             | Получить личку | `Chat?`                |
 | `createGroup(name, creator_id, member_ids(vector<id>))`         | Создать групповой чат                      | `Chat`                |
 | `getMembers(chat_id)`                               | Список участников чата                     | `vector<ChatMember>`  |
-| `addMember(chat_id, user_id, role)`                 | Добавить участника                         | `bool`                |
+| `addMember(chat_id, user_id, role)`                 | Добавить участника                         | `ChatMember`                |
 | `removeMember(chat_id, user_id)`                    | Удалить участника                          | `bool`                |
 | `updateMemberRole(chat_id, user_id, new_role)`          | Изменить роль участника                    | `bool`                |
 | `updateInfo(chat_id, name?, avatar?, description?)` | Обновить инфо чата                         | `bool`                |
 | `markAsRead(chat_id, user_id, last_read_message_id)`                 | Обновить last_read_message_id | `bool`            |
-
+| `createSaved(user_id)` | Создать сохранёнки для пользователя                         | `Chat`                |
 ### ChatPreview
 
 ### Model: ChatPreview
@@ -78,11 +78,7 @@
 | `avatar_path` | `string?` | Аватарка |
 | `last_message` | `Message?` | Последнее сообщение (для превью) |
 | `unread_count` | `int` | Кол-во непрочитанных сообщений |
-
-
-При загрузке чата возвращаем не просто Chat, а ChatPreview с последним сообщением(текст, автор), списком непрочитанных и тд.
-(подумать как реализовать: Самим? Или сделать фиктивную таблицу,
-чтобы drogon сгенерил?)
+| `type` | `str`(значения из `ChatType`!) | Тип чаты(личный, группа, сохранённые...) |
 
 ---
 

@@ -14,6 +14,7 @@ struct ChatPreview {
     std::optional<std::string> avatar_path;
     std::optional<Message> last_message;
     int64_t unread_count;
+    std::string type;
 };
 
 }  // namespace messenger::dto

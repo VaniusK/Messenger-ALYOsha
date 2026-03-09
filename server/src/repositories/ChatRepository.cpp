@@ -92,10 +92,12 @@ ChatRepository::getOrCreateDirect(int64_t user1_id, int64_t user2_id) {
         chat_member1.setChatId(chat.getValueOfId());
         chat_member1.setUserId(user1_id);
         chat_member1.setRole(messenger::models::ChatRole::Member);
+        chat_member1.setChatType(messenger::models::ChatType::Direct);
         co_await chat_member_mapper.insert(chat_member1);
         chat_member2.setChatId(chat.getValueOfId());
         chat_member2.setUserId(user2_id);
         chat_member2.setRole(messenger::models::ChatRole::Member);
+        chat_member2.setChatType(messenger::models::ChatType::Direct);
         co_await chat_member_mapper.insert(chat_member2);
         co_return chat;
     } catch (const DrogonDbException &e) {
@@ -197,6 +199,7 @@ Task<ChatPreview> ChatRepository::buildChatPreview(
     preview.avatar_path = new_avatar_path;
     preview.last_message = last_message;
     preview.unread_count = unread_count;
+    preview.type = chat.getValueOfType();
 
     co_return preview;
 }
@@ -291,6 +294,159 @@ Task<bool> ChatRepository::markAsRead(
         co_return true;
     } catch (UnexpectedRows &e) {
         co_return false;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<Chat> ChatRepository::createGroup(
+    std::string name,
+    int64_t creator_id,
+    std::vector<int64_t> member_ids
+) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+
+    try {
+        Chat chat;
+        chat.setType(messenger::models::ChatType::Group);
+        chat.setName(name);
+        chat = co_await mapper.insert(chat);
+        for (auto id : member_ids) {
+            ChatMember chat_member;
+            chat_member.setChatId(chat.getValueOfId());
+            chat_member.setUserId(id);
+            chat_member.setRole(messenger::models::ChatRole::Member);
+            chat_member.setChatType(messenger::models::ChatType::Group);
+            co_await chat_member_mapper.insert(chat_member);
+        }
+        ChatMember creator = co_await chat_member_mapper.findOne(Criteria(
+            ChatMember::Cols::_user_id, CompareOperator::EQ, creator_id
+        ));
+        creator.setRole(messenger::models::ChatRole::Owner);
+        co_await chat_member_mapper.update(creator);
+        co_return chat;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<std::vector<ChatMember>> ChatRepository::getMembers(int64_t chat_id) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        std::vector<ChatMember> chat_members =
+            co_await chat_member_mapper.findBy(Criteria(
+                ChatMember::Cols::_chat_id, CompareOperator::EQ, chat_id
+            ));
+        co_return chat_members;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<ChatMember>
+ChatRepository::addMember(int64_t chat_id, int64_t user_id, std::string role) {
+    auto chat_member_mapper = getChatMemberMapper();
+    auto mapper = getMapper();
+    Chat chat;
+    try {
+        chat = co_await mapper.findByPrimaryKey(chat_id);
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Chat does not exist");
+    }
+    if (chat.getValueOfType() != messenger::models::ChatType::Group &&
+        chat.getValueOfType() != messenger::models::ChatType::Channel) {
+        throw std::logic_error(
+            "Can't add member to non-group chat of type " +
+            chat.getValueOfType()
+        );
+    }
+    try {
+        ChatMember chat_member;
+        chat_member.setChatId(chat_id);
+        chat_member.setUserId(user_id);
+        chat_member.setRole(role);
+        chat_member.setChatType(messenger::models::ChatType::Group);
+        chat_member = co_await chat_member_mapper.insert(chat_member);
+        co_return chat_member;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<bool> ChatRepository::removeMember(int64_t chat_id, int64_t user_id) {
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        co_await chat_member_mapper.deleteByPrimaryKey({chat_id, user_id});
+        co_return true;
+    } catch (const DrogonDbException &e) {
+        // deleteByPrimaryKey can't throw anything
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<bool> ChatRepository::updateMemberRole(
+    int64_t chat_id,
+    int64_t user_id,
+    std::string new_role
+) {
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        ChatMember chat_member =
+            co_await chat_member_mapper.findByPrimaryKey({chat_id, user_id});
+        chat_member.setRole(new_role);
+        co_await chat_member_mapper.update(chat_member);
+        co_return true;
+    } catch (const UnexpectedRows &e) {
+        co_return false;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<bool> ChatRepository::updateInfo(
+    int64_t chat_id,
+    std::optional<std::string> name,
+    std::optional<std::string> avatar,
+    std::optional<std::string> description
+) {
+    auto mapper = getMapper();
+    try {
+        Chat chat = co_await mapper.findByPrimaryKey(chat_id);
+        if (name.has_value()) {
+            chat.setName(name.value());
+        }
+        if (avatar.has_value()) {
+            chat.setAvatarPath(avatar.value());
+        }
+        if (description.has_value()) {
+            chat.setDescription(description.value());
+        }
+        co_await mapper.update(chat);
+        co_return true;
+    } catch (const UnexpectedRows &e) {
+        co_return false;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<Chat> ChatRepository::createSaved(int64_t user_id) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        Chat chat;
+        chat.setType(messenger::models::ChatType::Saved);
+        chat.setName("Saved Messages");
+        chat = co_await mapper.insert(chat);
+        ChatMember chat_member;
+        chat_member.setChatId(chat.getValueOfId());
+        chat_member.setUserId(user_id);
+        chat_member.setRole(messenger::models::ChatRole::Owner);
+        chat_member.setChatType(messenger::models::ChatType::Saved);
+        co_await chat_member_mapper.insert(chat_member);
+        co_return chat;
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }

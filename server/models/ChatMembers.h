@@ -49,6 +49,7 @@ class ChatMembers
         static const std::string _role;
         static const std::string _last_read_message_id;
         static const std::string _joined_at;
+        static const std::string _chat_type;
     };
 
     static const int primaryKeyNumber;
@@ -143,8 +144,17 @@ class ChatMembers
     void setJoinedAt(const ::trantor::Date &pJoinedAt) noexcept;
     void setJoinedAtToNull() noexcept;
 
+    /**  For column chat_type  */
+    ///Get the value of the column chat_type, returns the default value if the column is null
+    const std::string &getValueOfChatType() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getChatType() const noexcept;
+    ///Set the value of the column chat_type
+    void setChatType(const std::string &pChatType) noexcept;
+    void setChatType(std::string &&pChatType) noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 5;  }
+
+    static size_t getColumnNumber() noexcept {  return 6;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -171,6 +181,7 @@ class ChatMembers
     std::shared_ptr<std::string> role_;
     std::shared_ptr<int64_t> lastReadMessageId_;
     std::shared_ptr<::trantor::Date> joinedAt_;
+    std::shared_ptr<std::string> chatType_;
     struct MetaData
     {
         const std::string colName_;
@@ -182,7 +193,7 @@ class ChatMembers
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[5]={ false };
+    bool dirtyFlag_[6]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -227,6 +238,11 @@ class ChatMembers
         {
             needSelection=true;
         }
+        if(dirtyFlag_[5])
+        {
+            sql += "chat_type,";
+            ++parametersCount;
+        }
         if(parametersCount > 0)
         {
             sql[sql.length()-1]=')';
@@ -270,6 +286,11 @@ class ChatMembers
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[5])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

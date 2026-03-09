@@ -1,6 +1,7 @@
 #include <drogon/orm/Result.h>
 #include "dto/ChatPreview.hpp"
 #include "fixtures/ChatTestFixture.hpp"
+#include "utils/Enum.hpp"
 
 using ChatRepository = messenger::repositories::ChatRepository;
 using Chat = drogon_model::messenger_db::Chats;
@@ -135,6 +136,7 @@ TEST_F(ChatTestFixture, TestGetByUserDirect) {
         message.getValueOfId()
     );
     EXPECT_EQ(chat1_preview.title, dummy_user2_.getValueOfDisplayName());
+    EXPECT_EQ(chat1_preview.type, chat1.getValueOfType());
 }
 
 TEST_F(ChatTestFixture, TestGetByUserEmptyDirect) {
@@ -223,4 +225,192 @@ TEST_F(ChatTestFixture, TestMarkAsReadFailNoUser) {
         message.getValueOfId()
     ));
     EXPECT_FALSE(result);
+}
+
+TEST_F(ChatTestFixture, TestCreateGroup) {
+    /* When valid data is provided,
+    CreateGroup should create group chat
+    and return it*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId(),
+         dummy_user3_.getValueOfId()}
+    ));
+    auto chat_result = sync_wait(repo_.getById(chat.getValueOfId()));
+    EXPECT_TRUE(chat_result.has_value());
+    EXPECT_EQ(chat_result.value().getValueOfId(), chat.getValueOfId());
+    EXPECT_EQ(chat.getValueOfName(), "Чат жабоманов");
+}
+
+TEST_F(ChatTestFixture, TestGetMembers) {
+    /* When valid data is provided,
+    getMembers should return members of the chat*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId(),
+         dummy_user3_.getValueOfId()}
+    ));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Group);
+    auto chat_members = sync_wait(repo_.getMembers(chat.getValueOfId()));
+    EXPECT_EQ(chat_members.size(), 3);
+    auto chat_member1 = *std::find_if(
+        chat_members.begin(), chat_members.end(),
+        [this](const ChatMember &m) {
+            return m.getValueOfUserId() == dummy_user1_.getValueOfId();
+        }
+    );
+    auto chat_member2 = *std::find_if(
+        chat_members.begin(), chat_members.end(),
+        [this](const ChatMember &m) {
+            return m.getValueOfUserId() == dummy_user2_.getValueOfId();
+        }
+    );
+    auto chat_member3 = *std::find_if(
+        chat_members.begin(), chat_members.end(),
+        [this](const ChatMember &m) {
+            return m.getValueOfUserId() == dummy_user3_.getValueOfId();
+        }
+    );
+    EXPECT_EQ(
+        chat_member1.getValueOfRole(), messenger::models::ChatRole::Owner
+    );
+    EXPECT_EQ(
+        chat_member2.getValueOfRole(), messenger::models::ChatRole::Member
+    );
+    EXPECT_EQ(
+        chat_member3.getValueOfRole(), messenger::models::ChatRole::Member
+    );
+}
+
+TEST_F(ChatTestFixture, TestAddMember) {
+    /* When valid data is provided,
+    addMember should add a member to the group
+    and return it*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    sync_wait(repo_.addMember(
+        chat.getValueOfId(), dummy_user3_.getValueOfId(),
+        messenger::models::ChatRole::Moderator
+    ));
+    auto members = sync_wait(repo_.getMembers(chat.getValueOfId()));
+    EXPECT_EQ(members.size(), 3);
+    auto chat_member3 = *std::find_if(
+        members.begin(), members.end(),
+        [this](const ChatMember &m) {
+            return m.getValueOfUserId() == dummy_user3_.getValueOfId();
+        }
+    );
+    EXPECT_EQ(
+        chat_member3.getValueOfRole(), messenger::models::ChatRole::Moderator
+    );
+}
+
+TEST_F(ChatTestFixture, TestAddMemberFail) {
+    /* When trying to add member to a direct chat,
+    addMember should throw an exception*/
+    Chat chat = sync_wait(repo_.getOrCreateDirect(
+        dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
+    ));
+    EXPECT_THROW(
+        sync_wait(repo_.addMember(
+            chat.getValueOfId(), dummy_user3_.getValueOfId(),
+            messenger::models::ChatRole::Moderator
+        )),
+        std::logic_error
+    );
+}
+
+TEST_F(ChatTestFixture, TestRemoveMember) {
+    /* When valid data is provided,
+    removeMember should remove a member from the group
+    and return true*/
+    Chat chat = sync_wait(repo_.getOrCreateDirect(
+        dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
+    ));
+    EXPECT_TRUE(sync_wait(
+        repo_.removeMember(chat.getValueOfId(), dummy_user2_.getValueOfId())
+    ));
+}
+
+TEST_F(ChatTestFixture, TestUpdateMemberRole) {
+    /* When valid data is provided,
+    updateMemberRole should update member's role
+    and return true*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    auto result = sync_wait(repo_.updateMemberRole(
+        chat.getValueOfId(), dummy_user2_.getValueOfId(),
+        messenger::models::ChatRole::Moderator
+    ));
+    EXPECT_TRUE(result);
+    auto members = sync_wait(repo_.getMembers(chat.getValueOfId()));
+    auto chat_member2 = *std::find_if(
+        members.begin(), members.end(),
+        [this](const ChatMember &m) {
+            return m.getValueOfUserId() == dummy_user2_.getValueOfId();
+        }
+    );
+    EXPECT_EQ(
+        chat_member2.getValueOfRole(), messenger::models::ChatRole::Moderator
+    );
+}
+
+TEST_F(ChatTestFixture, TestUpdateMemberRoleFail) {
+    /* When member does not exist,
+    updateMemberRole should return false*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    auto result = sync_wait(repo_.updateMemberRole(
+        chat.getValueOfId(), dummy_user3_.getValueOfId(),
+        messenger::models::ChatRole::Moderator
+    ));
+    EXPECT_FALSE(result);
+}
+
+TEST_F(ChatTestFixture, TestUpdateInfo) {
+    /* When valid data is provided,
+    updateInfo should update chat info
+    and return true*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    auto result = sync_wait(repo_.updateInfo(
+        chat.getValueOfId(), std::nullopt, "new_avatar", "new_description"
+    ));
+    EXPECT_TRUE(result);
+    Chat new_chat = sync_wait(repo_.getById(chat.getValueOfId())).value();
+    EXPECT_EQ(new_chat.getValueOfAvatarPath(), "new_avatar");
+    EXPECT_EQ(new_chat.getValueOfDescription(), "new_description");
+}
+
+TEST_F(ChatTestFixture, TestUpdateInfoFail) {
+    /* When chat does not exist,
+    updateInfo should return false*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    auto result = sync_wait(repo_.updateInfo(
+        chat.getValueOfId() - 1, std::nullopt, "new_avatar", "new_description"
+    ));
+    EXPECT_FALSE(result);
+}
+
+TEST_F(ChatTestFixture, TestCreateSaved) {
+    /* When valid data is provided,
+    createSaved should create Saved Messages chat
+    and return it*/
+    Chat chat = sync_wait(repo_.createSaved(dummy_user1_.getValueOfId()));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Saved);
+    auto members = sync_wait(repo_.getMembers(chat.getValueOfId()));
+    EXPECT_EQ(members.size(), 1);
+    auto member = members[0];
+    EXPECT_EQ(member.getValueOfChatType(), messenger::models::ChatType::Saved);
 }

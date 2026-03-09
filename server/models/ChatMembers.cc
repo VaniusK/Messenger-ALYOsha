@@ -18,6 +18,7 @@ const std::string ChatMembers::Cols::_user_id = "\"user_id\"";
 const std::string ChatMembers::Cols::_role = "\"role\"";
 const std::string ChatMembers::Cols::_last_read_message_id = "\"last_read_message_id\"";
 const std::string ChatMembers::Cols::_joined_at = "\"joined_at\"";
+const std::string ChatMembers::Cols::_chat_type = "\"chat_type\"";
 const std::vector<std::string> ChatMembers::primaryKeyName = {"chat_id","user_id"};
 const bool ChatMembers::hasPrimaryKey = true;
 const std::string ChatMembers::tableName = "\"chat_members\"";
@@ -27,7 +28,8 @@ const std::vector<typename ChatMembers::MetaData> ChatMembers::metaData_={
 {"user_id","int64_t","bigint",8,0,1,1},
 {"role","std::string","USER-DEFINED",0,0,0,1},
 {"last_read_message_id","int64_t","bigint",8,0,0,0},
-{"joined_at","::trantor::Date","timestamp with time zone",0,0,0,0}
+{"joined_at","::trantor::Date","timestamp with time zone",0,0,0,0},
+{"chat_type","std::string","USER-DEFINED",0,0,0,1}
 };
 const std::string &ChatMembers::getColumnName(size_t index) noexcept(false)
 {
@@ -76,11 +78,15 @@ ChatMembers::ChatMembers(const Row &r, const ssize_t indexOffset) noexcept
                 joinedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["chat_type"].isNull())
+        {
+            chatType_=std::make_shared<std::string>(r["chat_type"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 5 > r.size())
+        if(offset + 6 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -129,13 +135,18 @@ ChatMembers::ChatMembers(const Row &r, const ssize_t indexOffset) noexcept
                 joinedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 5;
+        if(!r[index].isNull())
+        {
+            chatType_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 ChatMembers::ChatMembers(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 5)
+    if(pMasqueradingVector.size() != 6)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -196,6 +207,14 @@ ChatMembers::ChatMembers(const Json::Value &pJson, const std::vector<std::string
                 }
                 joinedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson[pMasqueradingVector[5]].isNull())
+        {
+            chatType_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
 }
@@ -260,12 +279,20 @@ ChatMembers::ChatMembers(const Json::Value &pJson) noexcept(false)
             }
         }
     }
+    if(pJson.isMember("chat_type"))
+    {
+        dirtyFlag_[5]=true;
+        if(!pJson["chat_type"].isNull())
+        {
+            chatType_=std::make_shared<std::string>(pJson["chat_type"].asString());
+        }
+    }
 }
 
 void ChatMembers::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 5)
+    if(pMasqueradingVector.size() != 6)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -326,6 +353,14 @@ void ChatMembers::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson[pMasqueradingVector[5]].isNull())
+        {
+            chatType_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
+        }
+    }
 }
 
 void ChatMembers::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -384,6 +419,14 @@ void ChatMembers::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 joinedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("chat_type"))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson["chat_type"].isNull())
+        {
+            chatType_=std::make_shared<std::string>(pJson["chat_type"].asString());
         }
     }
 }
@@ -488,6 +531,28 @@ void ChatMembers::setJoinedAtToNull() noexcept
     dirtyFlag_[4] = true;
 }
 
+const std::string &ChatMembers::getValueOfChatType() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(chatType_)
+        return *chatType_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &ChatMembers::getChatType() const noexcept
+{
+    return chatType_;
+}
+void ChatMembers::setChatType(const std::string &pChatType) noexcept
+{
+    chatType_ = std::make_shared<std::string>(pChatType);
+    dirtyFlag_[5] = true;
+}
+void ChatMembers::setChatType(std::string &&pChatType) noexcept
+{
+    chatType_ = std::make_shared<std::string>(std::move(pChatType));
+    dirtyFlag_[5] = true;
+}
+
 void ChatMembers::updateId(const uint64_t id)
 {
 }
@@ -503,7 +568,8 @@ const std::vector<std::string> &ChatMembers::insertColumns() noexcept
         "user_id",
         "role",
         "last_read_message_id",
-        "joined_at"
+        "joined_at",
+        "chat_type"
     };
     return inCols;
 }
@@ -565,6 +631,17 @@ void ChatMembers::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[5])
+    {
+        if(getChatType())
+        {
+            binder << getValueOfChatType();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> ChatMembers::updateColumns() const
@@ -589,6 +666,10 @@ const std::vector<std::string> ChatMembers::updateColumns() const
     if(dirtyFlag_[4])
     {
         ret.push_back(getColumnName(4));
+    }
+    if(dirtyFlag_[5])
+    {
+        ret.push_back(getColumnName(5));
     }
     return ret;
 }
@@ -650,6 +731,17 @@ void ChatMembers::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[5])
+    {
+        if(getChatType())
+        {
+            binder << getValueOfChatType();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value ChatMembers::toJson() const
 {
@@ -694,6 +786,14 @@ Json::Value ChatMembers::toJson() const
     {
         ret["joined_at"]=Json::Value();
     }
+    if(getChatType())
+    {
+        ret["chat_type"]=getValueOfChatType();
+    }
+    else
+    {
+        ret["chat_type"]=Json::Value();
+    }
     return ret;
 }
 
@@ -706,7 +806,7 @@ Json::Value ChatMembers::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 5)
+    if(pMasqueradingVector.size() == 6)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -763,6 +863,17 @@ Json::Value ChatMembers::toMasqueradedJson(
                 ret[pMasqueradingVector[4]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[5].empty())
+        {
+            if(getChatType())
+            {
+                ret[pMasqueradingVector[5]]=getValueOfChatType();
+            }
+            else
+            {
+                ret[pMasqueradingVector[5]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -806,6 +917,14 @@ Json::Value ChatMembers::toMasqueradedJson(
     {
         ret["joined_at"]=Json::Value();
     }
+    if(getChatType())
+    {
+        ret["chat_type"]=getValueOfChatType();
+    }
+    else
+    {
+        ret["chat_type"]=Json::Value();
+    }
     return ret;
 }
 
@@ -846,13 +965,23 @@ bool ChatMembers::validateJsonForCreation(const Json::Value &pJson, std::string 
         if(!validJsonOfField(4, "joined_at", pJson["joined_at"], err, true))
             return false;
     }
+    if(pJson.isMember("chat_type"))
+    {
+        if(!validJsonOfField(5, "chat_type", pJson["chat_type"], err, true))
+            return false;
+    }
+    else
+    {
+        err="The chat_type column cannot be null";
+        return false;
+    }
     return true;
 }
 bool ChatMembers::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                      const std::vector<std::string> &pMasqueradingVector,
                                                      std::string &err)
 {
-    if(pMasqueradingVector.size() != 5)
+    if(pMasqueradingVector.size() != 6)
     {
         err = "Bad masquerading vector";
         return false;
@@ -908,6 +1037,19 @@ bool ChatMembers::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[5].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[5]))
+          {
+              if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, true))
+                  return false;
+          }
+        else
+        {
+            err="The " + pMasqueradingVector[5] + " column cannot be null";
+            return false;
+        }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -953,13 +1095,18 @@ bool ChatMembers::validateJsonForUpdate(const Json::Value &pJson, std::string &e
         if(!validJsonOfField(4, "joined_at", pJson["joined_at"], err, false))
             return false;
     }
+    if(pJson.isMember("chat_type"))
+    {
+        if(!validJsonOfField(5, "chat_type", pJson["chat_type"], err, false))
+            return false;
+    }
     return true;
 }
 bool ChatMembers::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                    const std::vector<std::string> &pMasqueradingVector,
                                                    std::string &err)
 {
-    if(pMasqueradingVector.size() != 5)
+    if(pMasqueradingVector.size() != 6)
     {
         err = "Bad masquerading vector";
         return false;
@@ -998,6 +1145,11 @@ bool ChatMembers::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
       {
           if(!validJsonOfField(4, pMasqueradingVector[4], pJson[pMasqueradingVector[4]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+      {
+          if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, false))
               return false;
       }
     }
@@ -1067,6 +1219,18 @@ bool ChatMembers::validJsonOfField(size_t index,
             if(pJson.isNull())
             {
                 return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 5:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
             if(!pJson.isString())
             {

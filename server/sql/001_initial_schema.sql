@@ -36,6 +36,7 @@ CREATE TABLE chat_members (
     role chat_role NOT NULL DEFAULT 'member',
     last_read_message_id BIGINT, -- FK
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    chat_type chat_type NOT NULL,
     PRIMARY KEY (chat_id, user_id)
 );
 
@@ -128,3 +129,4 @@ CREATE INDEX idx_attachments_message_id ON attachments(message_id);
 CREATE INDEX idx_attachments_post_id ON attachments(post_id);
 CREATE INDEX idx_messages_reply_to ON messages(reply_to_message_id);
 CREATE UNIQUE INDEX idx_direct_chat_users ON chats(direct_user1_id, direct_user2_id) WHERE type = 'direct';
+CREATE UNIQUE INDEX one_saved_chat_per_user ON chat_members(user_id) WHERE chat_type = 'saved';
