@@ -75,6 +75,11 @@ public:
         int64_t chat_id,
         int64_t user_id
     ) = 0;
+    drogon::Task<bool> virtual updateMemberRole(
+        int64_t chat_id,
+        int64_t user_id,
+        std::string new_role
+    ) = 0;
 
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
@@ -122,6 +127,11 @@ public:
     drogon::Task<ChatMember>
     addMember(int64_t chat_id, int64_t user_id, std::string role) override;
     drogon::Task<bool> removeMember(int64_t chat_id, int64_t user_id) override;
+    drogon::Task<bool> updateMemberRole(
+        int64_t chat_id,
+        int64_t user_id,
+        std::string new_role
+    ) override;
 
 private:
     drogon::orm::CoroMapper<Chat> getMapper() {

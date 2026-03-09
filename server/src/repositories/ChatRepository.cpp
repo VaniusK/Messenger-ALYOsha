@@ -384,3 +384,22 @@ Task<bool> ChatRepository::removeMember(int64_t chat_id, int64_t user_id) {
         throw std::runtime_error("Database error");
     }
 }
+
+Task<bool> ChatRepository::updateMemberRole(
+    int64_t chat_id,
+    int64_t user_id,
+    std::string new_role
+) {
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        ChatMember chat_member =
+            co_await chat_member_mapper.findByPrimaryKey({chat_id, user_id});
+        chat_member.setRole(new_role);
+        co_await chat_member_mapper.update(chat_member);
+        co_return true;
+    } catch (const UnexpectedRows &e) {
+        co_return false;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
