@@ -307,9 +307,8 @@ TEST_F(ChatTestFixture, TestAddMember) {
 }
 
 TEST_F(ChatTestFixture, TestAddMemberFail) {
-    /* When valid data is provided,
-    addMember should add a member to the group
-    and return it*/
+    /* When trying to add member to a direct chat,
+    addMember should throw an exception*/
     Chat chat = sync_wait(repo_.getOrCreateDirect(
         dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
     ));
@@ -320,4 +319,16 @@ TEST_F(ChatTestFixture, TestAddMemberFail) {
         )),
         std::logic_error
     );
+}
+
+TEST_F(ChatTestFixture, TestRemoveMember) {
+    /* When valid data is provided,
+    removeMember should remove a member from the group
+    and return true*/
+    Chat chat = sync_wait(repo_.getOrCreateDirect(
+        dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
+    ));
+    EXPECT_TRUE(sync_wait(
+        repo_.removeMember(chat.getValueOfId(), dummy_user2_.getValueOfId())
+    ));
 }
