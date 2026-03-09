@@ -62,7 +62,7 @@
 | `getDirect(user1_id, user2_id)` ✅             | Получить личку | `Chat?`                |
 | `createGroup(name, creator_id, member_ids(vector<id>))` ✅         | Создать групповой чат                      | `Chat`                |
 | `getMembers(chat_id)` ✅                               | Список участников чата                     | `vector<ChatMember>`  |
-| `addMember(chat_id, user_id, role)`                 | Добавить участника                         | `bool`                |
+| `addMember(chat_id, user_id, role)` ✅                 | Добавить участника                         | `ChatMember`                |
 | `removeMember(chat_id, user_id)`                    | Удалить участника                          | `bool`                |
 | `updateMemberRole(chat_id, user_id, new_role)`          | Изменить роль участника                    | `bool`                |
 | `updateInfo(chat_id, name?, avatar?, description?)` | Обновить инфо чата                         | `bool`                |

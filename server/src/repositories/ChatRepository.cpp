@@ -343,3 +343,33 @@ Task<std::vector<ChatMember>> ChatRepository::getMembers(int64_t chat_id) {
         throw std::runtime_error("Database error");
     }
 }
+
+Task<ChatMember>
+ChatRepository::addMember(int64_t chat_id, int64_t user_id, std::string role) {
+    auto chat_member_mapper = getChatMemberMapper();
+    auto mapper = getMapper();
+    Chat chat;
+    try {
+        chat = co_await mapper.findByPrimaryKey(chat_id);
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Chat does not exist");
+    }
+    if (chat.getValueOfType() != messenger::models::ChatType::Group &&
+        chat.getValueOfType() != messenger::models::ChatType::Channel) {
+        throw std::logic_error(
+            "Can't add member to non-group chat of type " +
+            chat.getValueOfType()
+        );
+    }
+    try {
+        ChatMember chat_member;
+        chat_member.setChatId(chat_id);
+        chat_member.setUserId(user_id);
+        chat_member.setRole(role);
+        chat_member.setChatType(messenger::models::ChatType::Group);
+        chat_member = co_await chat_member_mapper.insert(chat_member);
+        co_return chat_member;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
