@@ -430,3 +430,23 @@ Task<bool> ChatRepository::updateInfo(
         throw std::runtime_error("Database error");
     }
 }
+
+Task<Chat> ChatRepository::createSaved(int64_t user_id) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        Chat chat;
+        chat.setType(messenger::models::ChatType::Saved);
+        chat.setName("Saved Messages");
+        chat = co_await mapper.insert(chat);
+        ChatMember chat_member;
+        chat_member.setChatId(chat.getValueOfId());
+        chat_member.setUserId(user_id);
+        chat_member.setRole(messenger::models::ChatRole::Owner);
+        chat_member.setChatType(messenger::models::ChatType::Saved);
+        co_await chat_member_mapper.insert(chat_member);
+        co_return chat;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
