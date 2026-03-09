@@ -373,3 +373,14 @@ ChatRepository::addMember(int64_t chat_id, int64_t user_id, std::string role) {
         throw std::runtime_error("Database error");
     }
 }
+
+Task<bool> ChatRepository::removeMember(int64_t chat_id, int64_t user_id) {
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        co_await chat_member_mapper.deleteByPrimaryKey({chat_id, user_id});
+        co_return true;
+    } catch (const DrogonDbException &e) {
+        // deleteByPrimaryKey can't throw anything
+        throw std::runtime_error("Database error");
+    }
+}
