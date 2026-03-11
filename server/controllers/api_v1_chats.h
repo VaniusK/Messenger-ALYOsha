@@ -5,6 +5,7 @@
 #include "repositories/ChatRepository.hpp"
 #include "repositories/MessageRepository.hpp"
 #include "repositories/UserRepository.hpp"
+#include "services/ChatService.hpp"
 
 using namespace drogon;
 
@@ -30,12 +31,14 @@ class chats : public drogon::HttpController<chats>
     Task<HttpResponsePtr> readMessages(const HttpRequestPtr req, int64_t chat_id);
     Task<HttpResponsePtr> getMessageById(const HttpRequestPtr req, int64_t message_id);
 
-    chats() : chat_repo(std::make_shared<messenger::repositories::ChatRepository>(std::make_unique<messenger::repositories::MessageRepository>(), std::make_unique<messenger::repositories::UserRepository>())) {}
+    chats() {
+      chat_service.setChatRepo(std::make_shared<messenger::repositories::ChatRepository>(std::make_unique<messenger::repositories::MessageRepository>(), std::make_unique<messenger::repositories::UserRepository>()));
+    }
     void setRepo(std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo) {
-      this->chat_repo = chat_repo;
+      this->chat_service.setChatRepo(chat_repo);
     }
   private:
-    std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
+    ChatService chat_service;
 };
 }
 }

@@ -30,7 +30,7 @@ class IpFilter : public HttpFilter<IpFilter>
                   FilterChainCallback &&fccb) override;
 
   private:
-    static std::unordered_map<std::string, ClientRequestsCounter> clients_;
+    static std::unordered_map<uint32_t, ClientRequestsCounter> clients_;
     static std::shared_mutex mutex_;
 
     void cleanUpOldClients();

@@ -10,41 +10,34 @@ namespace api {
 namespace v1 {
 class ChatService {
 public:
-    static Task<HttpResponsePtr> getMessageById(
+    Task<HttpResponsePtr> getMessageById(
         const std::shared_ptr<Json::Value> request_json,
-        int64_t message_id,
-        const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-            chat_repo
+        int64_t message_id
     );
-    static Task<HttpResponsePtr> getUserChats(
+    Task<HttpResponsePtr> getUserChats(
         const std::shared_ptr<Json::Value> request_json,
-        int64_t user_id,
-        const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-            chat_repo
+        int64_t user_id
     );
-    static Task<HttpResponsePtr> createOrGetDirectChat(
+    Task<HttpResponsePtr> createOrGetDirectChat(
+        const std::shared_ptr<Json::Value> request_json
+    );
+    Task<HttpResponsePtr> getChatMessages(
         const std::shared_ptr<Json::Value> request_json,
-        const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-            chat_repo
+        int64_t chat_id
     );
-    static Task<HttpResponsePtr> getChatMessages(
+    Task<HttpResponsePtr> sendMessage(
         const std::shared_ptr<Json::Value> request_json,
-        int64_t chat_id,
-        const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-            chat_repo
+        int64_t chat_id
     );
-    static Task<HttpResponsePtr> sendMessage(
+    Task<HttpResponsePtr> readMessages(
         const std::shared_ptr<Json::Value> request_json,
-        int64_t chat_id,
-        const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-            chat_repo
+        int64_t chat_id
     );
-    static Task<HttpResponsePtr> readMessages(
-        const std::shared_ptr<Json::Value> request_json,
-        int64_t chat_id,
-        const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-            chat_repo
-    );
+    void setChatRepo(std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo) {
+        this->chat_repo = chat_repo;
+    }
+    private:
+        std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
 };
 }  // namespace v1
 }  // namespace api

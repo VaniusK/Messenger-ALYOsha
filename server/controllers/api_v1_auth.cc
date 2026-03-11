@@ -12,29 +12,40 @@ using namespace api::v1;
 Task<HttpResponsePtr> auth::registerUser(HttpRequestPtr req) {
     auto request_json = req->getJsonObject();
     Json::Value response_json;
+    LOG_INFO << "Entered userController -> registerUser";
 
     if (utils::find_missed_fields(
             response_json, request_json, {"handle", "password", "display_name"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    co_return co_await UserService::registerUser(request_json, user_repo);
+    std::string user_handle = (*request_json)["handle"].asString();
+    if (user_handle.size() > 20){
+        response_json["message"] = "Handle is too long";
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
+    co_return co_await user_service.registerUser(request_json);
 }
 
 Task<HttpResponsePtr> auth::loginUser(HttpRequestPtr req) {
     auto request_json = req->getJsonObject();
     Json::Value response_json;
+    LOG_INFO << "Entered userController -> loginUser";
     if (utils::find_missed_fields(
             response_json, request_json, {"handle", "password"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
     std::string user_handle = (*request_json)["handle"].asString();
+    if (user_handle.size() > 20){
+        response_json["message"] = "Handle is too long";
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
     if (!checkUserAuthTries(user_handle)) {
         LOG_WARN << "Too many auth tries to user " << user_handle;
         RETURN_RESPONSE_CODE_429(response_json)
     }
-    co_return co_await UserService::loginUser(request_json, user_repo);
+    co_return co_await user_service.loginUser(request_json);
 }
 
 bool auth::checkUserAuthTries(const std::string &user_handle) {

@@ -2,6 +2,7 @@
 
 #include <drogon/HttpController.h>
 #include "repositories/UserRepository.hpp"
+#include "services/UserService.hpp"
 
 using namespace drogon;
 
@@ -21,12 +22,14 @@ class users : public drogon::HttpController<users>
     Task<HttpResponsePtr> getUserById(const HttpRequestPtr req, int64_t &&user_id);
     Task<HttpResponsePtr> getUserByHandle(const HttpRequestPtr req, std::string &&user_handle);
     Task<HttpResponsePtr> searchUser(const HttpRequestPtr req);
-    users(): user_repo(std::make_shared<messenger::repositories::UserRepository>()) {}
-    void setRepo(std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo) {
-        this->user_repo = user_repo;
+    users(){
+        user_service.setUserRepo(std::make_shared<messenger::repositories::UserRepository>());
+    }
+    void setUserRepo(std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo) {
+        this->user_service.setUserRepo(user_repo);
     }
   private:
-    std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo;
+    UserService user_service;
 
 };
 }

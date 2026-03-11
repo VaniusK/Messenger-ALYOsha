@@ -18,9 +18,7 @@ using ChatPreview = messenger::dto::ChatPreview;
 
 Task<HttpResponsePtr> ChatService::getMessageById(
     const std::shared_ptr<Json::Value> request_json,
-    int64_t message_id,
-    const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-        chat_repo
+    int64_t message_id
 ) {
     Json::Value response_json;
     std::optional<Message> message;
@@ -67,9 +65,7 @@ Task<HttpResponsePtr> ChatService::getMessageById(
 
 Task<HttpResponsePtr> ChatService::getUserChats(
     const std::shared_ptr<Json::Value> request_json,
-    int64_t user_id,
-    const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-        chat_repo
+    int64_t user_id
 ) {
     Json::Value response_json;
     if ((*request_json)["user_id"].asInt64() != user_id) {
@@ -105,9 +101,7 @@ Task<HttpResponsePtr> ChatService::getUserChats(
 }
 
 Task<HttpResponsePtr> ChatService::createOrGetDirectChat(
-    const std::shared_ptr<Json::Value> request_json,
-    const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-        chat_repo
+    const std::shared_ptr<Json::Value> request_json
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
@@ -141,9 +135,7 @@ Task<HttpResponsePtr> ChatService::createOrGetDirectChat(
 
 Task<HttpResponsePtr> ChatService::getChatMessages(
     const std::shared_ptr<Json::Value> request_json,
-    int64_t chat_id,
-    const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-        chat_repo
+    int64_t chat_id
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
@@ -200,9 +192,7 @@ Task<HttpResponsePtr> ChatService::getChatMessages(
 
 Task<HttpResponsePtr> ChatService::sendMessage(
     const std::shared_ptr<Json::Value> request_json,
-    int64_t chat_id,
-    const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
-        chat_repo
+    int64_t chat_id
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
@@ -262,4 +252,14 @@ Task<HttpResponsePtr> ChatService::sendMessage(
     }
     response_json["message"] = message.toJson();
     RETURN_RESPONSE_CODE_201(response_json)
+}
+
+Task<HttpResponsePtr> ChatService::readMessages(
+    const std::shared_ptr<Json::Value> request_json,
+    int64_t chat_id
+) {
+    Json::Value response_json;
+    int64_t user_id = (*request_json)["user_id"].asInt64();
+    response_json["message"] = "PiZda";
+    RETURN_RESPONSE_CODE_200(response_json)
 }

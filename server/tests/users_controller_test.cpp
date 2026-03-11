@@ -12,7 +12,17 @@
 using User = drogon_model::messenger_db::Users;
 using ::testing::Invoke;
 
-class UsersControllerTest : public ::testing::Test {
+struct RegisterTestParams{
+    std::optional<std::string> handle;
+    std::optional<std::string> display_name;
+    std::optional<std::string> password;
+    bool mock_user_exists;
+    bool mock_create_result;
+    drogon::HttpStatusCode expected_status_code;
+    std::string expected_message;
+};
+
+class UsersControllerTest : public /*::testing::TestWithParam<RegisterTestParams> */ ::testing::Test {
 protected:
     std::shared_ptr<MockUserRepository> mock_user_repo;
     api::v1::users user_controller;
@@ -20,10 +30,34 @@ protected:
 
     void SetUp() override {
         mock_user_repo = std::make_shared<MockUserRepository>();
-        user_controller.setRepo(mock_user_repo);
-        auth_controller.setRepo(mock_user_repo);
+        user_controller.setUserRepo(mock_user_repo);
+        auth_controller.setUserRepo(mock_user_repo);
     }
 };
+
+// TEST_P(UsersControllerTest, RegisterUser) {
+//     auto params = GetParam();
+//     EXPECT_CALL(*mock_user_repo, getByHandle(testing::_))
+//     .WillOnce(Invoke([&](std::string) -> drogon::Task<std::optional<User>> {
+//         co_return params.mock_user_exists ? std::optional<User>(User()) : std::nullopt;
+//     }));
+//     EXPECT_CALL(*mock_user_repo, create(testing::_, testing::_, testing::_))
+//     .WillOnce(Invoke([&](std::string, std::string, std::string) -> drogon::Task<bool> {
+//         co_return params.mock_create_result;
+//     }));
+//     Json::Value request_json;
+//     if (params.handle.has_value()) {
+//         request_json["handle"] = params.handle.value();
+//     }
+//     if (params.display_name.has_value()) {
+//         request_json["display_name"] = params.display_name.value();
+//     }
+//     if (params.password.has_value()) {
+//         request_json["password"] = params.password.value();
+//     }
+//     auto req = drogon::HttpRequest::newHttpJsonRequest(request_json);
+//     auto resp = drogon::sync_wait(auth_controller.registerUser(req));
+// }
 
 TEST_F(UsersControllerTest, RegisterUserSuccess) {
     /*If user with given handle doesn't exist,

@@ -9,12 +9,14 @@
 #include <mutex>
 #include <shared_mutex>
 #include <drogon/HttpAppFramework.h>
+#include <drogon/HttpResponse.h>
+#include <drogon/HttpTypes.h>
 #include <json/value.h>
 
 using namespace drogon;
 using namespace api::v1;
 
-std::unordered_map<std::string, ClientRequestsCounter> IpFilter::clients_;
+std::unordered_map<uint32_t, ClientRequestsCounter> IpFilter::clients_;
 std::shared_mutex IpFilter::mutex_;
 
 IpFilter::IpFilter(){
@@ -43,7 +45,16 @@ void IpFilter::doFilter(const HttpRequestPtr &req,
                          FilterCallback &&fcb,
                          FilterChainCallback &&fccb)
 {
-    std::string ip = req->getPeerAddr().toIp();
+    uint32_t ip = req->peerAddr().ipNetEndian();
+    if (ip == 0){
+        LOG_WARN << "Failed to get ip-address from request";
+        Json::Value response_json;
+        response_json["message"] = "Bad ip";
+        auto response = HttpResponse::newHttpJsonResponse(response_json);
+        response->setStatusCode(drogon::k400BadRequest);
+        fcb(response);
+        return;
+    }
     auto now = std::chrono::steady_clock::now();
     {
         std::unique_lock<std::shared_mutex> lock(mutex_);

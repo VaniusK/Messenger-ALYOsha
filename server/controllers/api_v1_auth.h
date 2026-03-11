@@ -2,6 +2,7 @@
 
 #include <drogon/HttpController.h>
 #include "repositories/UserRepository.hpp"
+#include "services/UserService.hpp"
 #include <memory>
 #include <shared_mutex>
 
@@ -31,13 +32,13 @@ class auth : public drogon::HttpController<auth>
       drogon::app().getLoop()->runEvery(std::stoi(std::getenv("SERVER_IP_LIST_CLEANING_SECONDS_COOLDOWN")), [this](){
         this->cleanUpOldUsersAuthTries();
       });
-      user_repo = std::make_shared<messenger::repositories::UserRepository>();
+      user_service.setUserRepo(std::make_shared<messenger::repositories::UserRepository>());
     }
-    void setRepo(std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo) {
-        this->user_repo = user_repo;
+    void setUserRepo(std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo) {
+        this->user_service.setUserRepo(user_repo);
     }
   private:
-    std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo;
+    UserService user_service;
     std::unordered_map<std::string, UserLastAuthTry> users_last_auth_try;
     std::shared_mutex users_last_auth_try_mutex;
 
