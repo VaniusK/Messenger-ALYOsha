@@ -33,11 +33,16 @@ public:
         const std::shared_ptr<Json::Value> request_json,
         int64_t chat_id
     );
-    void setChatRepo(std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo) {
+
+    void setChatRepo(
+        std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
+            chat_repo
+    ) {
         this->chat_repo = chat_repo;
     }
-    private:
-        std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
+
+private:
+    std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
 };
 }  // namespace v1
 }  // namespace api

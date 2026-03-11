@@ -12,7 +12,7 @@
 using User = drogon_model::messenger_db::Users;
 using ::testing::Invoke;
 
-struct RegisterTestParams{
+struct RegisterTestParams {
     std::optional<std::string> handle;
     std::optional<std::string> display_name;
     std::optional<std::string> password;
@@ -22,7 +22,8 @@ struct RegisterTestParams{
     std::string expected_message;
 };
 
-class UsersControllerTest : public /*::testing::TestWithParam<RegisterTestParams> */ ::testing::Test {
+class UsersControllerTest
+    : public /*::testing::TestWithParam<RegisterTestParams> */ ::testing::Test {
 protected:
     std::shared_ptr<MockUserRepository> mock_user_repo;
     api::v1::users user_controller;
@@ -39,10 +40,12 @@ protected:
 //     auto params = GetParam();
 //     EXPECT_CALL(*mock_user_repo, getByHandle(testing::_))
 //     .WillOnce(Invoke([&](std::string) -> drogon::Task<std::optional<User>> {
-//         co_return params.mock_user_exists ? std::optional<User>(User()) : std::nullopt;
+//         co_return params.mock_user_exists ? std::optional<User>(User()) :
+//         std::nullopt;
 //     }));
 //     EXPECT_CALL(*mock_user_repo, create(testing::_, testing::_, testing::_))
-//     .WillOnce(Invoke([&](std::string, std::string, std::string) -> drogon::Task<bool> {
+//     .WillOnce(Invoke([&](std::string, std::string, std::string) ->
+//     drogon::Task<bool> {
 //         co_return params.mock_create_result;
 //     }));
 //     Json::Value request_json;

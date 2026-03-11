@@ -101,9 +101,7 @@ Task<HttpResponsePtr> UserService::loginUser(
     }
 }
 
-Task<HttpResponsePtr> UserService::getUserById(
-    int64_t user_id
-) {
+Task<HttpResponsePtr> UserService::getUserById(int64_t user_id) {
     Json::Value response_json;
     std::optional<User> user;
     try {
@@ -123,9 +121,7 @@ Task<HttpResponsePtr> UserService::getUserById(
     }
 }
 
-Task<HttpResponsePtr> UserService::getUserByHandle(
-    std::string &&user_handle
-) {
+Task<HttpResponsePtr> UserService::getUserByHandle(std::string &&user_handle) {
     Json::Value response_json;
     std::optional<User> user;
     try {
