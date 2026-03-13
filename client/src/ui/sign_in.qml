@@ -1,14 +1,16 @@
 import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
 import Messenger 1.0
 
 Rectangle {
     id: root
-    color: "#f1f2f5"
+    color: "#1c242f"
 
-    Column {
+    ColumnLayout {
         anchors.centerIn: parent
-        width: Math.min(400, parent.width * 0.8)
-        spacing: 15
+        width: Math.min(320, parent.width * 0.8)
+        spacing: 30
 
         Connections {
             target: Auth
@@ -17,7 +19,6 @@ Rectangle {
                 console.log("[Login] Authentication successful! Token:", token)
                 AppState.token = token
                 AppState.currentUserHandle = handleField.text
-                console.log("State token is now:", AppState.token)
                 ChatLayer.connectWebSocket()
                 
                 var loader = root.parent
@@ -27,163 +28,180 @@ Rectangle {
             }
 
             function onLoginFailed(errorMsg) {
-                console.log("[Login] Login failed:", errorMsg)
                 errorText.text = errorMsg
-                errorBox.visible = true
+                errorText.visible = true
                 errorTimer.restart()
             }
         }
 
         Text {
-            text: "Alyosha messenger"
-            font.pixelSize: 28
+            text: "Начните общение в Алёшe!"
+            color: "white"
+            font.pixelSize: 24
             font.bold: true
-            anchors.horizontalCenter: parent.horizontalCenter
-            bottomPadding: 20
+            font.family: "Segoe UI"
+            Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: 10
         }
 
-        // Handle Input
-        Rectangle {
-            width: parent.width
-            height: Math.max(45, Math.min(55, root.height * 0.07))
-            color: "white"
-            border.color: "#ccc"
-            radius: height / 2
-
-            TextInput {
-                id: handleField
-                anchors.fill: parent
-                anchors.leftMargin: parent.radius
-                anchors.rightMargin: parent.radius
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 16
-                
-                Text {
-                    text: "Введите логин"
-                    color: "#aaa"
-                    font.pixelSize: parent.font.pixelSize
-                    visible: !parent.text && !parent.activeFocus
-                    anchors.centerIn: parent
-                }
-            }
-        }
-
-        // Password Input
-        Rectangle {
-            width: parent.width
-            height: Math.max(45, Math.min(55, root.height * 0.07))
-            color: "white"
-            border.color: "#ccc"
-            radius: height / 2
-
-            TextInput {
-                id: passwordField
-                anchors.fill: parent
-                anchors.leftMargin: parent.radius
-                anchors.rightMargin: parent.radius
-                echoMode: TextInput.Password
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 16
-
-                Text {
-                    text: "Введите пароль"
-                    color: "#aaa"
-                    font.pixelSize: parent.font.pixelSize
-                    visible: !parent.text && !parent.activeFocus
-                    anchors.centerIn: parent
-                }
-            }
-        }
-
-        // Error Message box
-        Rectangle {
-            id: errorBox
-            width: parent.width
-            height: Math.max(45, Math.min(55, root.height * 0.07))
-            color: "white"
-            border.color: "#F05C5C"
-            radius: 8
-            visible: false
+        Item {
+            Layout.fillWidth: true
+            height: 50
 
             Text {
-                id: errorText
-                text: ""
-                color: "red"
-                anchors.centerIn: parent
-                font.pixelSize: 12
+                id: handlePlaceholder
+                text: "Логин"
+                color: handleField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                font.pixelSize: (handleField.length > 0 || handleField.activeFocus) ? 12 : 16
+                font.family: "Segoe UI"
+                
+                Behavior on font.pixelSize { NumberAnimation { duration: 150 } }
+                Behavior on anchors.bottomMargin { NumberAnimation { duration: 150 } }
+                
+                anchors.left: parent.left
+                anchors.bottom: handleField.top
+                anchors.bottomMargin: (handleField.length > 0 || handleField.activeFocus) ? 2 : -28
             }
+
+            TextField {
+                id: handleField
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                color: "white"
+                font.pixelSize: 16
+                font.family: "Segoe UI"
+                
+                background: Item {
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: handleField.activeFocus ? 2 : 1
+                        color: handleField.activeFocus ? "#5eb5f7" : "#39434f"
+                        
+                        Behavior on height { NumberAnimation { duration: 100 } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+                }
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            height: 50
+
+            Text {
+                id: passwordPlaceholder
+                text: "Пароль"
+                color: passwordField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                font.pixelSize: (passwordField.length > 0 || passwordField.activeFocus) ? 12 : 16
+                font.family: "Segoe UI"
+                
+                Behavior on font.pixelSize { NumberAnimation { duration: 150 } }
+                Behavior on anchors.bottomMargin { NumberAnimation { duration: 150 } }
+                
+                anchors.left: parent.left
+                anchors.bottom: passwordField.top
+                anchors.bottomMargin: (passwordField.length > 0 || passwordField.activeFocus) ? 2 : -28
+            }
+
+            TextField {
+                id: passwordField
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                color: "white"
+                font.pixelSize: 16
+                font.family: "Segoe UI"
+                echoMode: TextInput.Password
+                
+                background: Item {
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: passwordField.activeFocus ? 2 : 1
+                        color: passwordField.activeFocus ? "#5eb5f7" : "#39434f"
+                        
+                        Behavior on height { NumberAnimation { duration: 100 } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+                }
+            }
+        }
+
+        Text {
+            id: errorText
+            text: ""
+            color: "#f05b5b"
+            font.pixelSize: 14
+            visible: false
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: -10
 
             Timer {
                 id: errorTimer 
                 interval: 5000
-                running: false
                 repeat: false
-                onTriggered: parent.visible = false
+                onTriggered: errorText.visible = false
             }
         }
 
-        // Login Button
         Rectangle {
-            width: parent.width
-            height: Math.max(50, Math.min(60, root.height * 0.1))
-            color: "#007bff"
-            radius: height / 2
+            Layout.fillWidth: true
+            height: 44
+            color: loginMouseArea.containsMouse ? "#459ce0" : "#5eb5f7"
+            radius: 8
+            Layout.topMargin: 10
 
             Text {
-                text: "Sign In"
+                text: "ВОЙТИ"
                 color: "white"
-                font.pixelSize: 16
+                font.pixelSize: 14
                 font.bold: true
+                font.family: "Segoe UI"
                 anchors.centerIn: parent
             }
 
             MouseArea {
+                id: loginMouseArea
                 anchors.fill: parent
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onPressed: parent.opacity = 0.75
-                onReleased: parent.opacity = 1.0
+                
+                onPressed: parent.color = "#3782be"
+                onReleased: parent.color = loginMouseArea.containsMouse ? "#459ce0" : "#5eb5f7"
+                
                 onClicked: {
-                    console.log("[Login] Sign In button clicked")
-                    errorBox.visible = false
+                    errorText.visible = false
                     if (handleField.text.length == 0) {
-                        console.log("[Login] Validation Error: Handle is empty")
-                        errorText.text = "Ошибка! Введите логин"
-                        errorBox.visible = true
+                        errorText.text = "Введите логин!"
+                        errorText.visible = true
                         errorTimer.restart()
                     } else if (passwordField.text.length == 0) {
-                        console.log("[Login] Validation Error: Password is empty")
-                        errorText.text = "Ошибка! Введите пароль"
-                        errorBox.visible = true
+                        errorText.text = "Введите пароль!"
+                        errorText.visible = true
                         errorTimer.restart()
                     } else {
-                        console.log("[Login] Validation Successful. Sending data...", handleField.text)
                         Auth.loginUser(handleField.text, passwordField.text)
                     }
                 }
             }
         }
 
-        // Register Button
-        Rectangle {
-            width: parent.width
-            height: Math.max(50, Math.min(60, root.height * 0.1))
-            color: "#007bff"
-            radius: height / 2
-
-            Text {
-                text: "Register"
-                color: "white"
-                font.pixelSize: 16
-                font.bold: true
-                anchors.centerIn: parent
-            }
+        Text {
+            text: "Регистрация"
+            color: registerMouseArea.containsMouse ? "#5eb5f7" : "#8a96a3"
+            font.pixelSize: 14
+            font.family: "Segoe UI"
+            Layout.alignment: Qt.AlignHCenter
 
             MouseArea {
+                id: registerMouseArea
                 anchors.fill: parent
-                onPressed: parent.opacity = 0.75
-                onReleased: parent.opacity = 1.0
+                anchors.margins: -5
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    console.log("[Login] Navigating to Registration screen")
                     var loader = root.parent
                     if (loader) {
                         loader.source = "sign_up.qml"
