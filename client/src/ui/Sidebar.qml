@@ -4,13 +4,19 @@ import Messenger 1.0
 
 Rectangle {
     id: sidebarRoot
-    color: "#ffffff"
-    border.color: "#e0e0e0"
+    color: "#1c242f"
+    border.color: "#0e1621"
     border.width: 1
 
     property var chatDataList: []
     property bool isSearching: false
     property string pendingSearchQuery: ""
+    property bool hasSearchFocus: searchInput.activeFocus
+
+    function clearSearch() {
+        searchInput.text = ""
+        searchInput.focus = false
+    }
 
     signal logoutRequested()
     signal chatSelected(string chatId, string chatName)
@@ -20,8 +26,25 @@ Rectangle {
 
         function onChatsUpdated(chats) {
             if (!isSearching) {
+                chats.sort(function(a, b) {
+                    var timeA = a.last_message ? new Date(a.last_message.sent_at || a.last_message.timestamp || 0).getTime() : 0;
+                    var timeB = b.last_message ? new Date(b.last_message.sent_at || b.last_message.timestamp || 0).getTime() : 0;
+                    if (isNaN(timeA)) timeA = 0;
+                    if (isNaN(timeB)) timeB = 0;
+                    return timeB - timeA;
+                })
                 chatDataList = chats
                 chatList.model = chatDataList
+            }
+        }
+
+        function onMessageSentSuccess() {
+            ChatLayer.fetchChats()
+        }
+
+        function onIncomingWebSocketMessage(data) {
+            if (data.event_type === "NEW_MESSAGE") {
+                ChatLayer.fetchChats()
             }
         }
 
@@ -60,44 +83,46 @@ Rectangle {
         id: searchHeader
         width: parent.width
         height: 100
-        color: "#f5f5f5"
-        border.color: "#e0e0e0"
-        border.width: 1
+        color: "#242f3d"
         anchors.top: parent.top
 
         RowLayout {
             anchors.fill: parent
-            anchors.margins: 10
-            spacing: 10
+            anchors.margins: 15
+            spacing: 12
 
             Rectangle {
-                width: 40
-                height: 40
-                radius: 20
-                color: "#e0e0e0"
+                width: 90
+                height: 36
+                radius: 8
+                color: logoutBtnMouseArea.containsMouse ? "#d9363e" : "#ff4d4f"
                 Layout.alignment: Qt.AlignVCenter
 
                 Text {
-                    text: "⚙"
-                    font.pixelSize: 20
+                    text: "Выйти"
+                    color: "white"
+                    font.pixelSize: 14
+                    font.bold: true
+                    font.family: "Segoe UI"
                     anchors.centerIn: parent
                 }
 
                 MouseArea {
+                    id: logoutBtnMouseArea
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onPressed: parent.color = "#d0d0d0"
-                    onReleased: parent.color = "#e0e0e0"
+                    onPressed: parent.color = "#a22026"
+                    onReleased: parent.color = logoutBtnMouseArea.containsMouse ? "#d9363e" : "#ff4d4f"
                     onClicked: sidebarRoot.logoutRequested()
                 }
             }
 
             Rectangle {
                 Layout.fillWidth: true
-                height: 40
-                color: "white"
-                border.color: "#ccc"
-                radius: 20
+                height: 36
+                color: "#17212b"
+                radius: 18
                 Layout.alignment: Qt.AlignVCenter
 
                 Timer {
@@ -114,12 +139,21 @@ Rectangle {
                     anchors.rightMargin: 15
                     verticalAlignment: Text.AlignVCenter
                     font.pixelSize: 14
+                    font.family: "Segoe UI"
+                    color: "white"
+                    clip: true
 
                     Text {
                         text: "Поиск..."
-                        color: "#999"
+                        color: "#8a96a3"
+                        font.family: "Segoe UI"
                         visible: !parent.text && !parent.activeFocus
                         anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Keys.onEscapePressed: {
+                        text = ""
+                        focus = false
                     }
 
                     onTextChanged: {
@@ -138,6 +172,16 @@ Rectangle {
         }
     }
 
+    Text {
+        text: "Нет результатов..."
+        color: "#8a96a3"
+        font.pixelSize: 15
+        font.family: "Segoe UI"
+        anchors.centerIn: chatList
+        visible: isSearching && chatList.count === 0 && searchInput.text.trim() !== ""
+        z: 1
+    }
+
     ListView {
         id: chatList
         width: parent.width
@@ -149,25 +193,23 @@ Rectangle {
         delegate: Rectangle {
             id: chatItem
             width: chatList.width
-            height: 100
-            color: index % 2 == 0 ? "#ffffff" : "#fafafa"
-            border.color: "#f0f0f0"
-            border.width: 1
+            height: 70 
+
+            color: chatMouseArea.containsMouse ? "#202b36" : "#1c242f"
             property var itemData: modelData
 
             MouseArea {
+                id: chatMouseArea
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     if (isSearching) {
-                        console.log("[Sidebar] open direct chat with user " + itemData.id)
-                        ChatLayer.openDirectChat(itemData.id, itemData.display_name ?? itemData.handle ?? "Unknown")
+                        ChatLayer.openDirectChat(itemData.id, itemData.display_name ?? itemData.handle ?? "")
                     } else {
-                        console.log("[Sidebar] open chat " + itemData.chat_id)
                         sidebarRoot.chatSelected(
                             String(itemData.chat_id),
-                            itemData.title ? itemData.title : "Unknown"
+                            itemData.title ? itemData.title : ""
                         )
                         ChatLayer.fetchChatHistory(String(itemData.chat_id))
                     }
@@ -176,14 +218,17 @@ Rectangle {
 
             Row {
                 anchors.fill: parent
-                anchors.margins: 10
+                anchors.leftMargin: 15
+                anchors.rightMargin: 15
+                anchors.topMargin: 10
+                anchors.bottomMargin: 10
                 spacing: 15
 
                 Rectangle {
-                    width: Math.min(chatItem.height * 0.6, 60)
-                    height: width
-                    radius: width / 2
-                    color: "#007bff"
+                    width: 50
+                    height: 50
+                    radius: 25
+                    color: "#5eb5f7" 
                     anchors.verticalCenter: parent.verticalCenter
 
                     Text {
@@ -192,28 +237,67 @@ Rectangle {
                             : (itemData.title ? itemData.title.charAt(0).toUpperCase() : "?")
                         color: "white"
                         font.bold: true
-                        font.pixelSize: parent.height * 0.5
+                        font.family: "Segoe UI"
+                        font.pixelSize: 22
                         anchors.centerIn: parent
                     }
                 }
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
+                    width: chatItem.width - 95
 
-                    Text {
-                        text: isSearching
-                            ? (itemData.display_name ?? itemData.handle ?? "Unknown User")
-                            : (itemData.title ?? "Unknown Chat")
-                        font.bold: true
-                        font.pixelSize: Math.max(12, Math.min(16, chatItem.height * 0.2))
+                    Item {
+                        width: parent.width
+                        height: 20
+
+                        Text {
+                            text: isSearching
+                                ? (itemData.display_name ?? itemData.handle ?? "")
+                                : (itemData.title ?? "")
+                            font.bold: true
+                            color: "white"
+                            font.family: "Segoe UI"
+                            font.pixelSize: 15
+                            elide: Text.ElideRight
+                            anchors.left: parent.left
+                            anchors.right: timeText.left
+                            anchors.rightMargin: 10
+                            anchors.top: parent.top
+                        }
+
+                        Text {
+                            id: timeText
+                            visible: !isSearching && !!itemData.last_message && !!itemData.last_message.sent_at
+                            text: {
+                                if (isSearching || !itemData.last_message || !itemData.last_message.sent_at) return "";
+                                var t = itemData.last_message.sent_at;
+                                if (typeof t === "string" && t.indexOf(" ") !== -1) {
+                                    t = t.replace(" ", "T");
+                                }
+                                var d = new Date(t);
+                                if (isNaN(d.getTime())) return "";
+                                var hrs = d.getHours();
+                                var mins = d.getMinutes();
+                                return (hrs < 10 ? "0" : "") + hrs + ":" + (mins < 10 ? "0" : "") + mins;
+                            }
+                            color: "#8a96a3"
+                            font.pixelSize: 12
+                            font.family: "Segoe UI"
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.topMargin: 2
+                        }
                     }
 
                     Text {
-                        text: isSearching
-                            ? "Начать диалог!"
-                            : (itemData.last_message ? itemData.last_message.text : (itemData.unread_count > 0 ? "Новое сообщение" : "Нет сообщений"))
-                        color: "#777"
-                        font.pixelSize: Math.max(10, Math.min(14, chatItem.height * 0.15))
+                        text: isSearching ? "" : (itemData.last_message ? itemData.last_message.text : (itemData.unread_count > 0 ? "Новое сообщение\n" : "Нет сообщений"))
+                        visible: !isSearching
+                        color: "#8a96a3"
+                        font.pixelSize: 14
+                        font.family: "Segoe UI"
+                        elide: Text.ElideRight
+                        width: parent.width
                     }
                 }
             }

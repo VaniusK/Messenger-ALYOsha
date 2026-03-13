@@ -3,8 +3,8 @@ import QtQuick.Layouts
 import Messenger 1.0
 
 Rectangle {
-    id:chatAreaRoot
-    color: "#e5ddd5"
+    id: chatAreaRoot
+    color: "#0e1621"
 
     property bool isChatActive: activeChatId !== ""
     property string activeChatId: ""
@@ -28,7 +28,6 @@ Rectangle {
         }
 
         function onIncomingWebSocketMessage(data) {
-            console.log("QML WS Event " + JSON.stringify(data))
             if (data.event_type === "NEW_MESSAGE" && data.data && data.data.message) {
                 var msg = data.data.message
                 if (String(msg.chat_id) === String(activeChatId)) {
@@ -46,18 +45,18 @@ Rectangle {
 
     Rectangle {
         anchors.centerIn: parent
-        width: placeholderText.width + 30
-        height: 32
-        radius: 16
-        color: "#4d000000"
+        width: Math.min(300, placeholderText.width + 40)
+        height: 36
+        radius: 18
+        color: "#1c242f"
         visible: !isChatActive
 
         Text {
             id: placeholderText
-            text: "Select a chat to start messaging"
+            text: "Выберите чат, чтобы начать общение"
             color: "white"
             font.pixelSize: 14
-            font.bold: true
+            font.family: "Segoe UI"
             anchors.centerIn: parent
         }
     }
@@ -65,31 +64,29 @@ Rectangle {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
-
         visible: isChatActive
 
         Rectangle {
             Layout.fillWidth: true
-            height: 95
-            color: "#f5f5f5"
-            border.color: "#e0e0e0"
-            border.width: 1
-
+            height: 60
+            color: "#242f3d"
+            
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: 10
+                anchors.margins: 15
                 spacing: 15
 
                 Rectangle {
                     width: 40
                     height: 40
                     radius: 20
-                    color: "#007bff"
+                    color: "#5eb5f7"
                     
                     Text {
                         text: activeChatName.charAt(0).toUpperCase()
                         color: "white"
                         font.bold: true
+                        font.family: "Segoe UI"
                         anchors.centerIn: parent
                     }
                 }
@@ -101,13 +98,16 @@ Rectangle {
                     Text {
                         text: activeChatName
                         font.bold: true
+                        color: "white"
+                        font.family: "Segoe UI"
                         font.pixelSize: 16
                     }
 
                     Text {
-                        text: isChatActive ? "В сети" : ""
-                        color: "#007bff"
-                        font.pixelSize: 12
+                        text: isChatActive ? "в сети" : ""
+                        color: "#5eb5f7"
+                        font.pixelSize: 13
+                        font.family: "Segoe UI"
                     }
                 }
             }
@@ -119,32 +119,105 @@ Rectangle {
             Layout.fillHeight: true
             clip: true
             model: currentMessages
-            spacing: 10
+            spacing: 8
             topMargin: 15
             bottomMargin: 15
+            
             delegate: Item {
+                id: msgDelegateItem
                 width: messageList.width
-                height: Math.max(40, messageText.contentHeight + 20)
+                height: messageBubble.height + 6
                 
                 property var msgData: modelData
                 property bool isMe: msgData.is_me
+                
                 Rectangle {
-                    width: Math.min(300, messageList.width * 0.7)
-                    height: parent.height
+                    id: messageBubble
+                    width: Math.min(Math.max(60, messageText.implicitWidth + timeText.implicitWidth + 30), parent.width * 0.75)
+                    height: messageText.implicitHeight + 20
                     radius: 12
-                    color: isMe ? "#dcf8c6" : "#ffffff"
+                    
+                    color: isMe ? "#2b5278" : "#18222d"
+                    
                     anchors.right: isMe ? parent.right : undefined
                     anchors.left: isMe ? undefined : parent.left
-                    anchors.rightMargin: isMe ? 20 : 0
-                    anchors.leftMargin: isMe ? 0 : 20
+                    anchors.rightMargin: isMe ? 15 : 0
+                    anchors.leftMargin: isMe ? 0 : 15
+
+                    Rectangle {
+                        width: 12; height: 12
+                        color: parent.color
+                        anchors.bottom: parent.bottom
+                        anchors.right: isMe ? parent.right : undefined
+                        anchors.left: isMe ? undefined : parent.left
+                    }
+
+                    Item {
+                        anchors.bottom: parent.bottom
+                        anchors.right: isMe ? parent.right : undefined
+                        anchors.left: isMe ? undefined : parent.left
+                        anchors.rightMargin: isMe ? -8 : 0
+                        anchors.leftMargin: isMe ? 0 : -8
+                        width: 8; height: 16
+                        
+                        Rectangle {
+                            width: 16; height: 16
+                            color: messageBubble.color; radius: 4
+                            anchors.bottom: parent.bottom
+                            anchors.right: isMe ? parent.right : undefined
+                            anchors.left: isMe ? undefined : parent.left
+                        }
+                        Rectangle {
+                            width: 16; height: 16
+                            color: "#0e1621"; radius: 8
+                            anchors.bottom: parent.bottom; anchors.bottomMargin: 6
+                            anchors.right: isMe ? parent.right : undefined
+                            anchors.left: isMe ? undefined : parent.left
+                            anchors.rightMargin: isMe ? -8 : 0
+                            anchors.leftMargin: isMe ? 0 : -8
+                        }
+                    }
+
                     Text {
                         id: messageText
                         text: msgData.text
                         anchors.fill: parent
-                        anchors.margins: 10
+                        anchors.margins: 8
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        anchors.bottomMargin: 12
                         wrapMode: Text.Wrap
-                        font.pixelSize: 14
+                        color: "white"
+                        font.pixelSize: 15
+                        font.family: "Segoe UI"
                         verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignLeft
+                    }
+
+                    Text {
+                        id: timeText
+                        text: {
+                            var t = msgData.sent_at;
+                            if (!t) return "12:00"; 
+
+                            if (typeof t === "string" && t.indexOf(" ") !== -1) {
+                                t = t.replace(" ", "T");
+                            }
+                            var d = new Date(t);
+                            if (isNaN(d.getTime())) return "??:??";
+
+                            var hrs = d.getHours();
+                            var mins = d.getMinutes();
+                            return (hrs < 10 ? "0" : "") + hrs + ":" + (mins < 10 ? "0" : "") + mins;
+                        }
+                        color: isMe ? "#78aee3" : "#728392"
+                        font.pixelSize: 11
+                        font.family: "Segoe UI"
+                        
+                        anchors.bottom: parent.bottom
+                        anchors.right: parent.right
+                        anchors.bottomMargin: 4
+                        anchors.rightMargin: 12
                     }
                 }
             }
@@ -153,8 +226,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             height: 60
-            color: "#f5f5f5"
-            border.color: "#e0e0e0"
+            color: "#1c242f"
 
             RowLayout {
                 anchors.fill: parent
@@ -165,22 +237,32 @@ Rectangle {
                     Layout.fillWidth: true
                     height: 40
                     radius: 20
-                    color: "white"
-                    border.color: "#ccc"
-
+                    color: "#242f3d"
+                    
                     TextInput {
                         id: messageInput
                         anchors.fill: parent
-                        anchors.leftMargin: 15
-                        anchors.rightMargin: 15
+                        anchors.leftMargin: 20
+                        anchors.rightMargin: 20
                         verticalAlignment: Text.AlignVCenter
-                        font.pixelSize: 14
+                        color: "white"
+                        font.pixelSize: 15
+                        font.family: "Segoe UI"
+                        clip: true
                         
                         Text {
-                            text: isChatActive ? "Write a message..." : "Выберите чат"
-                            color: "#999"
+                            text: isChatActive ? "Сообщение..." : ""
+                            color: "#8a96a3"
+                            font.family: "Segoe UI"
+                            font.pixelSize: 15
                             visible: !parent.text && !parent.activeFocus
                             anchors.verticalCenter: parent.verticalCenter
+                        }
+                        
+                        Keys.onReturnPressed: {
+                            if (messageInput.text.trim() != "" && isChatActive) {
+                                ChatLayer.sendMessage(activeChatId, messageInput.text.trim())
+                            }
                         }
                     }
                 }
@@ -189,13 +271,14 @@ Rectangle {
                     width: 40
                     height: 40
                     radius: 20
-                    color: "#007bff"
+                    color: "#5eb5f7"
                     
                     Text {
                         text: "➤"
                         color: "white"
                         font.pixelSize: 18
                         anchors.centerIn: parent
+                        anchors.horizontalCenterOffset: 1
                     }
 
                     MouseArea {
@@ -203,7 +286,6 @@ Rectangle {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             if (messageInput.text.trim() != "" && isChatActive) {
-                                console.log("[ChatArea] Sending message...")
                                 ChatLayer.sendMessage(activeChatId, messageInput.text.trim())
                             }
                         }

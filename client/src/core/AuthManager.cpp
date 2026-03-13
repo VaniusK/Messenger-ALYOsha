@@ -31,8 +31,14 @@ void AuthManager::registerUser(
 
         if (statusCode == 201) {
             emit registerSuccess();
+        } else if (statusCode == 409) {
+            emit registerFailed("Пользователь с таким логином уже существует");
+        } else if (statusCode == 400) {
+            emit registerFailed("Проверьте заполненные поля");
         } else {
-            emit registerFailed("Server Error: " + QString::number(statusCode));
+            emit registerFailed(
+                "Ошибка сервера: " + QString::number(statusCode)
+            );
         }
     });
 }
@@ -64,8 +70,12 @@ void AuthManager::loginUser(const QString &handle, const QString &password) {
             m_stateManager->setToken(token);
             emit loginSuccess(token);
             fetchUserId(handle);
+        } else if (statusCode == 401 || statusCode == 404) {
+            emit loginFailed("Неверный логин или пароль");
         } else {
-            emit loginFailed("Login Failed: " + QString::number(statusCode));
+            emit loginFailed(
+                "Ошибка авторизации (" + QString::number(statusCode) + ")"
+            );
         }
     });
 }

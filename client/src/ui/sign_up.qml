@@ -1,14 +1,16 @@
 import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
 import Messenger 1.0
 
 Rectangle {
     id: root
-    color: "#f1f2f5"
+    color: "#1c242f"
 
-    Column {
+    ColumnLayout {
         anchors.centerIn: parent
-        width: Math.min(400, parent.width * 0.8)
-        spacing: 15
+        width: Math.min(320, parent.width * 0.8)
+        spacing: 25
 
         Connections {
             target: Auth
@@ -22,232 +24,264 @@ Rectangle {
             }
 
             function onRegisterFailed(errorMsg) {
-                console.log("[Sign Up] Registration failed: ", errorMsg)
                 errorText.text = errorMsg
-                errorBox.visible = true
+                errorText.visible = true
                 errorTimer.restart()
             }
         }
 
         Text {
-            text: "Регистрация"
-            font.pixelSize: 28
+            text: "Зарегистрируйтесь в Алёше!"
+            color: "white"
+            font.pixelSize: 24
             font.bold: true
-            anchors.horizontalCenter: parent.horizontalCenter
-            bottomPadding: 20
+            font.family: "Segoe UI"
+            Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: 5
         }
 
-        // Handle Input
-        Rectangle {
-            width: parent.width
-            height: Math.max(45, Math.min(55, root.height * 0.07))
-            color: "white"
-            border.color: "#ccc"
-            radius: height / 2
-
-            TextInput {
-                id: handleField
-                anchors.fill: parent
-                anchors.leftMargin: parent.radius
-                anchors.rightMargin: parent.radius
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 16
-                
-                Text {
-                    text: "Введите логин"
-                    color: "#aaa"
-                    font.pixelSize: parent.font.pixelSize
-                    visible: !parent.text && !parent.activeFocus
-                    anchors.centerIn: parent
-                }
-            }
-        }
-
-        // Display Name Input
-        Rectangle {
-            width: parent.width
-            height: Math.max(45, Math.min(55, root.height * 0.07))
-            color: "white"
-            border.color: "#ccc"
-            radius: height / 2
-
-            TextInput {
-                id: displayNameField
-                anchors.fill: parent
-                anchors.leftMargin: parent.radius
-                anchors.rightMargin: parent.radius
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 16
-                
-                Text {
-                    text: "Введите имя"
-                    color: "#aaa"
-                    font.pixelSize: parent.font.pixelSize
-                    visible: !parent.text && !parent.activeFocus
-                    anchors.centerIn: parent
-                }
-            }
-        }
-
-        // Password Input
-        Rectangle {
-            width: parent.width
-            height: Math.max(45, Math.min(55, root.height * 0.07))
-            color: "white"
-            border.color: "#ccc"
-            radius: height / 2
-
-            TextInput {
-                id: passwordField
-                anchors.fill: parent
-                anchors.leftMargin: parent.radius
-                anchors.rightMargin: parent.radius
-                echoMode: TextInput.Password
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 16
-
-                Text {
-                    text: "Придумайте надежный пароль"
-                    color: "#aaa"
-                    font.pixelSize: parent.font.pixelSize
-                    visible: !parent.text && !parent.activeFocus
-                    anchors.centerIn: parent
-                }
-            }
-        }
-
-        // Repeat Password Input
-        Rectangle {
-            width: parent.width
-            height: Math.max(45, Math.min(55, root.height * 0.07))
-            color: "white"
-            border.color: "#ccc"
-            radius: height / 2
-
-            TextInput {
-                id: repeatPasswordField
-                anchors.fill: parent
-                anchors.leftMargin: parent.radius
-                anchors.rightMargin: parent.radius
-                echoMode: TextInput.Password
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 16
-
-                Text {
-                    text: "Повторите пароль"
-                    color: "#aaa"
-                    font.pixelSize: parent.font.pixelSize
-                    visible: !parent.text && !parent.activeFocus
-                    anchors.centerIn: parent
-                }
-            }
-        }
-
-        // Error Message box
-        Rectangle {
-            id: errorBox
-            width: parent.width
-            height: Math.max(45, Math.min(55, root.height * 0.07))
-            color: "white"
-            border.color: "#F05C5C"
-            radius: 8
-            visible: false
+        Item {
+            Layout.fillWidth: true
+            height: 50
 
             Text {
-                id: errorText
-                text: ""
-                color: "red"
-                anchors.centerIn: parent
-                font.pixelSize: 12
+                text: "Логин"
+                color: handleField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                font.pixelSize: (handleField.length > 0 || handleField.activeFocus) ? 12 : 16
+                font.family: "Segoe UI"
+                
+                Behavior on font.pixelSize { NumberAnimation { duration: 150 } }
+                Behavior on anchors.bottomMargin { NumberAnimation { duration: 150 } }
+                
+                anchors.left: parent.left
+                anchors.bottom: handleField.top
+                anchors.bottomMargin: (handleField.length > 0 || handleField.activeFocus) ? 2 : -28
             }
+
+            TextField {
+                id: handleField
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                color: "white"
+                font.pixelSize: 16
+                font.family: "Segoe UI"
+                
+                background: Item {
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: handleField.activeFocus ? 2 : 1
+                        color: handleField.activeFocus ? "#5eb5f7" : "#39434f"
+                        
+                        Behavior on height { NumberAnimation { duration: 100 } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+                }
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            height: 50
+
+            Text {
+                text: "Имя профиля"
+                color: displayNameField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                font.pixelSize: (displayNameField.length > 0 || displayNameField.activeFocus) ? 12 : 16
+                font.family: "Segoe UI"
+                
+                Behavior on font.pixelSize { NumberAnimation { duration: 150 } }
+                Behavior on anchors.bottomMargin { NumberAnimation { duration: 150 } }
+                
+                anchors.left: parent.left
+                anchors.bottom: displayNameField.top
+                anchors.bottomMargin: (displayNameField.length > 0 || displayNameField.activeFocus) ? 2 : -28
+            }
+
+            TextField {
+                id: displayNameField
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                color: "white"
+                font.pixelSize: 16
+                font.family: "Segoe UI"
+                
+                background: Item {
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: displayNameField.activeFocus ? 2 : 1
+                        color: displayNameField.activeFocus ? "#5eb5f7" : "#39434f"
+                        
+                        Behavior on height { NumberAnimation { duration: 100 } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+                }
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            height: 50
+
+            Text {
+                text: "Пароль"
+                color: passwordField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                font.pixelSize: (passwordField.length > 0 || passwordField.activeFocus) ? 12 : 16
+                font.family: "Segoe UI"
+                
+                Behavior on font.pixelSize { NumberAnimation { duration: 150 } }
+                Behavior on anchors.bottomMargin { NumberAnimation { duration: 150 } }
+                
+                anchors.left: parent.left
+                anchors.bottom: passwordField.top
+                anchors.bottomMargin: (passwordField.length > 0 || passwordField.activeFocus) ? 2 : -28
+            }
+
+            TextField {
+                id: passwordField
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                color: "white"
+                font.pixelSize: 16
+                font.family: "Segoe UI"
+                echoMode: TextInput.Password
+                
+                background: Item {
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: passwordField.activeFocus ? 2 : 1
+                        color: passwordField.activeFocus ? "#5eb5f7" : "#39434f"
+                        
+                        Behavior on height { NumberAnimation { duration: 100 } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+                }
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            height: 50
+
+            Text {
+                text: "Повторите пароль"
+                color: repeatPasswordField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                font.pixelSize: (repeatPasswordField.length > 0 || repeatPasswordField.activeFocus) ? 12 : 16
+                font.family: "Segoe UI"
+                
+                Behavior on font.pixelSize { NumberAnimation { duration: 150 } }
+                Behavior on anchors.bottomMargin { NumberAnimation { duration: 150 } }
+                
+                anchors.left: parent.left
+                anchors.bottom: repeatPasswordField.top
+                anchors.bottomMargin: (repeatPasswordField.length > 0 || repeatPasswordField.activeFocus) ? 2 : -28
+            }
+
+            TextField {
+                id: repeatPasswordField
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                color: "white"
+                font.pixelSize: 16
+                font.family: "Segoe UI"
+                echoMode: TextInput.Password
+                
+                background: Item {
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: repeatPasswordField.activeFocus ? 2 : 1
+                        color: repeatPasswordField.activeFocus ? "#5eb5f7" : "#39434f"
+                        
+                        Behavior on height { NumberAnimation { duration: 100 } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+                }
+            }
+        }
+
+        Text {
+            id: errorText
+            text: ""
+            color: "#f05b5b"
+            font.pixelSize: 14
+            visible: false
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: -10
 
             Timer {
                 id: errorTimer 
                 interval: 5000
-                running: false
                 repeat: false
-                onTriggered: parent.visible = false
+                onTriggered: errorText.visible = false
             }
         }
 
-        // Sign Up Button
         Rectangle {
-            width: parent.width
-            height: Math.max(50, Math.min(60, root.height * 0.1))
-            color: "#007bff"
-            radius: height / 2
+            Layout.fillWidth: true
+            height: 44
+            color: registerButtonMouseArea.containsMouse ? "#459ce0" : "#5eb5f7"
+            radius: 8
+            Layout.topMargin: 10
 
             Text {
-                text: "Sign Up!"
+                text: "СОЗДАТЬ АККАУНТ"
                 color: "white"
-                font.pixelSize: 16
+                font.pixelSize: 14
                 font.bold: true
+                font.family: "Segoe UI"
                 anchors.centerIn: parent
             }
 
             MouseArea {
+                id: registerButtonMouseArea
                 anchors.fill: parent
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onPressed: parent.opacity = 0.75
-                onReleased: parent.opacity = 1.0
+                
+                onPressed: parent.color = "#3782be"
+                onReleased: parent.color = registerButtonMouseArea.containsMouse ? "#459ce0" : "#5eb5f7"
+                
                 onClicked: {
-                    console.log("[Sign Up] Sign Up button clicked")
-                    errorBox.visible = false
+                    errorText.visible = false
                     
-                    if (handleField.text.length == 0) {
-                        console.log("[Sign Up] Validation Error: Handle is empty")
-                        errorText.text = "Введите логин!"
-                        errorBox.visible = true
+                    if (handleField.length == 0 || displayNameField.length == 0 || passwordField.length == 0) {
+                        errorText.text = "Пожалуйста, заполните все поля"
+                        errorText.visible = true
                         errorTimer.restart()
                         return
-                    } else if (displayNameField.text.length == 0) {
-                        console.log("[Sign Up] Validation Error: Display Name is empty")
-                        errorText.text = "Введите имя!"
-                        errorBox.visible = true
-                        errorTimer.restart()
-                        return
-                    } else if (passwordField.text.length == 0) {
-                        console.log("[Sign Up] Validation Error: Password is empty")
-                        errorText.text = "Введите пароль!"
-                        errorBox.visible = true
-                        errorTimer.restart()
-                        return
-                    } else if (passwordField.text != repeatPasswordField.text) {
-                        console.log("[Sign Up] Validation Error: Passwords do not match")
+                    } else if (passwordField.text !== repeatPasswordField.text) {
                         errorText.text = "Пароли не совпадают!"
-                        errorBox.visible = true
+                        errorText.visible = true
                         errorTimer.restart()
                         return
                     }
 
-                    console.log("[Sign Up] Validation successful. Sending request to server...")
                     Auth.registerUser(handleField.text, displayNameField.text, passwordField.text)
-                }   
+                }
             }
         }
 
-        // Back to Login Link
-        Rectangle {
-            width: parent.width
-            height: Math.max(50, Math.min(60, root.height * 0.1))
-            color: "transparent"
-            border.color: "#007bff"
-            border.width: 2
-            radius: height / 2
-            
-            Text {
-                text: "Уже есть аккаунт? Войти"
-                color: "#007bff"
-                font.pixelSize: 14
-                font.bold: true
-                anchors.centerIn: parent
-            }
+        Text {
+            text: "Уже есть аккаунт? Войти"
+            color: gotoLoginMouseArea.containsMouse ? "#5eb5f7" : "#8a96a3"
+            font.pixelSize: 14
+            font.family: "Segoe UI"
+            Layout.alignment: Qt.AlignHCenter
 
             MouseArea {
+                id: gotoLoginMouseArea
                 anchors.fill: parent
+                anchors.margins: -5
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    console.log("[Sign Up] Navigating to Login screen (already have account)")
                     var loader = root.parent
                     if (loader) {
                         loader.source = "sign_in.qml"
