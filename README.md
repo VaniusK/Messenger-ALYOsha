@@ -1,4 +1,4 @@
-[](https://raw.githubusercontent.com/VaniusK/Messenger-ALYOsha/dev/docs/alesha_sticker_1.png)
+![alt text](https://github.com/VaniusK/Messenger-ALYOsha/raw/dev/docs/alesha_sticker_1.png "Стикер 1")
 
 ![Version](https://img.shields.io/github/v/tag/VaniusK/Messenger-ALYOsha?label=version)
 ![Build](https://img.shields.io/github/actions/workflow/status/VaniusK/Messenger-ALYOsha/ci.yml)
@@ -13,7 +13,7 @@
 
 Проект разрабатывается студентами ВШЭ (СПб) как учебная работа по курсу C++. Наша цель — создать производительный<!--ха -->, масштабируемый<!--ха-ха --> и безопасный<!--ахахахахахах --> мессенджер с использованием современных архитектурных паттернов.
 
-[](https://raw.githubusercontent.com/VaniusK/Messenger-ALYOsha/dev/docs/alesha_sticker_6.png)
+![alt text](https://github.com/VaniusK/Messenger-ALYOsha/raw/dev/docs/alesha_sticker_6.png "Стикер 6")
 
 ### Текущие возможности (MVP):
 *   **Личные чаты:** Поддержка диалогов в реальном времени.
@@ -45,7 +45,7 @@
 
 ---
 
-[](https://raw.githubusercontent.com/VaniusK/Messenger-ALYOsha/dev/docs/alesha_sticker_9.png)
+![alt text](https://github.com/VaniusK/Messenger-ALYOsha/raw/dev/docs/alesha_sticker_9.png "Стикер 9")
 
 ## Быстрый старт
 
