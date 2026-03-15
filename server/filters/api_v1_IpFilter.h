@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <chrono>
 #include <shared_mutex>
+#include <unordered_set>
 using namespace drogon;
 namespace api
 {
@@ -32,6 +33,8 @@ class IpFilter : public HttpFilter<IpFilter>
   private:
     static std::unordered_map<uint32_t, ClientRequestsCounter> clients_;
     static std::shared_mutex mutex_;
+
+    std::unordered_set<uint32_t> whitelist_ips_;
 
     void cleanUpOldClients();
 

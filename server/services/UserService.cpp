@@ -33,7 +33,7 @@ Task<HttpResponsePtr> UserService::registerUser(
 
     if (user == std::nullopt) {
         std::string password_hash =
-            BCrypt::generateHash((*request_json)["password"].asString());
+            BCrypt::generateHash((*request_json)["password"].asString(), 10);
         bool success = co_await user_repo->create(
             (*request_json)["handle"].asCString(),
             (*request_json)["display_name"].asCString(), password_hash
@@ -117,6 +117,7 @@ Task<HttpResponsePtr> UserService::getUserById(int64_t user_id) {
         RETURN_RESPONSE_CODE_404(response_json)
     } else {
         response_json = user->toJson();
+        response_json.removeMember("password_hash");
         RETURN_RESPONSE_CODE_200(response_json)
     }
 }
@@ -137,6 +138,7 @@ Task<HttpResponsePtr> UserService::getUserByHandle(std::string &&user_handle) {
         RETURN_RESPONSE_CODE_404(response_json)
     } else {
         response_json = user->toJson();
+        response_json.removeMember("password_hash");
         RETURN_RESPONSE_CODE_200(response_json)
     }
 }
@@ -159,7 +161,9 @@ Task<HttpResponsePtr> UserService::searchUser(
     }
     Json::Value jsonArray(Json::arrayValue);
     for (const auto &user : users) {
-        jsonArray.append(user.toJson());
+        Json::Value user_json = user.toJson();
+        user_json.removeMember("password_hash");
+        jsonArray.append(user_json);
     }
     response_json["results"] = jsonArray;
     RETURN_RESPONSE_CODE_200(response_json)

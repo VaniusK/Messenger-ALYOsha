@@ -2,6 +2,7 @@
 
 #include <drogon/HttpController.h>
 #include "repositories/UserRepository.hpp"
+#include "repositories/ChatRepository.hpp"
 #include "services/UserService.hpp"
 #include <memory>
 #include <shared_mutex>
@@ -33,9 +34,13 @@ class auth : public drogon::HttpController<auth>
         this->cleanUpOldUsersAuthTries();
       });
       user_service.setUserRepo(std::make_shared<messenger::repositories::UserRepository>());
+      user_service.setChatRepo(std::make_shared<messenger::repositories::ChatRepository>(std::make_unique<messenger::repositories::MessageRepository>(), std::make_unique<messenger::repositories::UserRepository>()));
     }
     void setUserRepo(std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo) {
         this->user_service.setUserRepo(user_repo);
+    }
+    void setChatRepo(std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo) {
+        this->user_service.setChatRepo(chat_repo);
     }
   private:
     UserService user_service;
@@ -44,6 +49,9 @@ class auth : public drogon::HttpController<auth>
 
     bool checkUserAuthTries(const std::string &user_handle);
     void cleanUpOldUsersAuthTries();
+
+    bool isPasswordValid(const std::string&);
+    bool isHandleValid(const std::string&);
 
     const int MAX_REQUESTS = std::stoi(std::getenv("SERVER_MAX_REQUESTS_PER_WINDOW"));
     const int WINDOW_SECONDS = std::stoi(std::getenv("SERVER_WINDOW_FOR_REQUESTS_SECONDS"));

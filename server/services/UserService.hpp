@@ -3,6 +3,7 @@
 #include <json/value.h>
 #include <memory>
 #include "include/repositories/UserRepository.hpp"
+#include "repositories/ChatRepository.hpp"
 
 using namespace drogon;
 
@@ -29,8 +30,16 @@ public:
         this->user_repo = user_repo;
     }
 
+    void setChatRepo(
+        const std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
+            chat_repo
+    ) {
+        this->chat_repo = chat_repo;
+    }
+
 private:
     std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo;
+    std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
 };
 }  // namespace v1
 }  // namespace api

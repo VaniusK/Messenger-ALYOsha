@@ -260,6 +260,22 @@ Task<HttpResponsePtr> ChatService::readMessages(
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
-    response_json["message"] = "PiZda";
-    RETURN_RESPONSE_CODE_200(response_json)
+    bool success;
+    try {
+        success = co_await chat_repo->markAsRead(
+            chat_id, (*request_json)["user_id"].asInt64(),
+            (*request_json)["last_read_message_id"].asInt64()
+        );
+        if (success) {
+            response_json["message"] = "Succussfully read last messages";
+            RETURN_RESPONSE_CODE_200(response_json)
+        } else {
+            response_json["message"] = "Something went wrong";
+            RETURN_RESPONSE_CODE_500(response_json)
+        }
+    } catch (std::exception &e) {
+        LOG_WARN << "Couldn't read message" << e.what();
+        response_json["message"] = "Internal server error";
+        RETURN_RESPONSE_CODE_500(response_json)
+    }
 }

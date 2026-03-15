@@ -51,7 +51,7 @@ Task<HttpResponsePtr> chats::readMessages(const HttpRequestPtr req, int64_t chat
     (*request_json)["user_id"] = req->getAttributes()->get<int64_t>("user_id");
     Json::Value response_json;
     if (utils::find_missed_fields(
-            response_json, request_json, {"to_read_messages"}
+            response_json, request_json, {"last_read_message_id"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }

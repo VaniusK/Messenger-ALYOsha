@@ -14,6 +14,8 @@
 #include <drogon/HttpResponse.h>
 #include <drogon/HttpTypes.h>
 #include <json/value.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 using namespace drogon;
 using namespace api::v1;
@@ -26,6 +28,21 @@ IpFilter::IpFilter() {
         std::stoi(std::getenv("SERVER_IP_LIST_CLEANING_SECONDS_COOLDOWN")),
         [this]() { this->cleanUpOldClients(); }
     );
+    auto custom_config = drogon::app().getCustomConfig();
+    if (custom_config.isMember("whitelist_ips") && custom_config["whitelist_ips"].isArray()) {
+        auto ips_list = custom_config["whitelist_ips"];
+        for (auto &ip_val : ips_list){
+            std::string ip_str = ip_val.asString();
+            struct in_addr addr;
+            if (inet_pton(AF_INET, ip_str.c_str(), &addr) == 1){
+                whitelist_ips_.insert(addr.s_addr);
+                LOG_INFO << "Added new ip to whitelist: " << ip_str;
+            }
+            else{
+                LOG_INFO << "Failed to add ip to whitelist: " << ip_str;
+            }
+        }
+    }
 }
 
 void IpFilter::cleanUpOldClients() {
@@ -57,6 +74,10 @@ void IpFilter::doFilter(const HttpRequestPtr &req,
         auto response = HttpResponse::newHttpJsonResponse(response_json);
         response->setStatusCode(drogon::k400BadRequest);
         fcb(response);
+        return;
+    }
+    if (whitelist_ips_.count(ip) > 0) {
+        fccb();
         return;
     }
     auto now = std::chrono::steady_clock::now();

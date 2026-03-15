@@ -3,11 +3,20 @@
 #include <drogon/HttpTypes.h>
 #include <drogon/drogon_callbacks.h>
 #include <json/value.h>
+#include <regex>
 #include "services/UserService.hpp"
 #include "utils/controller_utils.hpp"
 #include "utils/server_response_macro.hpp"
 
 using namespace api::v1;
+
+bool auth::isPasswordValid(const std::string &password){
+    return !(password.size() < 8 || password.size() > 72);
+}
+bool auth::isHandleValid(const std::string &handle){
+    static const std::regex handle_regex("^[a-zA-Z0-9_]{3,32}$");
+    return std::regex_match(handle, handle_regex);
+}
 
 Task<HttpResponsePtr> auth::registerUser(HttpRequestPtr req) {
     auto request_json = req->getJsonObject();
@@ -19,9 +28,12 @@ Task<HttpResponsePtr> auth::registerUser(HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    std::string user_handle = (*request_json)["handle"].asString();
-    if (user_handle.size() > 20){
-        response_json["message"] = "Handle is too long";
+    if (!isHandleValid((*request_json)["handle"].asString())){
+        response_json["message"] = "Handle is invalid";
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
+    if (!isPasswordValid((*request_json)["password"].asString())){
+        response_json["message"] = "Password is invalid";
         RETURN_RESPONSE_CODE_400(response_json)
     }
     co_return co_await user_service.registerUser(request_json);
@@ -37,8 +49,12 @@ Task<HttpResponsePtr> auth::loginUser(HttpRequestPtr req) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
     std::string user_handle = (*request_json)["handle"].asString();
-    if (user_handle.size() > 20){
-        response_json["message"] = "Handle is too long";
+    if (!isHandleValid(user_handle)){
+        response_json["message"] = "Handle is invalid";
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
+    if (!isPasswordValid((*request_json)["password"].asString())){
+        response_json["message"] = "Password is invalid";
         RETURN_RESPONSE_CODE_400(response_json)
     }
     if (!checkUserAuthTries(user_handle)) {
