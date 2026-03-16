@@ -5,7 +5,6 @@
 #include "controllers/api_v1_ChatWebSocket.h"
 #include "include/repositories/ChatRepository.hpp"
 #include "models/Messages.h"
-#include "utils/Enum.hpp"
 #include "utils/server_response_macro.hpp"
 
 using namespace drogon;
@@ -15,6 +14,24 @@ using ChatRepo = messenger::repositories::ChatRepository;
 using Message = drogon_model::messenger_db::Messages;
 using Chat = drogon_model::messenger_db::Chats;
 using ChatPreview = messenger::dto::ChatPreview;
+
+Task<bool> ChatService::checkChatAccess(int64_t user_id, int64_t chat_id) {
+    std::vector<messenger::repositories::ChatMember> chat_members;
+    try {
+        chat_members = co_await chat_repo->getMembers(chat_id);
+    } catch (std::exception &e) {
+        LOG_WARN << "Couldnt't get chat members for check access: " << e.what();
+        co_return false;
+    }
+    bool is_member = false;
+    for (const auto &chat_member : chat_members) {
+        if (chat_member.getValueOfUserId() == user_id) {
+            is_member = true;
+            break;
+        }
+    }
+    co_return is_member;
+}
 
 Task<HttpResponsePtr> ChatService::getMessageById(
     const std::shared_ptr<Json::Value> request_json,
@@ -36,28 +53,12 @@ Task<HttpResponsePtr> ChatService::getMessageById(
             "Message with id " + std::to_string(message_id) + " doesn't exist";
         RETURN_RESPONSE_CODE_404(response_json)
     }
-    // TODO : move to one function
-    std::optional<Chat> chat;
-    try {
-        chat = co_await chat_repo->getById(message->getValueOfChatId());
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get chat by id: " << e.what();
-        response_json["message"] = "Internal server error: failed to get chat";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
-    if (!chat.has_value()) {
-        LOG_WARN << "Chat with id " << message->getValueOfChatId()
-                 << " provided by message doesn't exist";
-        response_json["message"] =
-            "Message with id " + std::to_string(message_id) + " doesn't exist";
-        RETURN_RESPONSE_CODE_404(response_json)
-    }
-    int64_t user_id = (*request_json)["user_id"].asInt64();
-    if (chat->getValueOfType() == messenger::models::ChatType::Direct &&
-        (chat->getValueOfDirectUser1Id() != user_id &&
-         chat->getValueOfDirectUser2Id() != user_id)) {
+    bool is_member = co_await checkChatAccess(
+        (*request_json)["user_id"].asInt64(), message->getValueOfChatId()
+    );
+    if (!is_member) {
         response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json)
+        RETURN_RESPONSE_CODE_403(response_json);
     }
     response_json["message"] = message->getValueOfText();
     RETURN_RESPONSE_CODE_200(response_json)
@@ -148,27 +149,17 @@ Task<HttpResponsePtr> ChatService::getChatMessages(
     int64_t limit = request_json->isMember("limit")
                         ? (*request_json)["limit"].asInt64()
                         : 20;
-
-    std::optional<Chat> chat;
-    // TODO : move to one function
-    try {
-        chat = co_await chat_repo->getById(chat_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get chat by id: " << e.what();
-        response_json["message"] = "Internal server error: failed to get chat";
-        RETURN_RESPONSE_CODE_500(response_json)
+    if (limit > 100) {
+        limit = 100;
     }
-    if (!chat.has_value()) {
-        LOG_WARN << "Chat with id " << chat_id << " doesn't exist";
-        response_json["message"] =
-            "Chat with id " + std::to_string(chat_id) + " doesn't exist";
-        RETURN_RESPONSE_CODE_404(response_json)
+    if (limit < 1) {
+        limit = 1;
     }
-    if (chat->getValueOfType() == messenger::models::ChatType::Direct &&
-        (chat->getValueOfDirectUser1Id() != user_id &&
-         chat->getValueOfDirectUser2Id() != user_id)) {
+    bool is_member =
+        co_await checkChatAccess((*request_json)["user_id"].asInt64(), chat_id);
+    if (!is_member) {
         response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json)
+        RETURN_RESPONSE_CODE_403(response_json);
     }
 
     std::vector<Message> chat_messages;
@@ -196,26 +187,12 @@ Task<HttpResponsePtr> ChatService::sendMessage(
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
-    std::optional<Chat> chat;
-    // TODO : move to one function
-    try {
-        chat = co_await chat_repo->getById(chat_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get chat by id: " << e.what();
-        response_json["message"] = "Internal server error: failed to get chat";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
-    if (!chat.has_value()) {
-        LOG_WARN << "Chat with id " << chat_id << " doesn't exist";
-        response_json["message"] =
-            "Chat with id " + std::to_string(chat_id) + " doesn't exist";
-        RETURN_RESPONSE_CODE_404(response_json)
-    }
-    if (chat->getValueOfType() == messenger::models::ChatType::Direct &&
-        (chat->getValueOfDirectUser1Id() != user_id &&
-         chat->getValueOfDirectUser2Id() != user_id)) {
+
+    bool is_member =
+        co_await checkChatAccess((*request_json)["user_id"].asInt64(), chat_id);
+    if (!is_member) {
         response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json)
+        RETURN_RESPONSE_CODE_403(response_json);
     }
 
     std::string text = (*request_json)["text"].asString();
@@ -239,16 +216,38 @@ Task<HttpResponsePtr> ChatService::sendMessage(
             "Internal server error: failed to send message";
         RETURN_RESPONSE_CODE_500(response_json)
     }
+    bool successfully_read_sended_message;
+    try {
+        successfully_read_sended_message = co_await chat_repo->markAsRead(
+            message.getValueOfChatId(), user_id, message.getValueOfId()
+        );
+    } catch (std::exception &e) {
+        LOG_WARN << "Couldnt't mark message as read: " << e.what();
+        response_json["warn"] =
+            "Internal server error: failed to mark message as read";
+    }
+    if (!successfully_read_sended_message) {
+        LOG_WARN << "Couldnt't mark message as read";
+        response_json["warn"] =
+            "Internal server error: failed to mark message as read";
+    }
     Json::Value websocket_message_json;
     websocket_message_json["event_type"] = "NEW_MESSAGE";
     websocket_message_json["data"]["message"] = message.toJson();
-    if (chat->getValueOfType() == messenger::models::ChatType::Direct) {
-        ChatWebSocket::notifyUser(
-            chat->getValueOfDirectUser1Id() == user_id
-                ? chat->getValueOfDirectUser2Id()
-                : chat->getValueOfDirectUser1Id(),
-            websocket_message_json.toStyledString()
-        );
+    std::vector<messenger::repositories::ChatMember> chat_members;
+    try {
+        chat_members = co_await chat_repo->getMembers(chat_id);
+    } catch (std::exception &e) {
+        LOG_WARN << "Couldnt't get chat members for sending message: "
+                 << e.what();
+    }
+    for (auto &chat_member : chat_members) {
+        if (chat_member.getValueOfUserId() != user_id) {
+            ChatWebSocket::notifyUser(
+                chat_member.getValueOfUserId(),
+                websocket_message_json.toStyledString()
+            );
+        }
     }
     response_json["message"] = message.toJson();
     RETURN_RESPONSE_CODE_201(response_json)

@@ -43,6 +43,7 @@ public:
 
 private:
     std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
+    Task<bool> checkChatAccess(int64_t user_id, int64_t chat_id);
 };
 }  // namespace v1
 }  // namespace api

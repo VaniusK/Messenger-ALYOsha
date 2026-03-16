@@ -21,7 +21,7 @@ using namespace drogon;
 using namespace api::v1;
 
 std::unordered_map<uint32_t, ClientRequestsCounter> IpFilter::clients_;
-std::shared_mutex IpFilter::mutex_;
+std::mutex IpFilter::mutex_;
 
 IpFilter::IpFilter() {
     drogon::app().getLoop()->runEvery(
@@ -48,7 +48,7 @@ IpFilter::IpFilter() {
 void IpFilter::cleanUpOldClients() {
     auto now = std::chrono::steady_clock::now();
 
-    std::unique_lock<std::shared_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     std::size_t size_before = clients_.size();
     std::erase_if(clients_, [now, this](const auto &item) {
@@ -82,7 +82,7 @@ void IpFilter::doFilter(const HttpRequestPtr &req,
     }
     auto now = std::chrono::steady_clock::now();
     {
-        std::unique_lock<std::shared_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         auto &client = clients_[ip];
         auto time_diff = std::chrono::duration_cast<std::chrono::seconds>(
             now - client.window_start
@@ -91,7 +91,9 @@ void IpFilter::doFilter(const HttpRequestPtr &req,
             client.requests_count = 1;
             client.window_start = now;
         } else {
-            client.requests_count++;
+            {
+                client.requests_count++;
+            }
             if (client.requests_count > MAX_REQUESTS) {
                 Json::Value response_json;
                 response_json["message"] = "Too many requests";

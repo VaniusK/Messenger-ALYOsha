@@ -66,7 +66,7 @@ Task<HttpResponsePtr> auth::loginUser(HttpRequestPtr req) {
 
 bool auth::checkUserAuthTries(const std::string &user_handle) {
     auto now = std::chrono::steady_clock::now();
-    std::unique_lock<std::shared_mutex> lock(users_last_auth_try_mutex);
+    std::lock_guard<std::mutex> lock(users_last_auth_try_mutex);
     auto &client = users_last_auth_try[user_handle];
     auto time_diff = std::chrono::duration_cast<std::chrono::seconds>(
         now - client.window_start
@@ -86,7 +86,7 @@ bool auth::checkUserAuthTries(const std::string &user_handle) {
 void auth::cleanUpOldUsersAuthTries(){
     auto now = std::chrono::steady_clock::now();
 
-    std::unique_lock<std::shared_mutex> lock(users_last_auth_try_mutex);
+    std::lock_guard<std::mutex> lock(users_last_auth_try_mutex);
 
     std::size_t size_before = users_last_auth_try.size();
     std::erase_if(users_last_auth_try, [now, this](const auto& item){

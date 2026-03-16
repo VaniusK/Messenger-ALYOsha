@@ -4,6 +4,7 @@
 #include <jwt-cpp/jwt.h>
 #include <bcrypt/BCrypt.hpp>
 #include <chrono>
+#include <exception>
 #include <optional>
 #include "models/Users.h"
 #include "repositories/UserRepository.hpp"
@@ -39,6 +40,17 @@ Task<HttpResponsePtr> UserService::registerUser(
             (*request_json)["display_name"].asCString(), password_hash
         );
         if (success) {
+            try {
+                auto user = co_await user_repo->getByHandle(
+                    (*request_json)["handle"].asString()
+                );
+                auto saved_chat =
+                    co_await chat_repo->createSaved(user->getValueOfId());
+            } catch (std::exception &e) {
+                LOG_WARN << "Couldn't create 'saved' chat " << e.what();
+                response_json["saved_chat_creating_status"] =
+                    "Internal server error: failed to create 'saved' chat";
+            }
             response_json["message"] = "New user was successfully created";
             RETURN_RESPONSE_CODE_201(response_json)
         } else {

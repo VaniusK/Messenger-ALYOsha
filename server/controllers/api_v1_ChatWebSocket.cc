@@ -63,7 +63,7 @@ void ChatWebSocket::handleConnectionClosed(const WebSocketConnectionPtr& wsConnP
 void ChatWebSocket::notifyUser(int64_t reciever_id, const std::string &payload){
     drogon::WebSocketConnectionPtr recieverWsConnPtr;
     {
-        std::unique_lock<std::shared_mutex> lock(clients_mutex_);
+        std::shared_lock<std::shared_mutex> lock(clients_mutex_);
         auto it = clients_.find(reciever_id);
         if (it != clients_.end()){
             recieverWsConnPtr = it->second;

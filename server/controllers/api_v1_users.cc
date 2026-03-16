@@ -30,5 +30,11 @@ Task<HttpResponsePtr> users::searchUser(const HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
+    if ((*request_json)["limit"].asInt64() > 100) {
+        (*request_json)["limit"] = 100;
+    }
+    if ((*request_json)["limit"].asInt64() < 1) {
+        (*request_json)["limit"] = 1;
+    }
     co_return co_await user_service.searchUser(request_json);
 }

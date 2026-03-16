@@ -5,7 +5,6 @@
 #include "repositories/ChatRepository.hpp"
 #include "services/UserService.hpp"
 #include <memory>
-#include <shared_mutex>
 
 using namespace drogon;
 
@@ -45,7 +44,7 @@ class auth : public drogon::HttpController<auth>
   private:
     UserService user_service;
     std::unordered_map<std::string, UserLastAuthTry> users_last_auth_try;
-    std::shared_mutex users_last_auth_try_mutex;
+    std::mutex users_last_auth_try_mutex;
 
     bool checkUserAuthTries(const std::string &user_handle);
     void cleanUpOldUsersAuthTries();
