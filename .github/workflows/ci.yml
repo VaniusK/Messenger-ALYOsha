@@ -199,7 +199,7 @@ jobs:
       - name: Install Qt via aqtinstall
         if: steps.cache-qt-mac.outputs.cache-hit != 'true'
         run: |
-          python3 -m pip install aqtinstall
+          pipx install aqtinstall
           aqt install-qt mac desktop 6.7.3 clang_64 \
             --outputdir ~/Qt \
             -m qtwebsockets
