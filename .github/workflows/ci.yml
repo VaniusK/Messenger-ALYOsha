@@ -238,8 +238,14 @@ jobs:
           EOF
 
           ${{ env.QT_ROOT }}/bin/macdeployqt Messenger-Alesha.app \
-            -qmldir=client/src \
-            -dmg
+            -qmldir=client/src
+
+          codesign --deep --force --sign - Messenger-Alesha.app
+
+          hdiutil create -volname "Messenger-Alesha" \
+            -srcfolder Messenger-Alesha.app \
+            -ov -format UDZO \
+            Messenger-Alesha.dmg
 
       - name: Upload macOS DMG
         uses: actions/upload-artifact@v4
