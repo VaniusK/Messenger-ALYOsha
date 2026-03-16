@@ -184,6 +184,75 @@ jobs:
           name: Messenger-Alesha-Windows
           path: installer\Messenger-Alesha.exe
     
+  build-client-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Qt (macOS)
+        id: cache-qt-mac
+        uses: actions/cache@v4
+        with:
+          path: ~/Qt
+          key: qt-6.7.3-macos-clang
+
+      - name: Install Qt via aqtinstall
+        if: steps.cache-qt-mac.outputs.cache-hit != 'true'
+        run: |
+          pipx install aqtinstall
+          aqt install-qt mac desktop 6.7.3 clang_64 \
+            --outputdir ~/Qt \
+            -m qtwebsockets
+
+      - name: Export Qt path
+        run: echo "QT_ROOT=$HOME/Qt/6.7.3/macos" >> $GITHUB_ENV
+
+      - name: Build client
+        run: |
+          cmake -B build/client -S client \
+            -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/client --parallel
+
+      - name: Bundle with macdeployqt
+        run: |
+          CLIENT_BIN=$(find build/client -type f -name "client" ! -name "*.dSYM" | head -n 1)
+          if [ -z "$CLIENT_BIN" ]; then echo "Client binary not found!"; exit 1; fi
+
+          mkdir -p Messenger-Alesha.app/Contents/MacOS
+          mkdir -p Messenger-Alesha.app/Contents/Resources
+          cp "$CLIENT_BIN" Messenger-Alesha.app/Contents/MacOS/Messenger-Alesha
+          cp common/alesha_logo.png Messenger-Alesha.app/Contents/Resources/
+
+          cat > Messenger-Alesha.app/Contents/Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>CFBundleExecutable</key><string>Messenger-Alesha</string>
+            <key>CFBundleIdentifier</key><string>ru.hse.messenger-alesha</string>
+            <key>CFBundleName</key><string>Messenger Alesha</string>
+            <key>CFBundleVersion</key><string>1.0</string>
+            <key>CFBundleShortVersionString</key><string>1.0</string>
+            <key>CFBundleIconFile</key><string>alesha_logo</string>
+          </dict></plist>
+          EOF
+
+          ${{ env.QT_ROOT }}/bin/macdeployqt Messenger-Alesha.app \
+            -qmldir=client/src
+
+          codesign --deep --force --sign - Messenger-Alesha.app
+
+          hdiutil create -volname "Messenger-Alesha" \
+            -srcfolder Messenger-Alesha.app \
+            -ov -format UDZO \
+            Messenger-Alesha.dmg
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: Messenger-Alesha-macOS
+          path: Messenger-Alesha.dmg
+
   run-format:
     runs-on: ubuntu-latest
     steps:
@@ -199,7 +268,7 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
-    needs: [build-client, run-format]
+    needs: [build-client, build-client-macos, run-format]
     steps:
       - uses: actions/checkout@v4
       - name: Create test .env
