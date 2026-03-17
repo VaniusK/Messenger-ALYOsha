@@ -9,11 +9,8 @@
 #include <json/value.h>
 #include <chrono>
 #include <mutex>
-#include <shared_mutex>
-#include <drogon/HttpAppFramework.h>
 #include <drogon/HttpResponse.h>
 #include <drogon/HttpTypes.h>
-#include <json/value.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 

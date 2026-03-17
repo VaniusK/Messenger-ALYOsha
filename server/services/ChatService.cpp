@@ -2,7 +2,7 @@
 #include <drogon/HttpController.h>
 #include <json/value.h>
 #include <cstdint>
-#include "controllers/api_v1_ChatWebSocket.h"
+#include "controllers/ServerWebSocketController.h"
 #include "include/repositories/ChatRepository.hpp"
 #include "models/Messages.h"
 #include "utils/server_response_macro.hpp"
@@ -243,7 +243,7 @@ Task<HttpResponsePtr> ChatService::sendMessage(
     }
     for (auto &chat_member : chat_members) {
         if (chat_member.getValueOfUserId() != user_id) {
-            ChatWebSocket::notifyUser(
+            ServerWebSocketController::notifyUser(
                 chat_member.getValueOfUserId(),
                 websocket_message_json.toStyledString()
             );

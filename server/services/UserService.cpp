@@ -2,7 +2,6 @@
 #include <drogon/HttpController.h>
 #include <json/value.h>
 #include <jwt-cpp/jwt.h>
-#include <bcrypt/BCrypt.hpp>
 #include <chrono>
 #include <exception>
 #include <optional>
@@ -34,7 +33,8 @@ Task<HttpResponsePtr> UserService::registerUser(
 
     if (user == std::nullopt) {
         std::string password_hash =
-            BCrypt::generateHash((*request_json)["password"].asString(), 10);
+            password_hasher->generateHash((*request_json)["password"].asString()
+            );
         bool success = co_await user_repo->create(
             (*request_json)["handle"].asCString(),
             (*request_json)["display_name"].asCString(), password_hash
@@ -83,8 +83,8 @@ Task<HttpResponsePtr> UserService::loginUser(
         response_json["message"] = "Login error: Invalid handle or password";
         RETURN_RESPONSE_CODE_401(response_json)
     } else {
-        if (!BCrypt::validatePassword(
-                std::string((*request_json)["password"].asCString()),
+        if (!password_hasher->verifyPassword(
+                std::string((*request_json)["password"].asString()),
                 user->getValueOfPasswordHash()
             )) {
             response_json["message"] =
