@@ -40,6 +40,10 @@ getFakeUserTask(bool exists, std::string handle) {
     co_return std::nullopt;
 }
 
+drogon::Task<bool> returnFakeBool(bool result) {
+    co_return result;
+}
+
 struct RegisterTestCase {
     std::string test_name;
     Json::Value request_json;
@@ -90,7 +94,7 @@ TEST_P(ServiceRegisterUserTest, RegisterUserTest) {
             .WillRepeatedly(Invoke(
                 [param](const std::string &, const std::string &, const std::string &)
                     -> drogon::Task<bool> {
-                    co_return param.is_user_create_success;
+                    return returnFakeBool(param.is_user_create_success);
                 }
             ));
     }
@@ -228,3 +232,11 @@ INSTANTIATE_TEST_SUITE_P(
         }
     )
 );
+
+struct GetUserByIdTestCase {
+    std::string test_name;
+    int64_t user_id;
+    bool is_user_exists;
+
+    drogon::HttpStatusCode excpected_status;
+};
