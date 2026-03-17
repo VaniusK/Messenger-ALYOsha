@@ -16,13 +16,8 @@ using Chat = drogon_model::messenger_db::Chats;
 using ChatPreview = messenger::dto::ChatPreview;
 
 Task<bool> ChatService::checkChatAccess(int64_t user_id, int64_t chat_id) {
-    std::vector<messenger::repositories::ChatMember> chat_members;
-    try {
-        chat_members = co_await chat_repo->getMembers(chat_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get chat members for check access: " << e.what();
-        co_return false;
-    }
+    std::vector<messenger::repositories::ChatMember> chat_members =
+        co_await chat_repo->getMembers(chat_id);
     bool is_member = false;
     for (const auto &chat_member : chat_members) {
         if (chat_member.getValueOfUserId() == user_id) {
@@ -38,15 +33,8 @@ Task<HttpResponsePtr> ChatService::getMessageById(
     int64_t message_id
 ) {
     Json::Value response_json;
-    std::optional<Message> message;
-    try {
-        message = co_await chat_repo->getMessageById(message_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get message by id: " << e.what();
-        response_json["message"] =
-            "Internal server error: failed to get message";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    std::optional<Message> message =
+        co_await chat_repo->getMessageById(message_id);
     if (!message.has_value()) {
         LOG_WARN << "Message with id " << message_id << " doesn't exist";
         response_json["message"] =
@@ -73,15 +61,8 @@ Task<HttpResponsePtr> ChatService::getUserChats(
         response_json["message"] = "Access denied";
         RETURN_RESPONSE_CODE_403(response_json)
     }
-    std::vector<ChatPreview> chats_previews;
-    try {
-        chats_previews = co_await chat_repo->getByUser(user_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get user chats: " << e.what();
-        response_json["message"] =
-            "Internal server error: failed to get user chats";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    std::vector<ChatPreview> chats_previews =
+        co_await chat_repo->getByUser(user_id);
     Json::Value jsonArray(Json::arrayValue);
     for (const auto &chat_preview : chats_previews) {
         Json::Value chat_json;
@@ -106,30 +87,14 @@ Task<HttpResponsePtr> ChatService::createOrGetDirectChat(
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
-    LOG_INFO << "User id: " << user_id;
     int64_t other_user_id = (*request_json)["target_user_id"].asInt64();
-    LOG_INFO << "Other user id: " << other_user_id;
-    std::optional<Chat> chat;
-    try {
-        chat = co_await chat_repo->getDirect(user_id, other_user_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get direct chat: " << e.what();
-        response_json["message"] =
-            "Internal server error: failed to get direct chat";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    std::optional<Chat> chat =
+        co_await chat_repo->getDirect(user_id, other_user_id);
     if (chat.has_value()) {
         response_json["chat"] = chat->toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     }
-    try {
-        chat = co_await chat_repo->getOrCreateDirect(user_id, other_user_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't create direct chat: " << e.what();
-        response_json["message"] =
-            "Internal server error: failed to create direct chat";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    chat = co_await chat_repo->getOrCreateDirect(user_id, other_user_id);
     response_json["chat"] = chat->toJson();
     RETURN_RESPONSE_CODE_201(response_json)
 }
@@ -162,17 +127,9 @@ Task<HttpResponsePtr> ChatService::getChatMessages(
         RETURN_RESPONSE_CODE_403(response_json);
     }
 
-    std::vector<Message> chat_messages;
-    try {
-        chat_messages = co_await chat_repo->getMessagesByChat(
-            chat_id, before_message_id, limit
-        );
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get chat messages: " << e.what();
-        response_json["message"] =
-            "Internal server error: failed to get chat messages";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    std::vector<Message> chat_messages = co_await chat_repo->getMessagesByChat(
+        chat_id, before_message_id, limit
+    );
     Json::Value jsonArray(Json::arrayValue);
     for (const auto &message : chat_messages) {
         jsonArray.append(message.toJson());
@@ -205,27 +162,12 @@ Task<HttpResponsePtr> ChatService::sendMessage(
             ? std::optional<int64_t>((*request_json)["forward_from_id"].asInt64(
               ))
             : std::nullopt;
-    Message message;
-    try {
-        message = co_await chat_repo->sendMessage(
-            chat_id, user_id, text, reply_to_id, forward_from_id
-        );
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't send message: " << e.what();
-        response_json["message"] =
-            "Internal server error: failed to send message";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
-    bool successfully_read_sended_message;
-    try {
-        successfully_read_sended_message = co_await chat_repo->markAsRead(
-            message.getValueOfChatId(), user_id, message.getValueOfId()
-        );
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't mark message as read: " << e.what();
-        response_json["warn"] =
-            "Internal server error: failed to mark message as read";
-    }
+    Message message = co_await chat_repo->sendMessage(
+        chat_id, user_id, text, reply_to_id, forward_from_id
+    );
+    bool successfully_read_sended_message = co_await chat_repo->markAsRead(
+        message.getValueOfChatId(), user_id, message.getValueOfId()
+    );
     if (!successfully_read_sended_message) {
         LOG_WARN << "Couldnt't mark message as read";
         response_json["warn"] =
@@ -234,13 +176,8 @@ Task<HttpResponsePtr> ChatService::sendMessage(
     Json::Value websocket_message_json;
     websocket_message_json["event_type"] = "NEW_MESSAGE";
     websocket_message_json["data"]["message"] = message.toJson();
-    std::vector<messenger::repositories::ChatMember> chat_members;
-    try {
-        chat_members = co_await chat_repo->getMembers(chat_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get chat members for sending message: "
-                 << e.what();
-    }
+    std::vector<messenger::repositories::ChatMember> chat_members =
+        co_await chat_repo->getMembers(chat_id);
     for (auto &chat_member : chat_members) {
         if (chat_member.getValueOfUserId() != user_id) {
             ServerWebSocketController::notifyUser(
@@ -259,22 +196,16 @@ Task<HttpResponsePtr> ChatService::readMessages(
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
-    bool success;
-    try {
-        success = co_await chat_repo->markAsRead(
-            chat_id, (*request_json)["user_id"].asInt64(),
-            (*request_json)["last_read_message_id"].asInt64()
-        );
-        if (success) {
-            response_json["message"] = "Succussfully read last messages";
-            RETURN_RESPONSE_CODE_200(response_json)
-        } else {
-            response_json["message"] = "Something went wrong";
-            RETURN_RESPONSE_CODE_500(response_json)
-        }
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldn't read message" << e.what();
-        response_json["message"] = "Internal server error";
+
+    bool success = co_await chat_repo->markAsRead(
+        chat_id, (*request_json)["user_id"].asInt64(),
+        (*request_json)["last_read_message_id"].asInt64()
+    );
+    if (success) {
+        response_json["message"] = "Succussfully read last messages";
+        RETURN_RESPONSE_CODE_200(response_json)
+    } else {
+        response_json["message"] = "Something went wrong";
         RETURN_RESPONSE_CODE_500(response_json)
     }
 }
