@@ -3,7 +3,6 @@
 #include <json/value.h>
 #include <jwt-cpp/jwt.h>
 #include <chrono>
-#include <exception>
 #include <optional>
 #include "models/Users.h"
 #include "repositories/UserRepository.hpp"
@@ -27,17 +26,10 @@ Task<HttpResponsePtr> UserService::registerUser(
         (*request_json)["display_name"].asCString(), password_hash
     );
     if (success) {
-        try {
-            auto user = co_await user_repo->getByHandle(
-                (*request_json)["handle"].asString()
+        auto user =
+            co_await user_repo->getByHandle((*request_json)["handle"].asString()
             );
-            auto saved_chat =
-                co_await chat_repo->createSaved(user->getValueOfId());
-        } catch (std::exception &e) {
-            LOG_WARN << "Couldn't create 'saved' chat " << e.what();
-            response_json["warn"] =
-                "Internal server error: failed to create 'saved' chat";
-        }
+        auto saved_chat = co_await chat_repo->createSaved(user->getValueOfId());
         response_json["message"] = "New user was successfully created";
         RETURN_RESPONSE_CODE_201(response_json)
     } else {
@@ -50,16 +42,8 @@ Task<HttpResponsePtr> UserService::loginUser(
     const std::shared_ptr<Json::Value> request_json
 ) {
     Json::Value response_json;
-    std::optional<User> user;
-    try {
-        user =
-            co_await user_repo->getByHandle((*request_json)["handle"].asString()
-            );
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get user by handle: " << e.what();
-        response_json["message"] = "Internal server error: user wasn't found";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    std::optional<User> user =
+        co_await user_repo->getByHandle((*request_json)["handle"].asString());
     if (user == std::nullopt) {
         response_json["message"] = "Login error: Invalid handle or password";
         RETURN_RESPONSE_CODE_401(response_json)
@@ -96,14 +80,7 @@ Task<HttpResponsePtr> UserService::loginUser(
 
 Task<HttpResponsePtr> UserService::getUserById(int64_t user_id) {
     Json::Value response_json;
-    std::optional<User> user;
-    try {
-        user = co_await user_repo->getById(user_id);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get user by id: " << e.what();
-        response_json["message"] = "Internal server error: failed to get user";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    std::optional<User> user = co_await user_repo->getById(user_id);
     if (!user.has_value()) {
         response_json["message"] =
             "User with id " + std::to_string(user_id) + " doesn't exist";
@@ -117,14 +94,7 @@ Task<HttpResponsePtr> UserService::getUserById(int64_t user_id) {
 
 Task<HttpResponsePtr> UserService::getUserByHandle(std::string &&user_handle) {
     Json::Value response_json;
-    std::optional<User> user;
-    try {
-        user = co_await user_repo->getByHandle(user_handle);
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get user by handle: " << e.what();
-        response_json["message"] = "Internal server error: failed to get user";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    std::optional<User> user = co_await user_repo->getByHandle(user_handle);
     if (!user.has_value()) {
         response_json["message"] =
             "User with handle " + std::string(user_handle) + " doesn't exist";
@@ -140,18 +110,9 @@ Task<HttpResponsePtr> UserService::searchUser(
     const std::shared_ptr<Json::Value> request_json
 ) {
     Json::Value response_json;
-    std::vector<User> users;
-    try {
-        users = co_await user_repo->search(
-            (*request_json)["query"].asString(),
-            (*request_json)["limit"].asInt64()
-        );
-    } catch (std::exception &e) {
-        LOG_WARN << "Failed to search: " << e.what();
-        response_json["message"] =
-            "Internal server error: failed to search users";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    std::vector<User> users = co_await user_repo->search(
+        (*request_json)["query"].asString(), (*request_json)["limit"].asInt64()
+    );
     Json::Value jsonArray(Json::arrayValue);
     for (const auto &user : users) {
         Json::Value user_json = user.toJson();
