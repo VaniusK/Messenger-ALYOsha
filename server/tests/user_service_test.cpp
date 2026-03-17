@@ -6,6 +6,7 @@
 #include <json/value.h>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "mocks/MockChatRepository.hpp"
@@ -28,16 +29,9 @@ Json::Value makeJson(std::vector<std::pair<std::string, std::string>> &&fields
     return j;
 }
 
-drogon::Task<std::optional<User>>
-getFakeUserTask(bool exists, std::string handle) {
-    if (exists) {
-        User fake_user;
-        fake_user.setId(123);
-        fake_user.setHandle(handle);
-        fake_user.setPasswordHash("some_hash_bebebe");
-        co_return fake_user;
-    }
-    co_return std::nullopt;
+template <typename T>
+drogon::Task<T> createFakeTask(T data) {
+    co_return data;
 }
 
 drogon::Task<bool> returnFakeBool(bool result) {
@@ -82,11 +76,16 @@ TEST_P(ServiceRegisterUserTest, RegisterUserTest) {
         *mock_user_repo, getByHandle(param.request_json["handle"].asString())
     )
         .WillRepeatedly(Invoke(
-            [param](const std::string &) -> drogon::Task<std::optional<User>> {
-                return getFakeUserTask(
-                    param.is_user_exists,
-                    param.request_json["handle"].asString()
-                );
+            [param](const std::string &handle
+            ) -> drogon::Task<std::optional<User>> {
+                if (param.is_user_exists) {
+                    User fake_user;
+                    fake_user.setId(123);
+                    fake_user.setHandle(handle);
+                    fake_user.setPasswordHash("some_hash_bebebe");
+                    return createFakeTask<std::optional<User>>(fake_user);
+                }
+                return createFakeTask<std::optional<User>>(std::nullopt);
             }
         ));
     if (!param.is_user_exists) {
@@ -94,7 +93,7 @@ TEST_P(ServiceRegisterUserTest, RegisterUserTest) {
             .WillRepeatedly(Invoke(
                 [param](const std::string &, const std::string &, const std::string &)
                     -> drogon::Task<bool> {
-                    return returnFakeBool(param.is_user_create_success);
+                    return createFakeTask<bool>(param.is_user_create_success);
                 }
             ));
     }
@@ -102,7 +101,7 @@ TEST_P(ServiceRegisterUserTest, RegisterUserTest) {
         EXPECT_CALL(*mock_chat_repo, createSaved(_))
             .WillRepeatedly(Invoke([param](int64_t) -> drogon::Task<Chat> {
                 Chat fake_chat;
-                co_return fake_chat;
+                return createFakeTask<Chat>(fake_chat);
             }));
     }
 
@@ -182,11 +181,16 @@ TEST_P(ServiceLoginUserTest, LoginUserTest) {
         *mock_user_repo, getByHandle(param.request_json["handle"].asString())
     )
         .WillRepeatedly(Invoke(
-            [param](const std::string &) -> drogon::Task<std::optional<User>> {
-                return getFakeUserTask(
-                    param.is_user_exists,
-                    param.request_json["handle"].asString()
-                );
+            [param](const std::string &handle
+            ) -> drogon::Task<std::optional<User>> {
+                if (param.is_user_exists) {
+                    User fake_user;
+                    fake_user.setId(123);
+                    fake_user.setHandle(handle);
+                    fake_user.setPasswordHash("some_hash_bebebe");
+                    return createFakeTask<std::optional<User>>(fake_user);
+                }
+                return createFakeTask<std::optional<User>>(std::nullopt);
             }
         ));
     if (param.is_user_exists) {
