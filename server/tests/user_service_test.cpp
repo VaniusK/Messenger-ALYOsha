@@ -34,15 +34,10 @@ drogon::Task<T> createFakeTask(T data) {
     co_return data;
 }
 
-drogon::Task<bool> returnFakeBool(bool result) {
-    co_return result;
-}
-
 struct RegisterTestCase {
     std::string test_name;
     Json::Value request_json;
 
-    bool is_user_exists;
     bool is_user_create_success;
 
     drogon::HttpStatusCode excpected_status;
@@ -72,32 +67,29 @@ protected:
 
 TEST_P(ServiceRegisterUserTest, RegisterUserTest) {
     auto param = GetParam();
+
     EXPECT_CALL(
         *mock_user_repo, getByHandle(param.request_json["handle"].asString())
     )
         .WillRepeatedly(Invoke(
             [param](const std::string &handle
             ) -> drogon::Task<std::optional<User>> {
-                if (param.is_user_exists) {
-                    User fake_user;
-                    fake_user.setId(123);
-                    fake_user.setHandle(handle);
-                    fake_user.setPasswordHash("some_hash_bebebe");
-                    return createFakeTask<std::optional<User>>(fake_user);
-                }
-                return createFakeTask<std::optional<User>>(std::nullopt);
+                User fake_user;
+                fake_user.setId(123);
+                fake_user.setHandle(handle);
+                fake_user.setPasswordHash("some_hash_bebebe");
+                return createFakeTask<std::optional<User>>(fake_user);
             }
         ));
-    if (!param.is_user_exists) {
-        EXPECT_CALL(*mock_user_repo, create(_, _, _))
-            .WillRepeatedly(Invoke(
-                [param](const std::string &, const std::string &, const std::string &)
-                    -> drogon::Task<bool> {
-                    return createFakeTask<bool>(param.is_user_create_success);
-                }
-            ));
-    }
-    if (!param.is_user_exists && param.is_user_create_success) {
+
+    EXPECT_CALL(*mock_user_repo, create(_, _, _))
+        .WillRepeatedly(Invoke(
+            [param](const std::string &, const std::string &, const std::string &)
+                -> drogon::Task<bool> {
+                return createFakeTask<bool>(param.is_user_create_success);
+            }
+        ));
+    if (param.is_user_create_success) {
         EXPECT_CALL(*mock_chat_repo, createSaved(_))
             .WillRepeatedly(Invoke([param](int64_t) -> drogon::Task<Chat> {
                 Chat fake_chat;
@@ -110,6 +102,8 @@ TEST_P(ServiceRegisterUserTest, RegisterUserTest) {
 
     ASSERT_NE(response, nullptr);
     EXPECT_EQ(response->getStatusCode(), param.excpected_status)
+        << "Failed test: " << param.test_name;
+    EXPECT_FALSE(response->getJsonObject()->isMember("warn"))
         << "Failed test: " << param.test_name;
 }
 
@@ -124,7 +118,7 @@ INSTANTIATE_TEST_SUITE_P(
                  {"password", "pass_omg"},
                  {"display_name", "chmo"}}
             ),
-            false, true, drogon::k201Created
+            true, drogon::k201Created
         },
         RegisterTestCase{
             "User already exists",
@@ -133,16 +127,7 @@ INSTANTIATE_TEST_SUITE_P(
                  {"password", "pass_omg"},
                  {"display_name", "chmo"}}
             ),
-            true, false, drogon::k409Conflict
-        },
-        RegisterTestCase{
-            "User creation failed",
-            makeJson(
-                {{"handle", "PIDORAS"},
-                 {"password", "pass_omg"},
-                 {"display_name", "chmo"}}
-            ),
-            false, false, drogon::k500InternalServerError
+            false, drogon::k409Conflict
         }
     )
 );
