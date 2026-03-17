@@ -84,7 +84,7 @@ jobs:
           QMAKE: ${{ env.QT_ROOT }}/bin/qmake
         run: |
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps/
-          convert common/alesha_logo.png -resize 256x256\! AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
+          convert common/aleshalogo.png -resize 256x256\! AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png
 
           cat > AppDir/messenger.desktop << 'EOF'
           [Desktop Entry]
@@ -139,7 +139,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --config Release
 
-      - name: Bundle Qt DLLs with windeployqt
+      - name: Bundle Qt DLLs with windeployqt and copy icon
         run: |
           mkdir deploy
           copy build\client\Release\client.exe deploy\Messenger-Alesha.exe
@@ -148,9 +148,7 @@ jobs:
             --release `
             --no-translations `
             deploy\Messenger-Alesha.exe
-
-      - name: Copy icon
-        run: copy common\alesha_logo.png deploy\alesha_logo.png
+          copy common\aleshalogo.ico deploy\app.ico
 
       - name: Create Inno Setup installer
         run: |
@@ -169,8 +167,8 @@ jobs:
           Source: "deploy\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
           [Icons]
-          Name: "{group}\Messenger Alesha"; Filename: "{app}\Messenger-Alesha.exe"
-          Name: "{commondesktop}\Messenger Alesha"; Filename: "{app}\Messenger-Alesha.exe"
+          Name: "{group}\Messenger Alesha"; Filename: "{app}\Messenger-Alesha.exe"; IconFilename: "{app}\app.ico"
+          Name: "{commondesktop}\Messenger Alesha"; Filename: "{app}\Messenger-Alesha.exe"; IconFilename: "{app}\app.ico"
 
           [Run]
           Filename: "{app}\Messenger-Alesha.exe"; Description: "Launch Messenger Alesha"; Flags: postinstall
@@ -222,7 +220,7 @@ jobs:
           mkdir -p Messenger-Alesha.app/Contents/MacOS
           mkdir -p Messenger-Alesha.app/Contents/Resources
           cp "$CLIENT_BIN" Messenger-Alesha.app/Contents/MacOS/Messenger-Alesha
-          cp common/alesha_logo.png Messenger-Alesha.app/Contents/Resources/
+          cp common/aleshalogo.png Messenger-Alesha.app/Contents/Resources/
 
           cat > Messenger-Alesha.app/Contents/Info.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -233,7 +231,7 @@ jobs:
             <key>CFBundleName</key><string>Messenger Alesha</string>
             <key>CFBundleVersion</key><string>1.0</string>
             <key>CFBundleShortVersionString</key><string>1.0</string>
-            <key>CFBundleIconFile</key><string>alesha_logo</string>
+            <key>CFBundleIconFile</key><string>aleshalogo</string>
           </dict></plist>
           EOF
 
