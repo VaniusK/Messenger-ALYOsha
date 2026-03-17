@@ -7,11 +7,11 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
+#include "../mocks/MockChatRepository.hpp"
+#include "../mocks/MockMessageRepository.hpp"
+#include "../mocks/MockUserRepository.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "mocks/MockChatRepository.hpp"
-#include "mocks/MockMessageRepository.hpp"
-#include "mocks/MockUserRepository.hpp"
 #include "services/UserService.hpp"
 
 using User = drogon_model::messenger_db::Users;

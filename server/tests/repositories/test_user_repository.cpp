@@ -1,7 +1,7 @@
 #include <drogon/orm/Result.h>
 #include <algorithm>
 #include <latch>
-#include "fixtures/UserTestFixture.hpp"
+#include "../fixtures/UserTestFixture.hpp"
 
 using UserRepository = messenger::repositories::UserRepository;
 using User = drogon_model::messenger_db::Users;

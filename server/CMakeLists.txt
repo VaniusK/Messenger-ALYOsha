@@ -104,6 +104,9 @@ if(BUILD_TESTS)
 
     enable_testing()
     aux_source_directory(tests TEST_FILES)
+    aux_source_directory(tests/services TEST_FILES)
+    aux_source_directory(tests/repositories TEST_FILES)
+    aux_source_directory(tests/controllers TEST_FILES)
     
     add_executable(server_tests 
         ${TEST_FILES}

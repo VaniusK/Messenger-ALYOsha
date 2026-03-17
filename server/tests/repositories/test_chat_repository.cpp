@@ -1,6 +1,6 @@
 #include <drogon/orm/Result.h>
+#include "../fixtures/ChatTestFixture.hpp"
 #include "dto/ChatPreview.hpp"
-#include "fixtures/ChatTestFixture.hpp"
 #include "utils/Enum.hpp"
 
 using ChatRepository = messenger::repositories::ChatRepository;

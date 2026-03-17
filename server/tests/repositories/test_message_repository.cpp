@@ -1,7 +1,7 @@
 #include <drogon/orm/Result.h>
 #include <gtest/gtest.h>
 #include <stdexcept>
-#include "fixtures/MessageTestFixture.hpp"
+#include "../fixtures/MessageTestFixture.hpp"
 
 using MessageRepository = messenger::repositories::MessageRepository;
 using Message = drogon_model::messenger_db::Messages;
