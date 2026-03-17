@@ -19,46 +19,27 @@ Task<HttpResponsePtr> UserService::registerUser(
     const std::shared_ptr<Json::Value> request_json
 ) {
     Json::Value response_json;
-    std::optional<User> user;
-    try {
-        user =
-            co_await user_repo->getByHandle((*request_json)["handle"].asString()
-            );
-    } catch (std::exception &e) {
-        LOG_WARN << "Couldnt't get user by handle: " << e.what();
-        response_json["message"] =
-            "Internal server error: failed to check user exists";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
 
-    if (user == std::nullopt) {
-        std::string password_hash =
-            password_hasher->generateHash((*request_json)["password"].asString()
+    std::string password_hash =
+        password_hasher->generateHash((*request_json)["password"].asString());
+    bool success = co_await user_repo->create(
+        (*request_json)["handle"].asCString(),
+        (*request_json)["display_name"].asCString(), password_hash
+    );
+    if (success) {
+        try {
+            auto user = co_await user_repo->getByHandle(
+                (*request_json)["handle"].asString()
             );
-        bool success = co_await user_repo->create(
-            (*request_json)["handle"].asCString(),
-            (*request_json)["display_name"].asCString(), password_hash
-        );
-        if (success) {
-            try {
-                auto user = co_await user_repo->getByHandle(
-                    (*request_json)["handle"].asString()
-                );
-                auto saved_chat =
-                    co_await chat_repo->createSaved(user->getValueOfId());
-            } catch (std::exception &e) {
-                LOG_WARN << "Couldn't create 'saved' chat " << e.what();
-                response_json["saved_chat_creating_status"] =
-                    "Internal server error: failed to create 'saved' chat";
-            }
-            response_json["message"] = "New user was successfully created";
-            RETURN_RESPONSE_CODE_201(response_json)
-        } else {
-            LOG_WARN << "User wasn't created";
-            response_json["message"] =
-                "Internal server error: user wasn't created";
-            RETURN_RESPONSE_CODE_500(response_json)
+            auto saved_chat =
+                co_await chat_repo->createSaved(user->getValueOfId());
+        } catch (std::exception &e) {
+            LOG_WARN << "Couldn't create 'saved' chat " << e.what();
+            response_json["warn"] =
+                "Internal server error: failed to create 'saved' chat";
         }
+        response_json["message"] = "New user was successfully created";
+        RETURN_RESPONSE_CODE_201(response_json)
     } else {
         response_json["message"] = "User already exists";
         RETURN_RESPONSE_CODE_409(response_json)
