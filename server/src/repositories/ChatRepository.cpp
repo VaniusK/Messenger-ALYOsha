@@ -438,7 +438,7 @@ Task<Chat> ChatRepository::createSaved(int64_t user_id) {
     try {
         Chat chat;
         chat.setType(messenger::models::ChatType::Saved);
-        chat.setName("Saved Messages");
+        chat.setName("Избранное");
         chat = co_await mapper.insert(chat);
         ChatMember chat_member;
         chat_member.setChatId(chat.getValueOfId());
