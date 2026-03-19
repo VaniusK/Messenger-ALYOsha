@@ -27,8 +27,10 @@ Rectangle {
         function onChatsUpdated(chats) {
             if (!isSearching) {
                 chats.sort(function(a, b) {
-                    var timeA = a.last_message ? new Date(a.last_message.sent_at || a.last_message.timestamp || 0).getTime() : 0;
-                    var timeB = b.last_message ? new Date(b.last_message.sent_at || b.last_message.timestamp || 0).getTime() : 0;
+                    if (a.type === "saved") return -1;
+                    if (b.type === "saved") return 1;
+                    var timeA = a.last_message ? new Date((a.last_message.sent_at || "").replace(" ", "T") || 0).getTime() : 0;
+                    var timeB = b.last_message ? new Date((b.last_message.sent_at || "").replace(" ", "T") || 0).getTime() : 0;
                     if (isNaN(timeA)) timeA = 0;
                     if (isNaN(timeB)) timeB = 0;
                     return timeB - timeA;
@@ -207,9 +209,10 @@ Rectangle {
                     if (isSearching) {
                         ChatLayer.openDirectChat(itemData.id, itemData.display_name ?? itemData.handle ?? "")
                     } else {
+                        var displayName = (itemData.type === "saved") ? "Избранное" : (itemData.title ? itemData.title : "")
                         sidebarRoot.chatSelected(
                             String(itemData.chat_id),
-                            itemData.title ? itemData.title : ""
+                            displayName
                         )
                         ChatLayer.fetchChatHistory(String(itemData.chat_id))
                     }
@@ -225,13 +228,42 @@ Rectangle {
                 spacing: 15
 
                 Rectangle {
+                    id: avatarCircle
                     width: 50
                     height: 50
                     radius: 25
-                    color: "#5eb5f7" 
+                    color: "#4a90d9"
                     anchors.verticalCenter: parent.verticalCenter
+                    clip: true
+
+                    Canvas {
+                        id: bookmarkCanvas
+                        visible: !isSearching && itemData.type === "saved"
+                        width: 22
+                        height: 28
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: 1
+
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            ctx.clearRect(0, 0, width, height)
+                            var w = width
+                            var h = height
+                            var notchDepth = h * 0.28
+                            ctx.beginPath()
+                            ctx.moveTo(0, 0)
+                            ctx.lineTo(w, 0)
+                            ctx.lineTo(w, h)
+                            ctx.lineTo(w / 2, h - notchDepth)
+                            ctx.lineTo(0, h)
+                            ctx.closePath()
+                            ctx.fillStyle = "white"
+                            ctx.fill()
+                        }
+                    }
 
                     Text {
+                        visible: isSearching || itemData.type !== "saved"
                         text: isSearching
                             ? (itemData.display_name ? itemData.display_name.charAt(0).toUpperCase() : "?")
                             : (itemData.title ? itemData.title.charAt(0).toUpperCase() : "?")
@@ -254,7 +286,7 @@ Rectangle {
                         Text {
                             text: isSearching
                                 ? (itemData.display_name ?? itemData.handle ?? "")
-                                : (itemData.title ?? "")
+                                : (itemData.type === "saved" ? "Избранное" : (itemData.title ?? ""))
                             font.bold: true
                             color: "white"
                             font.family: "Segoe UI"

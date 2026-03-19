@@ -80,13 +80,42 @@ Rectangle {
                     width: 40
                     height: 40
                     radius: 20
-                    color: "#5eb5f7"
+                    color: activeChatName === "Избранное" ? "#4a90d9" : "#5eb5f7"
+                    clip: true
                     
+                    Canvas {
+                        id: headerBookmarkCanvas
+                        visible: activeChatName === "Избранное"
+                        width: 18
+                        height: 22
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: 1
+
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            ctx.clearRect(0, 0, width, height)
+                            var w = width
+                            var h = height
+                            var notchDepth = h * 0.28
+                            ctx.beginPath()
+                            ctx.moveTo(0, 0)
+                            ctx.lineTo(w, 0)
+                            ctx.lineTo(w, h)
+                            ctx.lineTo(w / 2, h - notchDepth)
+                            ctx.lineTo(0, h)
+                            ctx.closePath()
+                            ctx.fillStyle = "white"
+                            ctx.fill()
+                        }
+                    }
+
                     Text {
-                        text: activeChatName.charAt(0).toUpperCase()
+                        visible: activeChatName !== "Избранное"
+                        text: activeChatName ? activeChatName.charAt(0).toUpperCase() : "?"
                         color: "white"
                         font.bold: true
                         font.family: "Segoe UI"
+                        font.pixelSize: 20
                         anchors.centerIn: parent
                     }
                 }
@@ -104,7 +133,8 @@ Rectangle {
                     }
 
                     Text {
-                        text: isChatActive ? "в сети" : ""
+                        text: (isChatActive && activeChatName !== "Избранное") ? "в сети" : ""
+                        visible: text !== ""
                         color: "#5eb5f7"
                         font.pixelSize: 13
                         font.family: "Segoe UI"

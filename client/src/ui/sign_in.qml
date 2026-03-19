@@ -181,6 +181,26 @@ Rectangle {
                         errorText.text = "Введите пароль!"
                         errorText.visible = true
                         errorTimer.restart()
+                    } else if (handleField.text.length < 3) {
+                        errorText.text = "Логин слишком короткий"
+                        errorText.visible = true
+                        errorTimer.restart()
+                    } else if (handleField.text.length > 32) {
+                        errorText.text = "Логин слишком длинный"
+                        errorText.visible = true
+                        errorTimer.restart()
+                    } else if (!/^[a-zA-Z0-9_]+$/.test(handleField.text)) {
+                        errorText.text = "Логин: только латиница, цифры и _"
+                        errorText.visible = true
+                        errorTimer.restart()
+                    } else if (passwordField.length < 8) {
+                        errorText.text = "Пароль слишком короткий"
+                        errorText.visible = true
+                        errorTimer.restart()
+                    } else if (passwordField.length > 72) {
+                        errorText.text = "Пароль слишком длинный"
+                        errorText.visible = true
+                        errorTimer.restart()
                     } else {
                         Auth.loginUser(handleField.text, passwordField.text)
                     }

@@ -16,11 +16,11 @@ void noMessageOutput(
 }
 
 int main(int argc, char *argv[]) {
-    QGuiApplication app(argc, argv);
-
-#ifdef QT_DEBAG
+#ifdef QT_NO_DEBUG
     qInstallMessageHandler(noMessageOutput);
 #endif
+
+    QGuiApplication app(argc, argv);
 
     auto *stateManager = new StateManager(&app);
     auto *connectionManager = new ConnectionManager(
