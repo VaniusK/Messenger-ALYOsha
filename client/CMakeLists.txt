@@ -14,7 +14,7 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
 endif()
 
-qt_add_executable(client 
+qt_add_executable(client WIN32
     src/core/main.cpp
     src/core/AuthManager.cpp
     include/AuthManager.hpp
