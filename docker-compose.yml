@@ -1,0 +1,40 @@
+services:
+  db:
+      image: postgres:16
+      env_file:
+        - .env
+      ports:
+        - "5432:5432"
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+        - ./server/sql:/docker-entrypoint-initdb.d
+
+  server:
+    build: ./server
+    env_file:
+      - .env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - db
+  
+  client-build:
+    build: ./client
+    volumes:
+      - ./artifacts:/output
+    profiles:
+      - build
+
+  test-server:
+    build: ./server
+    command: ["./server_tests"]
+    env_file: .env
+    depends_on:
+      - db
+    profiles:
+      - test
+    environment:
+      POSTGRES_DB: messenger_db_test
+
+volumes:
+  postgres_data:
