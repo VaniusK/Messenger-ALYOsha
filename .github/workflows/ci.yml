@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build-client-linux:
+  build-client:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
