@@ -117,6 +117,7 @@ Rectangle {
                         font.family: "Segoe UI"
                         font.pixelSize: 20
                         anchors.centerIn: parent
+                        textFormat: Text.PlainText
                     }
                 }
 
@@ -130,6 +131,7 @@ Rectangle {
                         color: "white"
                         font.family: "Segoe UI"
                         font.pixelSize: 16
+                        textFormat: Text.PlainText
                     }
 
                     Text {
@@ -208,7 +210,7 @@ Rectangle {
                         }
                     }
 
-                    Text {
+                    TextEdit {
                         id: messageText
                         text: msgData.text
                         anchors.fill: parent
@@ -216,12 +218,21 @@ Rectangle {
                         anchors.leftMargin: 12
                         anchors.rightMargin: 12
                         anchors.bottomMargin: 12
-                        wrapMode: Text.Wrap
+
+                        wrapMode: TextEdit.Wrap
+                        textFormat: TextEdit.PlainText
+                        verticalAlignment: TextEdit.AlignVCenter
+                        horizontalAlignment: TextEdit.AlignLeft
+
                         color: "white"
                         font.pixelSize: 15
                         font.family: "Segoe UI"
-                        verticalAlignment: Text.AlignVCenter
-                        horizontalAlignment: Text.AlignLeft
+
+                        readOnly: true
+                        selectByMouse: true
+                        cursorVisible: false
+                        selectedTextColor: "white"
+                        selectionColor: "#4a90d9"
                     }
 
                     Text {
@@ -255,60 +266,84 @@ Rectangle {
 
         Rectangle {
             Layout.fillWidth: true
-            height: 60
+            Layout.preferredHeight: Math.min(250, Math.max(60, messageInput.contentHeight + 20))
             color: "#1c242f"
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: "#151b23"
+                anchors.top: parent.top
+            }
 
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: 10
-                spacing: 10
+                anchors.leftMargin: 20
+                anchors.rightMargin: 15
+                anchors.topMargin: 10
+                anchors.bottomMargin: 10
+                spacing: 15
 
-                Rectangle {
+                Item {
                     Layout.fillWidth: true
-                    height: 40
-                    radius: 20
-                    color: "#242f3d"
-                    
-                    TextInput {
-                        id: messageInput
-                        anchors.fill: parent
-                        anchors.leftMargin: 20
-                        anchors.rightMargin: 20
-                        verticalAlignment: Text.AlignVCenter
-                        color: "white"
-                        font.pixelSize: 15
-                        font.family: "Segoe UI"
+                    Layout.fillHeight: true
+
+                    Flickable {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: Math.min(parent.height, messageInput.contentHeight)
+                        contentWidth: width
+                        contentHeight: messageInput.contentHeight
                         clip: true
-                        
-                        Text {
-                            text: isChatActive ? "Сообщение..." : ""
-                            color: "#8a96a3"
+
+                        TextEdit {
+                            id: messageInput
+                            width: parent.width
+                            height: contentHeight
+                            color: "white"
+                            font.pixelSize: 16
                             font.family: "Segoe UI"
-                            font.pixelSize: 15
-                            visible: !parent.text && !parent.activeFocus
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        
-                        Keys.onReturnPressed: {
-                            if (messageInput.text.trim() != "" && isChatActive) {
-                                ChatLayer.sendMessage(activeChatId, messageInput.text.trim())
+                            wrapMode: TextEdit.Wrap
+
+                            Keys.onPressed: function(event) {
+                                if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(event.modifiers & Qt.ShiftModifier)) {
+                                    event.accepted = true;
+                                    if (text.trim() !== "" && isChatActive) {
+                                        ChatLayer.sendMessage(activeChatId, text.trim());
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    Text {
+                        text: isChatActive ? "Написать сообщение..." : ""
+                        color: "#8a96a3"
+                        font.family: "Segoe UI"
+                        font.pixelSize: 16
+                        visible: !messageInput.text && !messageInput.activeFocus
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
 
                 Rectangle {
+                    Layout.alignment: Qt.AlignBottom
                     width: 40
                     height: 40
-                    radius: 20
-                    color: "#5eb5f7"
-                    
+                    color: "transparent"
+
                     Text {
                         text: "➤"
-                        color: "white"
-                        font.pixelSize: 18
+                        color: messageInput.text.trim() === "" ? "#546576" : "#5eb5f7"
+                        font.pixelSize: 24
                         anchors.centerIn: parent
                         anchors.horizontalCenterOffset: 1
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
                     }
 
                     MouseArea {
