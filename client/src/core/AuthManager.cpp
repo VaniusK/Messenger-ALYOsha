@@ -70,7 +70,7 @@ void AuthManager::loginUser(const QString &handle, const QString &password) {
             m_stateManager->setToken(token);
             emit loginSuccess(token);
             fetchUserId(handle);
-        } else if (statusCode == 401 || statusCode == 404) {
+        } else if (statusCode == 401 || statusCode == 404 || statusCode == 400) {
             emit loginFailed("Неверный логин или пароль");
         } else {
             emit loginFailed(

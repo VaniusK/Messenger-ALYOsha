@@ -272,6 +272,7 @@ Rectangle {
                         font.family: "Segoe UI"
                         font.pixelSize: 22
                         anchors.centerIn: parent
+                        textFormat: Text.PlainText
                     }
                 }
 
@@ -296,6 +297,7 @@ Rectangle {
                             anchors.right: timeText.left
                             anchors.rightMargin: 10
                             anchors.top: parent.top
+                            textFormat: Text.PlainText
                         }
 
                         Text {
@@ -330,6 +332,9 @@ Rectangle {
                         font.family: "Segoe UI"
                         elide: Text.ElideRight
                         width: parent.width
+
+                        maximumLineCount: 1
+                        textFormat: Text.PlainText
                     }
                 }
             }
