@@ -29,10 +29,15 @@ Rectangle {
                 chats.sort(function(a, b) {
                     if (a.type === "saved") return -1;
                     if (b.type === "saved") return 1;
-                    var timeA = a.last_message ? new Date((a.last_message.sent_at || "").replace(" ", "T") || 0).getTime() : 0;
-                    var timeB = b.last_message ? new Date((b.last_message.sent_at || "").replace(" ", "T") || 0).getTime() : 0;
+
+                    var strA = a.last_message ? a.last_message.sent_at || "" : "";
+                    var timeA = strA ? new Date(strA.replace(" ", "T") + (strA.indexOf("Z") === -1 ? "Z" : "")).getTime() : 0;
                     if (isNaN(timeA)) timeA = 0;
+
+                    var strB = b.last_message ? b.last_message.sent_at || "" : "";
+                    var timeB = strB ? new Date(strB.replace(" ", "T") + (strB.indexOf("Z") === -1 ? "Z" : "")).getTime() : 0;
                     if (isNaN(timeB)) timeB = 0;
+                    
                     return timeB - timeA;
                 })
                 chatDataList = chats
@@ -308,6 +313,9 @@ Rectangle {
                                 var t = itemData.last_message.sent_at;
                                 if (typeof t === "string" && t.indexOf(" ") !== -1) {
                                     t = t.replace(" ", "T");
+                                }
+                                if (t.indexOf("Z") === -1) {
+                                    t += "Z";
                                 }
                                 var d = new Date(t);
                                 if (isNaN(d.getTime())) return "";

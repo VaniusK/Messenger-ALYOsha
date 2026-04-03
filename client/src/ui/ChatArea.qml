@@ -244,6 +244,11 @@ Rectangle {
                             if (typeof t === "string" && t.indexOf(" ") !== -1) {
                                 t = t.replace(" ", "T");
                             }
+
+                            if (t.indexOf("Z") === -1) {
+                                t += "Z";
+                            }
+
                             var d = new Date(t);
                             if (isNaN(d.getTime())) return "??:??";
 
