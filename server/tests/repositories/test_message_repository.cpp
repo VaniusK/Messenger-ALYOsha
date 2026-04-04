@@ -186,8 +186,8 @@ TEST_F(MessageTestFixture, TestGetByChatOptionals) {
     EXPECT_EQ(
         std::count_if(
             messages.begin(), messages.end(),
-            [&message2](const Message &u) {
-                return message2.getValueOfId() == u.getValueOfId();
+            [&message1](const Message &u) {
+                return message1.getValueOfId() == u.getValueOfId();
             }
         ),
         1

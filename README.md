@@ -5,7 +5,7 @@
 ![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
 ![C++](https://img.shields.io/badge/C%2B%2B-20-blue)
 ![Drogon](https://img.shields.io/badge/framework-Drogon-orange)
-![License](https://img.shields.io/badge/license-GVLv3-green)
+![License](https://img.shields.io/badge/license-GPLv3-green)
 [![Join the telegram channel at https://t.me/+V9sf31BJYg5kNzAy](https://img.shields.io/badge/Telegram-2CA5E0?style=flat&logo=telegram&logoColor=white)](https://t.me/+V9sf31BJYg5kNzAy)
 
 

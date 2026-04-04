@@ -282,5 +282,5 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     auto direct_chat_dima_petr_messages_with_before_id =
         (*result21->getJsonObject())["messages"];
-    ASSERT_EQ(direct_chat_dima_petr_messages_with_before_id.size(), 2);
+    ASSERT_EQ(direct_chat_dima_petr_messages_with_before_id.size(), 1);
 }

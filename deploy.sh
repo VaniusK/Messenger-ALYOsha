@@ -2,7 +2,7 @@
 set -e
 
 IMAGE="c_project-server:latest"
-REMOTE="ivan@158.160.201.64"
+REMOTE="ivan@158.160.219.207"
 REMOTE_DIR="~/"
 
 echo "Building..."
