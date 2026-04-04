@@ -1,4 +1,5 @@
 import QtQuick
+import Messenger 1.0
 
 Window {
     id: window
@@ -17,5 +18,13 @@ Window {
 
     function push(page) {
         pageLoader.source = page
+    }
+
+    Component.onCompleted: {
+        AppState.loadSession()
+        if (AppState.isLoggedIn()) {
+            ChatLayer.connectWebSocket()
+            pageLoader.source = "chat.qml"
+        }
     }
 }

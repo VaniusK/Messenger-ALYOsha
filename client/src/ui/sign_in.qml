@@ -129,6 +129,50 @@ Rectangle {
             }
         }
 
+        Row {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Rectangle {
+                id: rememberCheckbox
+                width: 20
+                height: 20
+                radius: 4
+                color: checked ? "#5eb5f7" : "transparent"
+                border.color: checked ? "#5eb5f7" : "#39434f"
+                border.width: 2
+                anchors.verticalCenter: parent.verticalCenter
+
+                property bool checked: true
+
+                Text {
+                    visible: parent.checked
+                    text: "✓"
+                    color: "white"
+                    font.pixelSize: 13
+                    font.bold: true
+                    anchors.centerIn: parent
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: parent.checked = !parent.checked
+                }
+
+                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on border.color { ColorAnimation { duration: 150 } }
+            }
+
+            Text {
+                text: "Запомнить меня"
+                color: "#8a96a3"
+                font.pixelSize: 14
+                font.family: "Segoe UI"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
         Text {
             id: errorText
             text: ""
@@ -151,7 +195,6 @@ Rectangle {
             height: 44
             color: loginMouseArea.containsMouse ? "#459ce0" : "#5eb5f7"
             radius: 8
-            Layout.topMargin: 10
 
             Text {
                 text: "ВОЙТИ"
@@ -182,6 +225,7 @@ Rectangle {
                         errorText.visible = true
                         errorTimer.restart()
                     } else {
+                        AppState.rememberMe = rememberCheckbox.checked
                         Auth.loginUser(handleField.text, passwordField.text)
                     }
                 }

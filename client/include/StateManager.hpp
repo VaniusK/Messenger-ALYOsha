@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QSettings>
 #include <QString>
 
 class StateManager : public QObject {
@@ -24,6 +25,13 @@ public:
 
     Q_INVOKABLE bool isLoggedIn() const;
     Q_INVOKABLE void clearState();
+    Q_INVOKABLE void saveSession();
+    Q_INVOKABLE void loadSession();
+
+    Q_PROPERTY(bool rememberMe READ getRememberMe WRITE setRememberMe)
+
+    bool getRememberMe() const;
+    void setRememberMe(bool rememberMe);
 
 signals:
     void tokenChanged();
@@ -34,4 +42,5 @@ private:
     QString m_token;
     QString m_currentUserHandle;
     int m_userId = -1;
+    bool m_rememberMe = true;
 };
