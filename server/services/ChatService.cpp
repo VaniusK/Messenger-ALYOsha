@@ -108,9 +108,7 @@ Task<HttpResponsePtr> ChatService::getChatMessages(
     int64_t user_id = (*request_json)["user_id"].asInt64();
     std::optional<int64_t> before_message_id =
         request_json->isMember("before_id")
-            ? std::optional<int64_t>(
-                  (*request_json)["before_message_id"].asInt64()
-              )
+            ? std::optional<int64_t>((*request_json)["before_id"].asInt64())
             : std::nullopt;
     int64_t limit = request_json->isMember("limit")
                         ? (*request_json)["limit"].asInt64()
