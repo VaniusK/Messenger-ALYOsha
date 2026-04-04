@@ -252,4 +252,35 @@ TEST_F(ControllerTestFixture, E2ETest) {
     auto direct_chat_dima_petr_messages =
         (*result20->getJsonObject())["messages"];
     ASSERT_EQ(direct_chat_dima_petr_messages.size(), 2);
+
+    // Дима получает историю сообщений чата с Петей, но с before_id
+
+    // Отправляем 100 сообщений
+    for (int i = 0; i < 100; i++) {
+        auto result = sync_wait(sendReqTask(form_request(
+            Post,
+            "/api/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
+                "/messages",
+            makeJson({{"text", "Работаем"}}), petr_token
+        )));
+
+        ASSERT_EQ(result->getStatusCode(), k201Created);
+    }
+    // Проверяем, что можем достать старые
+    auto result21 = sync_wait(sendReqTask(form_request(
+        Get,
+        "/api/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
+            "/messages",
+        makeJson(
+            {{"before_id",
+              (*result17->getJsonObject())["message"]["id"].asInt64()}}
+        ),
+        dima_token
+    )));
+
+    ASSERT_EQ(result21->getStatusCode(), k200OK);
+
+    auto direct_chat_dima_petr_messages_with_before_id =
+        (*result21->getJsonObject())["messages"];
+    ASSERT_EQ(direct_chat_dima_petr_messages_with_before_id.size(), 2);
 }
