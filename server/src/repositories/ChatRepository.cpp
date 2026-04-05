@@ -451,3 +451,25 @@ Task<Chat> ChatRepository::createSaved(int64_t user_id) {
         throw std::runtime_error("Database error");
     }
 }
+
+Task<Chat> ChatRepository::getSaved(int64_t user_id) {
+    auto mapper = getMapper();
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        int64_t chat_id =
+            (co_await chat_member_mapper.findOne(
+                 Criteria(
+                     ChatMember::Cols::_chat_type, CompareOperator::EQ,
+                     models::ChatType::Saved
+                 ) &&
+                 Criteria(
+                     ChatMember::Cols::_user_id, CompareOperator::EQ, user_id
+                 )
+             ))
+                .getValueOfChatId();
+        Chat chat = co_await mapper.findByPrimaryKey(chat_id);
+        co_return chat;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}

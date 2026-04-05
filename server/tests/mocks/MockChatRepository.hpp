@@ -123,4 +123,5 @@ public:
         (override)
     );
     MOCK_METHOD(drogon::Task<Chat>, createSaved, (int64_t), (override));
+    MOCK_METHOD(drogon::Task<Chat>, getSaved, (int64_t), (override));
 };

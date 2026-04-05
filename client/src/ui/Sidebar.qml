@@ -205,6 +205,7 @@ Rectangle {
 
             property var itemData: modelData
             property bool isActive: !sidebarRoot.isSearching && String(itemData.chat_id) === sidebarRoot.activeChatId
+            property bool isSelf: isSearching && String(itemData.id) === String(AppState.userId)
             color: isActive ? "#2b5278" : (chatMouseArea.containsMouse ? "#202b36" : "#1c242f")
 
             MouseArea {
@@ -245,7 +246,7 @@ Rectangle {
 
                     Canvas {
                         id: bookmarkCanvas
-                        visible: !isSearching && itemData.type === "saved"
+                        visible: (!isSearching && itemData.type === "saved") || isSelf
                         width: 22
                         height: 28
                         anchors.centerIn: parent
@@ -270,7 +271,7 @@ Rectangle {
                     }
 
                     Text {
-                        visible: isSearching || itemData.type !== "saved"
+                        visible: !isSelf && (isSearching || itemData.type !== "saved")
                         text: isSearching
                             ? (itemData.display_name ? itemData.display_name.charAt(0).toUpperCase() : "?")
                             : (itemData.title ? itemData.title.charAt(0).toUpperCase() : "?")
@@ -292,7 +293,9 @@ Rectangle {
                         height: 20
 
                         Text {
-                            text: isSearching
+                            text: isSelf
+                            ? "Избранное"
+                            : isSearching
                                 ? (itemData.display_name ?? itemData.handle ?? "")
                                 : (itemData.type === "saved" ? "Избранное" : (itemData.title ?? ""))
                             font.bold: true

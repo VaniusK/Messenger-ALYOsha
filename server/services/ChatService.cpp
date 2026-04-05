@@ -89,8 +89,13 @@ Task<HttpResponsePtr> ChatService::createOrGetDirectChat(
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
     int64_t other_user_id = (*request_json)["target_user_id"].asInt64();
-    std::optional<Chat> chat =
-        co_await chat_repo->getDirect(user_id, other_user_id);
+    std::optional<Chat> chat;
+    if (user_id == other_user_id) {
+        chat = co_await chat_repo->getSaved(user_id);
+        response_json["chat"] = chat->toJson();
+        RETURN_RESPONSE_CODE_200(response_json)
+    }
+    chat = co_await chat_repo->getDirect(user_id, other_user_id);
     if (chat.has_value()) {
         response_json["chat"] = chat->toJson();
         RETURN_RESPONSE_CODE_200(response_json)

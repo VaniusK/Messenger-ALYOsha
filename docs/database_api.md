@@ -68,6 +68,7 @@
 | `updateInfo(chat_id, name?, avatar?, description?)` | Обновить инфо чата                         | `bool`                |
 | `markAsRead(chat_id, user_id, last_read_message_id)`                 | Обновить last_read_message_id | `bool`            |
 | `createSaved(user_id)` | Создать сохранёнки для пользователя                         | `Chat`                |
+| `getSaved(user_id)` | Вернуть сохранёнки пользователя                         | `Chat`                |
 ### ChatPreview
 
 ### Model: ChatPreview
