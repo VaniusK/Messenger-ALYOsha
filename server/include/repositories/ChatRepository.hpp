@@ -86,6 +86,7 @@ public:
         std::optional<std::string> description
     ) = 0;
     drogon::Task<Chat> virtual createSaved(int64_t user_id) = 0;
+    drogon::Task<Chat> virtual getSaved(int64_t user_id) = 0;
 
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
@@ -145,6 +146,7 @@ public:
         std::optional<std::string> description
     ) override;
     drogon::Task<Chat> createSaved(int64_t user_id) override;
+    drogon::Task<Chat> virtual getSaved(int64_t user_id) override;
 
 private:
     drogon::orm::CoroMapper<Chat> getMapper() {
