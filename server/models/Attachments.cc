@@ -15,10 +15,10 @@ using namespace drogon_model::messenger_db;
 
 const std::string Attachments::Cols::_id = "\"id\"";
 const std::string Attachments::Cols::_message_id = "\"message_id\"";
-const std::string Attachments::Cols::_post_id = "\"post_id\"";
+const std::string Attachments::Cols::_file_name = "\"file_name\"";
 const std::string Attachments::Cols::_file_type = "\"file_type\"";
-const std::string Attachments::Cols::_file_size = "\"file_size\"";
-const std::string Attachments::Cols::_file_path = "\"file_path\"";
+const std::string Attachments::Cols::_file_size_bytes = "\"file_size_bytes\"";
+const std::string Attachments::Cols::_s3_object_key = "\"s3_object_key\"";
 const std::string Attachments::Cols::_uploaded_at = "\"uploaded_at\"";
 const std::string Attachments::primaryKeyName = "id";
 const bool Attachments::hasPrimaryKey = true;
@@ -26,11 +26,11 @@ const std::string Attachments::tableName = "\"attachments\"";
 
 const std::vector<typename Attachments::MetaData> Attachments::metaData_={
 {"id","int64_t","bigint",8,1,1,1},
-{"message_id","int64_t","bigint",8,0,0,0},
-{"post_id","int64_t","bigint",8,0,0,0},
+{"message_id","int64_t","bigint",8,0,0,1},
+{"file_name","std::string","character varying",255,0,0,1},
 {"file_type","std::string","character varying",50,0,0,1},
-{"file_size","int64_t","bigint",8,0,0,1},
-{"file_path","std::string","character varying",500,0,0,1},
+{"file_size_bytes","int64_t","bigint",8,0,0,1},
+{"s3_object_key","std::string","character varying",500,0,0,1},
 {"uploaded_at","::trantor::Date","timestamp with time zone",0,0,0,0}
 };
 const std::string &Attachments::getColumnName(size_t index) noexcept(false)
@@ -50,21 +50,21 @@ Attachments::Attachments(const Row &r, const ssize_t indexOffset) noexcept
         {
             messageId_=std::make_shared<int64_t>(r["message_id"].as<int64_t>());
         }
-        if(!r["post_id"].isNull())
+        if(!r["file_name"].isNull())
         {
-            postId_=std::make_shared<int64_t>(r["post_id"].as<int64_t>());
+            fileName_=std::make_shared<std::string>(r["file_name"].as<std::string>());
         }
         if(!r["file_type"].isNull())
         {
             fileType_=std::make_shared<std::string>(r["file_type"].as<std::string>());
         }
-        if(!r["file_size"].isNull())
+        if(!r["file_size_bytes"].isNull())
         {
-            fileSize_=std::make_shared<int64_t>(r["file_size"].as<int64_t>());
+            fileSizeBytes_=std::make_shared<int64_t>(r["file_size_bytes"].as<int64_t>());
         }
-        if(!r["file_path"].isNull())
+        if(!r["s3_object_key"].isNull())
         {
-            filePath_=std::make_shared<std::string>(r["file_path"].as<std::string>());
+            s3ObjectKey_=std::make_shared<std::string>(r["s3_object_key"].as<std::string>());
         }
         if(!r["uploaded_at"].isNull())
         {
@@ -111,7 +111,7 @@ Attachments::Attachments(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 2;
         if(!r[index].isNull())
         {
-            postId_=std::make_shared<int64_t>(r[index].as<int64_t>());
+            fileName_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 3;
         if(!r[index].isNull())
@@ -121,12 +121,12 @@ Attachments::Attachments(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 4;
         if(!r[index].isNull())
         {
-            fileSize_=std::make_shared<int64_t>(r[index].as<int64_t>());
+            fileSizeBytes_=std::make_shared<int64_t>(r[index].as<int64_t>());
         }
         index = offset + 5;
         if(!r[index].isNull())
         {
-            filePath_=std::make_shared<std::string>(r[index].as<std::string>());
+            s3ObjectKey_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 6;
         if(!r[index].isNull())
@@ -183,7 +183,7 @@ Attachments::Attachments(const Json::Value &pJson, const std::vector<std::string
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            postId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[2]].asInt64());
+            fileName_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -199,7 +199,7 @@ Attachments::Attachments(const Json::Value &pJson, const std::vector<std::string
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            fileSize_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[4]].asInt64());
+            fileSizeBytes_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[4]].asInt64());
         }
     }
     if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
@@ -207,7 +207,7 @@ Attachments::Attachments(const Json::Value &pJson, const std::vector<std::string
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            filePath_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
+            s3ObjectKey_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -256,12 +256,12 @@ Attachments::Attachments(const Json::Value &pJson) noexcept(false)
             messageId_=std::make_shared<int64_t>((int64_t)pJson["message_id"].asInt64());
         }
     }
-    if(pJson.isMember("post_id"))
+    if(pJson.isMember("file_name"))
     {
         dirtyFlag_[2]=true;
-        if(!pJson["post_id"].isNull())
+        if(!pJson["file_name"].isNull())
         {
-            postId_=std::make_shared<int64_t>((int64_t)pJson["post_id"].asInt64());
+            fileName_=std::make_shared<std::string>(pJson["file_name"].asString());
         }
     }
     if(pJson.isMember("file_type"))
@@ -272,20 +272,20 @@ Attachments::Attachments(const Json::Value &pJson) noexcept(false)
             fileType_=std::make_shared<std::string>(pJson["file_type"].asString());
         }
     }
-    if(pJson.isMember("file_size"))
+    if(pJson.isMember("file_size_bytes"))
     {
         dirtyFlag_[4]=true;
-        if(!pJson["file_size"].isNull())
+        if(!pJson["file_size_bytes"].isNull())
         {
-            fileSize_=std::make_shared<int64_t>((int64_t)pJson["file_size"].asInt64());
+            fileSizeBytes_=std::make_shared<int64_t>((int64_t)pJson["file_size_bytes"].asInt64());
         }
     }
-    if(pJson.isMember("file_path"))
+    if(pJson.isMember("s3_object_key"))
     {
         dirtyFlag_[5]=true;
-        if(!pJson["file_path"].isNull())
+        if(!pJson["s3_object_key"].isNull())
         {
-            filePath_=std::make_shared<std::string>(pJson["file_path"].asString());
+            s3ObjectKey_=std::make_shared<std::string>(pJson["s3_object_key"].asString());
         }
     }
     if(pJson.isMember("uploaded_at"))
@@ -344,7 +344,7 @@ void Attachments::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            postId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[2]].asInt64());
+            fileName_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -360,7 +360,7 @@ void Attachments::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            fileSize_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[4]].asInt64());
+            fileSizeBytes_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[4]].asInt64());
         }
     }
     if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
@@ -368,7 +368,7 @@ void Attachments::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            filePath_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
+            s3ObjectKey_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -416,12 +416,12 @@ void Attachments::updateByJson(const Json::Value &pJson) noexcept(false)
             messageId_=std::make_shared<int64_t>((int64_t)pJson["message_id"].asInt64());
         }
     }
-    if(pJson.isMember("post_id"))
+    if(pJson.isMember("file_name"))
     {
         dirtyFlag_[2] = true;
-        if(!pJson["post_id"].isNull())
+        if(!pJson["file_name"].isNull())
         {
-            postId_=std::make_shared<int64_t>((int64_t)pJson["post_id"].asInt64());
+            fileName_=std::make_shared<std::string>(pJson["file_name"].asString());
         }
     }
     if(pJson.isMember("file_type"))
@@ -432,20 +432,20 @@ void Attachments::updateByJson(const Json::Value &pJson) noexcept(false)
             fileType_=std::make_shared<std::string>(pJson["file_type"].asString());
         }
     }
-    if(pJson.isMember("file_size"))
+    if(pJson.isMember("file_size_bytes"))
     {
         dirtyFlag_[4] = true;
-        if(!pJson["file_size"].isNull())
+        if(!pJson["file_size_bytes"].isNull())
         {
-            fileSize_=std::make_shared<int64_t>((int64_t)pJson["file_size"].asInt64());
+            fileSizeBytes_=std::make_shared<int64_t>((int64_t)pJson["file_size_bytes"].asInt64());
         }
     }
-    if(pJson.isMember("file_path"))
+    if(pJson.isMember("s3_object_key"))
     {
         dirtyFlag_[5] = true;
-        if(!pJson["file_path"].isNull())
+        if(!pJson["s3_object_key"].isNull())
         {
-            filePath_=std::make_shared<std::string>(pJson["file_path"].asString());
+            s3ObjectKey_=std::make_shared<std::string>(pJson["s3_object_key"].asString());
         }
     }
     if(pJson.isMember("uploaded_at"))
@@ -514,31 +514,26 @@ void Attachments::setMessageId(const int64_t &pMessageId) noexcept
     messageId_ = std::make_shared<int64_t>(pMessageId);
     dirtyFlag_[1] = true;
 }
-void Attachments::setMessageIdToNull() noexcept
-{
-    messageId_.reset();
-    dirtyFlag_[1] = true;
-}
 
-const int64_t &Attachments::getValueOfPostId() const noexcept
+const std::string &Attachments::getValueOfFileName() const noexcept
 {
-    static const int64_t defaultValue = int64_t();
-    if(postId_)
-        return *postId_;
+    static const std::string defaultValue = std::string();
+    if(fileName_)
+        return *fileName_;
     return defaultValue;
 }
-const std::shared_ptr<int64_t> &Attachments::getPostId() const noexcept
+const std::shared_ptr<std::string> &Attachments::getFileName() const noexcept
 {
-    return postId_;
+    return fileName_;
 }
-void Attachments::setPostId(const int64_t &pPostId) noexcept
+void Attachments::setFileName(const std::string &pFileName) noexcept
 {
-    postId_ = std::make_shared<int64_t>(pPostId);
+    fileName_ = std::make_shared<std::string>(pFileName);
     dirtyFlag_[2] = true;
 }
-void Attachments::setPostIdToNull() noexcept
+void Attachments::setFileName(std::string &&pFileName) noexcept
 {
-    postId_.reset();
+    fileName_ = std::make_shared<std::string>(std::move(pFileName));
     dirtyFlag_[2] = true;
 }
 
@@ -564,42 +559,42 @@ void Attachments::setFileType(std::string &&pFileType) noexcept
     dirtyFlag_[3] = true;
 }
 
-const int64_t &Attachments::getValueOfFileSize() const noexcept
+const int64_t &Attachments::getValueOfFileSizeBytes() const noexcept
 {
     static const int64_t defaultValue = int64_t();
-    if(fileSize_)
-        return *fileSize_;
+    if(fileSizeBytes_)
+        return *fileSizeBytes_;
     return defaultValue;
 }
-const std::shared_ptr<int64_t> &Attachments::getFileSize() const noexcept
+const std::shared_ptr<int64_t> &Attachments::getFileSizeBytes() const noexcept
 {
-    return fileSize_;
+    return fileSizeBytes_;
 }
-void Attachments::setFileSize(const int64_t &pFileSize) noexcept
+void Attachments::setFileSizeBytes(const int64_t &pFileSizeBytes) noexcept
 {
-    fileSize_ = std::make_shared<int64_t>(pFileSize);
+    fileSizeBytes_ = std::make_shared<int64_t>(pFileSizeBytes);
     dirtyFlag_[4] = true;
 }
 
-const std::string &Attachments::getValueOfFilePath() const noexcept
+const std::string &Attachments::getValueOfS3ObjectKey() const noexcept
 {
     static const std::string defaultValue = std::string();
-    if(filePath_)
-        return *filePath_;
+    if(s3ObjectKey_)
+        return *s3ObjectKey_;
     return defaultValue;
 }
-const std::shared_ptr<std::string> &Attachments::getFilePath() const noexcept
+const std::shared_ptr<std::string> &Attachments::getS3ObjectKey() const noexcept
 {
-    return filePath_;
+    return s3ObjectKey_;
 }
-void Attachments::setFilePath(const std::string &pFilePath) noexcept
+void Attachments::setS3ObjectKey(const std::string &pS3ObjectKey) noexcept
 {
-    filePath_ = std::make_shared<std::string>(pFilePath);
+    s3ObjectKey_ = std::make_shared<std::string>(pS3ObjectKey);
     dirtyFlag_[5] = true;
 }
-void Attachments::setFilePath(std::string &&pFilePath) noexcept
+void Attachments::setS3ObjectKey(std::string &&pS3ObjectKey) noexcept
 {
-    filePath_ = std::make_shared<std::string>(std::move(pFilePath));
+    s3ObjectKey_ = std::make_shared<std::string>(std::move(pS3ObjectKey));
     dirtyFlag_[5] = true;
 }
 
@@ -633,10 +628,10 @@ const std::vector<std::string> &Attachments::insertColumns() noexcept
 {
     static const std::vector<std::string> inCols={
         "message_id",
-        "post_id",
+        "file_name",
         "file_type",
-        "file_size",
-        "file_path",
+        "file_size_bytes",
+        "s3_object_key",
         "uploaded_at"
     };
     return inCols;
@@ -657,9 +652,9 @@ void Attachments::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[2])
     {
-        if(getPostId())
+        if(getFileName())
         {
-            binder << getValueOfPostId();
+            binder << getValueOfFileName();
         }
         else
         {
@@ -679,9 +674,9 @@ void Attachments::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[4])
     {
-        if(getFileSize())
+        if(getFileSizeBytes())
         {
-            binder << getValueOfFileSize();
+            binder << getValueOfFileSizeBytes();
         }
         else
         {
@@ -690,9 +685,9 @@ void Attachments::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[5])
     {
-        if(getFilePath())
+        if(getS3ObjectKey())
         {
-            binder << getValueOfFilePath();
+            binder << getValueOfS3ObjectKey();
         }
         else
         {
@@ -757,9 +752,9 @@ void Attachments::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[2])
     {
-        if(getPostId())
+        if(getFileName())
         {
-            binder << getValueOfPostId();
+            binder << getValueOfFileName();
         }
         else
         {
@@ -779,9 +774,9 @@ void Attachments::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[4])
     {
-        if(getFileSize())
+        if(getFileSizeBytes())
         {
-            binder << getValueOfFileSize();
+            binder << getValueOfFileSizeBytes();
         }
         else
         {
@@ -790,9 +785,9 @@ void Attachments::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[5])
     {
-        if(getFilePath())
+        if(getS3ObjectKey())
         {
-            binder << getValueOfFilePath();
+            binder << getValueOfS3ObjectKey();
         }
         else
         {
@@ -830,13 +825,13 @@ Json::Value Attachments::toJson() const
     {
         ret["message_id"]=Json::Value();
     }
-    if(getPostId())
+    if(getFileName())
     {
-        ret["post_id"]=(Json::Int64)getValueOfPostId();
+        ret["file_name"]=getValueOfFileName();
     }
     else
     {
-        ret["post_id"]=Json::Value();
+        ret["file_name"]=Json::Value();
     }
     if(getFileType())
     {
@@ -846,21 +841,21 @@ Json::Value Attachments::toJson() const
     {
         ret["file_type"]=Json::Value();
     }
-    if(getFileSize())
+    if(getFileSizeBytes())
     {
-        ret["file_size"]=(Json::Int64)getValueOfFileSize();
+        ret["file_size_bytes"]=(Json::Int64)getValueOfFileSizeBytes();
     }
     else
     {
-        ret["file_size"]=Json::Value();
+        ret["file_size_bytes"]=Json::Value();
     }
-    if(getFilePath())
+    if(getS3ObjectKey())
     {
-        ret["file_path"]=getValueOfFilePath();
+        ret["s3_object_key"]=getValueOfS3ObjectKey();
     }
     else
     {
-        ret["file_path"]=Json::Value();
+        ret["s3_object_key"]=Json::Value();
     }
     if(getUploadedAt())
     {
@@ -908,9 +903,9 @@ Json::Value Attachments::toMasqueradedJson(
         }
         if(!pMasqueradingVector[2].empty())
         {
-            if(getPostId())
+            if(getFileName())
             {
-                ret[pMasqueradingVector[2]]=(Json::Int64)getValueOfPostId();
+                ret[pMasqueradingVector[2]]=getValueOfFileName();
             }
             else
             {
@@ -930,9 +925,9 @@ Json::Value Attachments::toMasqueradedJson(
         }
         if(!pMasqueradingVector[4].empty())
         {
-            if(getFileSize())
+            if(getFileSizeBytes())
             {
-                ret[pMasqueradingVector[4]]=(Json::Int64)getValueOfFileSize();
+                ret[pMasqueradingVector[4]]=(Json::Int64)getValueOfFileSizeBytes();
             }
             else
             {
@@ -941,9 +936,9 @@ Json::Value Attachments::toMasqueradedJson(
         }
         if(!pMasqueradingVector[5].empty())
         {
-            if(getFilePath())
+            if(getS3ObjectKey())
             {
-                ret[pMasqueradingVector[5]]=getValueOfFilePath();
+                ret[pMasqueradingVector[5]]=getValueOfS3ObjectKey();
             }
             else
             {
@@ -980,13 +975,13 @@ Json::Value Attachments::toMasqueradedJson(
     {
         ret["message_id"]=Json::Value();
     }
-    if(getPostId())
+    if(getFileName())
     {
-        ret["post_id"]=(Json::Int64)getValueOfPostId();
+        ret["file_name"]=getValueOfFileName();
     }
     else
     {
-        ret["post_id"]=Json::Value();
+        ret["file_name"]=Json::Value();
     }
     if(getFileType())
     {
@@ -996,21 +991,21 @@ Json::Value Attachments::toMasqueradedJson(
     {
         ret["file_type"]=Json::Value();
     }
-    if(getFileSize())
+    if(getFileSizeBytes())
     {
-        ret["file_size"]=(Json::Int64)getValueOfFileSize();
+        ret["file_size_bytes"]=(Json::Int64)getValueOfFileSizeBytes();
     }
     else
     {
-        ret["file_size"]=Json::Value();
+        ret["file_size_bytes"]=Json::Value();
     }
-    if(getFilePath())
+    if(getS3ObjectKey())
     {
-        ret["file_path"]=getValueOfFilePath();
+        ret["s3_object_key"]=getValueOfS3ObjectKey();
     }
     else
     {
-        ret["file_path"]=Json::Value();
+        ret["s3_object_key"]=Json::Value();
     }
     if(getUploadedAt())
     {
@@ -1035,10 +1030,20 @@ bool Attachments::validateJsonForCreation(const Json::Value &pJson, std::string 
         if(!validJsonOfField(1, "message_id", pJson["message_id"], err, true))
             return false;
     }
-    if(pJson.isMember("post_id"))
+    else
     {
-        if(!validJsonOfField(2, "post_id", pJson["post_id"], err, true))
+        err="The message_id column cannot be null";
+        return false;
+    }
+    if(pJson.isMember("file_name"))
+    {
+        if(!validJsonOfField(2, "file_name", pJson["file_name"], err, true))
             return false;
+    }
+    else
+    {
+        err="The file_name column cannot be null";
+        return false;
     }
     if(pJson.isMember("file_type"))
     {
@@ -1050,24 +1055,24 @@ bool Attachments::validateJsonForCreation(const Json::Value &pJson, std::string 
         err="The file_type column cannot be null";
         return false;
     }
-    if(pJson.isMember("file_size"))
+    if(pJson.isMember("file_size_bytes"))
     {
-        if(!validJsonOfField(4, "file_size", pJson["file_size"], err, true))
+        if(!validJsonOfField(4, "file_size_bytes", pJson["file_size_bytes"], err, true))
             return false;
     }
     else
     {
-        err="The file_size column cannot be null";
+        err="The file_size_bytes column cannot be null";
         return false;
     }
-    if(pJson.isMember("file_path"))
+    if(pJson.isMember("s3_object_key"))
     {
-        if(!validJsonOfField(5, "file_path", pJson["file_path"], err, true))
+        if(!validJsonOfField(5, "s3_object_key", pJson["s3_object_key"], err, true))
             return false;
     }
     else
     {
-        err="The file_path column cannot be null";
+        err="The s3_object_key column cannot be null";
         return false;
     }
     if(pJson.isMember("uploaded_at"))
@@ -1102,6 +1107,11 @@ bool Attachments::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(1, pMasqueradingVector[1], pJson[pMasqueradingVector[1]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[1] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[2].empty())
       {
@@ -1110,6 +1120,11 @@ bool Attachments::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(2, pMasqueradingVector[2], pJson[pMasqueradingVector[2]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[2] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[3].empty())
       {
@@ -1183,9 +1198,9 @@ bool Attachments::validateJsonForUpdate(const Json::Value &pJson, std::string &e
         if(!validJsonOfField(1, "message_id", pJson["message_id"], err, false))
             return false;
     }
-    if(pJson.isMember("post_id"))
+    if(pJson.isMember("file_name"))
     {
-        if(!validJsonOfField(2, "post_id", pJson["post_id"], err, false))
+        if(!validJsonOfField(2, "file_name", pJson["file_name"], err, false))
             return false;
     }
     if(pJson.isMember("file_type"))
@@ -1193,14 +1208,14 @@ bool Attachments::validateJsonForUpdate(const Json::Value &pJson, std::string &e
         if(!validJsonOfField(3, "file_type", pJson["file_type"], err, false))
             return false;
     }
-    if(pJson.isMember("file_size"))
+    if(pJson.isMember("file_size_bytes"))
     {
-        if(!validJsonOfField(4, "file_size", pJson["file_size"], err, false))
+        if(!validJsonOfField(4, "file_size_bytes", pJson["file_size_bytes"], err, false))
             return false;
     }
-    if(pJson.isMember("file_path"))
+    if(pJson.isMember("s3_object_key"))
     {
-        if(!validJsonOfField(5, "file_path", pJson["file_path"], err, false))
+        if(!validJsonOfField(5, "s3_object_key", pJson["s3_object_key"], err, false))
             return false;
     }
     if(pJson.isMember("uploaded_at"))
@@ -1296,7 +1311,8 @@ bool Attachments::validJsonOfField(size_t index,
         case 1:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
             if(!pJson.isInt64())
             {
@@ -1307,11 +1323,20 @@ bool Attachments::validJsonOfField(size_t index,
         case 2:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
-            if(!pJson.isInt64())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 255)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 255)";
                 return false;
             }
             break;

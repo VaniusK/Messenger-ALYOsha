@@ -52,6 +52,9 @@ class Chats
         static const std::string _direct_user1_id;
         static const std::string _direct_user2_id;
         static const std::string _created_at;
+        static const std::string _handle;
+        static const std::string _is_private;
+        static const std::string _discussion_chat_id;
     };
 
     static const int primaryKeyNumber;
@@ -176,8 +179,35 @@ class Chats
     void setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept;
     void setCreatedAtToNull() noexcept;
 
+    /**  For column handle  */
+    ///Get the value of the column handle, returns the default value if the column is null
+    const std::string &getValueOfHandle() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getHandle() const noexcept;
+    ///Set the value of the column handle
+    void setHandle(const std::string &pHandle) noexcept;
+    void setHandle(std::string &&pHandle) noexcept;
+    void setHandleToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 8;  }
+    /**  For column is_private  */
+    ///Get the value of the column is_private, returns the default value if the column is null
+    const bool &getValueOfIsPrivate() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<bool> &getIsPrivate() const noexcept;
+    ///Set the value of the column is_private
+    void setIsPrivate(const bool &pIsPrivate) noexcept;
+
+    /**  For column discussion_chat_id  */
+    ///Get the value of the column discussion_chat_id, returns the default value if the column is null
+    const int64_t &getValueOfDiscussionChatId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int64_t> &getDiscussionChatId() const noexcept;
+    ///Set the value of the column discussion_chat_id
+    void setDiscussionChatId(const int64_t &pDiscussionChatId) noexcept;
+    void setDiscussionChatIdToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 11;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -207,6 +237,9 @@ class Chats
     std::shared_ptr<int64_t> directUser1Id_;
     std::shared_ptr<int64_t> directUser2Id_;
     std::shared_ptr<::trantor::Date> createdAt_;
+    std::shared_ptr<std::string> handle_;
+    std::shared_ptr<bool> isPrivate_;
+    std::shared_ptr<int64_t> discussionChatId_;
     struct MetaData
     {
         const std::string colName_;
@@ -218,7 +251,7 @@ class Chats
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[8]={ false };
+    bool dirtyFlag_[11]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -275,6 +308,22 @@ class Chats
         {
             needSelection=true;
         }
+        if(dirtyFlag_[8])
+        {
+            sql += "handle,";
+            ++parametersCount;
+        }
+        sql += "is_private,";
+        ++parametersCount;
+        if(!dirtyFlag_[9])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[10])
+        {
+            sql += "discussion_chat_id,";
+            ++parametersCount;
+        }
         needSelection=true;
         if(parametersCount > 0)
         {
@@ -330,6 +379,25 @@ class Chats
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[8])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[9])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[10])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {
