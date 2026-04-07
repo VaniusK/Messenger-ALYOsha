@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
     libxkbcommon-dev \
     libvulkan-dev \
     qt6-websockets-dev \
+    qt6-svg-dev \
+    qt6-wayland \
     && rm -rf /var/lib/apt/lists/*
     
 WORKDIR /usr/src/client

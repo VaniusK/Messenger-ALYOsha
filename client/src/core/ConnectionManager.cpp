@@ -1,4 +1,5 @@
 #include <ConnectionManager.hpp>
+#include <QDebug>
 #include <QNetworkRequest>
 #include <QString>
 #include <QUrl>
@@ -9,6 +10,17 @@ ConnectionManager::ConnectionManager(
 )
     : QObject(parent), m_tokenProvider(tokenProvider) {
     m_networkManager = new QNetworkAccessManager(this);
+
+    connect(
+        m_networkManager, &QNetworkAccessManager::finished,
+        [](QNetworkReply *reply) {
+            if (reply->error() != QNetworkReply::NoError) {
+                qDebug() << "Network Error (" << reply->error()
+                         << "):" << reply->errorString();
+                qDebug() << "Target URL:" << reply->url().toString();
+            }
+        }
+    );
 }
 
 QString ConnectionManager::baseUrl() const {

@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network WebSockets Test)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network WebSockets Test Widgets)
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
@@ -24,6 +24,8 @@ qt_add_executable(client WIN32
     include/ChatManager.hpp
     src/core/ConnectionManager.cpp
     include/ConnectionManager.hpp
+    src/core/MediaManager.cpp
+    include/MediaManager.hpp
 )
 
 qt_add_qml_module(client
@@ -36,9 +38,19 @@ qt_add_qml_module(client
         src/ui/chat.qml
         src/ui/Sidebar.qml
         src/ui/ChatArea.qml
+        src/ui/MediaPickerPopup.qml
+        src/ui/MediaPreviewDialog.qml
+    RESOURCES
+        assets/icons/clip.svg
+        assets/icons/clip_active.svg
+        assets/icons/photo.svg
+        assets/icons/document.svg
+        assets/icons/bookmark.svg
+        assets/icons/send.svg
+        assets/icons/send_active.svg
 )
 target_include_directories(client PRIVATE include)
-target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::WebSockets)
+target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::WebSockets Qt6::Widgets)
 
 # Tests (optional, Qt Test or GTest)
 option(BUILD_TESTS "Build tests" OFF)
