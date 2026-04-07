@@ -244,30 +244,12 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     clip: true
 
-                    Canvas {
-                        id: bookmarkCanvas
+                    Image {
+                        id: bookmarkIcon
                         visible: (!isSearching && itemData.type === "saved") || isSelf
-                        width: 22
-                        height: 28
+                        source: "qrc:/messenger_client_uri/assets/icons/bookmark.svg"
+                        width: 24; height: 24; sourceSize: Qt.size(24, 24)
                         anchors.centerIn: parent
-                        anchors.verticalCenterOffset: 1
-
-                        onPaint: {
-                            var ctx = getContext("2d")
-                            ctx.clearRect(0, 0, width, height)
-                            var w = width
-                            var h = height
-                            var notchDepth = h * 0.28
-                            ctx.beginPath()
-                            ctx.moveTo(0, 0)
-                            ctx.lineTo(w, 0)
-                            ctx.lineTo(w, h)
-                            ctx.lineTo(w / 2, h - notchDepth)
-                            ctx.lineTo(0, h)
-                            ctx.closePath()
-                            ctx.fillStyle = "white"
-                            ctx.fill()
-                        }
                     }
 
                     Text {
@@ -338,7 +320,12 @@ Rectangle {
                     }
 
                     Text {
-                        text: isSearching ? "" : (itemData.last_message ? itemData.last_message.text : (itemData.unread_count > 0 ? "Новое сообщение\n" : "Нет сообщений"))
+                        text: isSearching ? "" 
+                                          : (itemData.last_message
+                                                ? itemData.last_message.text 
+                                                : (itemData.unread_count > 0 
+                                                    ? "Новое сообщение\n" 
+                                                    : "Нет сообщений"))
                         visible: !isSearching
                         color: "#8a96a3"
                         font.pixelSize: 14

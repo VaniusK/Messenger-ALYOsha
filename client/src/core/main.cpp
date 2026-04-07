@@ -1,11 +1,12 @@
 #include <qqml.h>
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QUrl>
 #include <QtMessageHandler>
 #include "AuthManager.hpp"
 #include "ChatManager.hpp"
 #include "ConnectionManager.hpp"
+#include "MediaManager.hpp"
 #include "StateManager.hpp"
 
 void noMessageOutput(
@@ -20,7 +21,7 @@ int main(int argc, char *argv[]) {
     qInstallMessageHandler(noMessageOutput);
 #endif
 
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
 
     auto *stateManager = new StateManager(&app);
     auto *connectionManager = new ConnectionManager(
@@ -28,6 +29,8 @@ int main(int argc, char *argv[]) {
     );
     auto *authManager = new AuthManager(connectionManager, stateManager, &app);
     auto *chatManager = new ChatManager(connectionManager, stateManager, &app);
+    auto *mediaManager =
+        new MediaManager(connectionManager, stateManager, &app);
 
     QQmlApplicationEngine engine;
     qmlRegisterSingletonInstance("Messenger", 1, 0, "AppState", stateManager);
@@ -36,6 +39,7 @@ int main(int argc, char *argv[]) {
     );
     qmlRegisterSingletonInstance("Messenger", 1, 0, "Auth", authManager);
     qmlRegisterSingletonInstance("Messenger", 1, 0, "ChatLayer", chatManager);
+    qmlRegisterSingletonInstance("Messenger", 1, 0, "MediaLayer", mediaManager);
     const QUrl url(u"qrc:/messenger_client_uri/src/ui/main.qml"_qs);
     engine.load(url);
     return app.exec();

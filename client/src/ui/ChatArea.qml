@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Dialogs
+import QtQuick.Controls
 import Messenger 1.0
 
 Rectangle {
@@ -11,6 +13,45 @@ Rectangle {
     property string activeChatName: "Выберите чат"
     property bool isLoadingHistory: false
     property bool hasMoreHistory: true
+    property bool isUploading: false
+    property string pendingMediaCaption: ""
+
+    Connections {
+        target: MediaLayer
+        function onFileDialogOpened() {
+            systemDialogBlocker.open()
+        }
+        function onFileDialogClosed() {
+            systemDialogBlocker.close()
+        }
+        function onFileSelected(filePath, fileType, fileSize, fileName) {
+            if (fileSize === 0) {
+                errorToast.show("Невозможно отправить пустой файл:\n" + filePath)
+                return
+            }
+            if (fileSize >= 1073741824) { // 1 GB
+                errorToast.show("Невозможно отправить файл больше 1 ГБ:\n" + filePath)
+                return
+            }
+            mediaPreview.openWith(filePath, fileType, fileSize, fileName, messageInput.text.trim())
+        }
+        function onUploadFinished(fileUrl, fileType, fileSize, fileName) {
+            isUploading = false
+            var finalMsg = "Отправлено: " + fileName
+            if (pendingMediaCaption !== "") {
+                finalMsg += "\n" + pendingMediaCaption
+            }
+            ChatLayer.sendMessage(activeChatId, finalMsg,
+                                fileUrl, fileType, fileSize, fileName)
+            pendingMediaCaption = ""
+        }
+        function onUploadProgress(percent) {
+            // Здесь будет прогресс-бар
+        }
+        function onUploadFailed(error) {
+            isUploading = false
+        }
+    }
 
     ListModel {
         id: chatModel
@@ -151,30 +192,12 @@ Rectangle {
                     color: activeChatName === "Избранное" ? "#4a90d9" : "#5eb5f7"
                     clip: true
                     
-                    Canvas {
-                        id: headerBookmarkCanvas
+                    Image {
+                        id: headerBookmarkIcon
                         visible: activeChatName === "Избранное"
-                        width: 18
-                        height: 22
+                        source: "qrc:/messenger_client_uri/assets/icons/bookmark.svg"
+                        width: 20; height: 20; sourceSize: Qt.size(20, 20)
                         anchors.centerIn: parent
-                        anchors.verticalCenterOffset: 1
-
-                        onPaint: {
-                            var ctx = getContext("2d")
-                            ctx.clearRect(0, 0, width, height)
-                            var w = width
-                            var h = height
-                            var notchDepth = h * 0.28
-                            ctx.beginPath()
-                            ctx.moveTo(0, 0)
-                            ctx.lineTo(w, 0)
-                            ctx.lineTo(w, h)
-                            ctx.lineTo(w / 2, h - notchDepth)
-                            ctx.lineTo(0, h)
-                            ctx.closePath()
-                            ctx.fillStyle = "white"
-                            ctx.fill()
-                        }
                     }
 
                     Text {
@@ -370,6 +393,32 @@ Rectangle {
                 anchors.bottomMargin: 10
                 spacing: 15
 
+                Rectangle {
+                    Layout.alignment: Qt.AlignBottom
+                    width: 36
+                    height: 36
+                    color: "transparent"
+                    visible: isChatActive
+                    Image {
+                        anchors.centerIn: parent
+                        width: 22; height: 22
+                        sourceSize: Qt.size(24, 24)
+                        source: clipArea.containsMouse 
+                                ? "qrc:/messenger_client_uri/assets/icons/clip_active.svg"
+                                : "qrc:/messenger_client_uri/assets/icons/clip.svg"
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                    }
+                    MouseArea {
+                        id: clipArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            mediaPicker.visible = !mediaPicker.visible
+                        }
+                    }
+                }
+                
                 Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -391,6 +440,12 @@ Rectangle {
                             font.pixelSize: 16
                             font.family: "Segoe UI"
                             wrapMode: TextEdit.Wrap
+
+                            onTextChanged: {
+                                if (mediaPicker.visible && text.length > 0) {
+                                    mediaPicker.visible = false
+                                }
+                            }
 
                             Keys.onPressed: function(event) {
                                 if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(event.modifiers & Qt.ShiftModifier)) {
@@ -420,16 +475,15 @@ Rectangle {
                     height: 40
                     color: "transparent"
 
-                    Text {
-                        text: "➤"
-                        color: messageInput.text.trim() === "" ? "#546576" : "#5eb5f7"
-                        font.pixelSize: 24
+                    Image {
+                        source: messageInput.text.trim() === "" 
+                            ? "qrc:/messenger_client_uri/assets/icons/send.svg"
+                            : "qrc:/messenger_client_uri/assets/icons/send_active.svg"
+                        width: 24; height: 24; sourceSize: Qt.size(24, 24)
                         anchors.centerIn: parent
-                        anchors.horizontalCenterOffset: 1
+                        anchors.horizontalCenterOffset: 2
 
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
                     }
 
                     MouseArea {
@@ -444,5 +498,81 @@ Rectangle {
                 }
             }
         }
+    }
+
+    Popup {
+        id: systemDialogBlocker
+        parent: Overlay.overlay
+        modal: true
+        dim: false
+        closePolicy: Popup.NoAutoClose
+        background: Item {}
+        contentItem: MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.BusyCursor
+        }
+    }
+
+    Popup {
+        id: errorToast
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        z: 9999
+        modal: false
+        dim: false
+        closePolicy: Popup.NoAutoClose
+
+        background: Rectangle {
+            color: Qt.rgba(0, 0, 0, 0.85)
+            radius: 8
+        }
+        
+        padding: 16
+        
+        contentItem: Text {
+            id: errorToastText
+            color: "white"
+            font.pixelSize: 15
+            font.family: "Segoe UI"
+            text: ""
+            wrapMode: Text.Wrap
+        }
+        
+        Timer {
+            id: errorToastTimer
+            interval: 4000
+            onTriggered: errorToast.close()
+        }
+        
+        function show(msg) {
+            errorToastText.text = msg
+            errorToast.open()
+            errorToastTimer.restart()
+        }
+    }
+
+
+    MediaPickerPopup {
+        id: mediaPicker
+        z: 100
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 70
+        anchors.left: parent.left
+        anchors.leftMargin: 15
+        onPhotoVideoRequested: MediaLayer.openFileDialog("image")
+        onDocumentRequested: MediaLayer.openFileDialog("document")
+    }
+
+    MediaPreviewDialog {
+        id: mediaPreview
+        z: 200
+        onSendRequested: function(filePath, fileType, asFile, caption) {
+            pendingMediaCaption = caption
+            messageInput.text = ""
+            isUploading = true
+            MediaLayer.uploadFile(filePath, fileType)
+        }
+        onCancelRequested: {}
     }
 }
