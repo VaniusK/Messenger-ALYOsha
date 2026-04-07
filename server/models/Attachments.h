@@ -46,10 +46,10 @@ class Attachments
     {
         static const std::string _id;
         static const std::string _message_id;
-        static const std::string _post_id;
+        static const std::string _file_name;
         static const std::string _file_type;
-        static const std::string _file_size;
-        static const std::string _file_path;
+        static const std::string _file_size_bytes;
+        static const std::string _s3_object_key;
         static const std::string _uploaded_at;
     };
 
@@ -117,16 +117,15 @@ class Attachments
     const std::shared_ptr<int64_t> &getMessageId() const noexcept;
     ///Set the value of the column message_id
     void setMessageId(const int64_t &pMessageId) noexcept;
-    void setMessageIdToNull() noexcept;
 
-    /**  For column post_id  */
-    ///Get the value of the column post_id, returns the default value if the column is null
-    const int64_t &getValueOfPostId() const noexcept;
+    /**  For column file_name  */
+    ///Get the value of the column file_name, returns the default value if the column is null
+    const std::string &getValueOfFileName() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<int64_t> &getPostId() const noexcept;
-    ///Set the value of the column post_id
-    void setPostId(const int64_t &pPostId) noexcept;
-    void setPostIdToNull() noexcept;
+    const std::shared_ptr<std::string> &getFileName() const noexcept;
+    ///Set the value of the column file_name
+    void setFileName(const std::string &pFileName) noexcept;
+    void setFileName(std::string &&pFileName) noexcept;
 
     /**  For column file_type  */
     ///Get the value of the column file_type, returns the default value if the column is null
@@ -137,22 +136,22 @@ class Attachments
     void setFileType(const std::string &pFileType) noexcept;
     void setFileType(std::string &&pFileType) noexcept;
 
-    /**  For column file_size  */
-    ///Get the value of the column file_size, returns the default value if the column is null
-    const int64_t &getValueOfFileSize() const noexcept;
+    /**  For column file_size_bytes  */
+    ///Get the value of the column file_size_bytes, returns the default value if the column is null
+    const int64_t &getValueOfFileSizeBytes() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<int64_t> &getFileSize() const noexcept;
-    ///Set the value of the column file_size
-    void setFileSize(const int64_t &pFileSize) noexcept;
+    const std::shared_ptr<int64_t> &getFileSizeBytes() const noexcept;
+    ///Set the value of the column file_size_bytes
+    void setFileSizeBytes(const int64_t &pFileSizeBytes) noexcept;
 
-    /**  For column file_path  */
-    ///Get the value of the column file_path, returns the default value if the column is null
-    const std::string &getValueOfFilePath() const noexcept;
+    /**  For column s3_object_key  */
+    ///Get the value of the column s3_object_key, returns the default value if the column is null
+    const std::string &getValueOfS3ObjectKey() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getFilePath() const noexcept;
-    ///Set the value of the column file_path
-    void setFilePath(const std::string &pFilePath) noexcept;
-    void setFilePath(std::string &&pFilePath) noexcept;
+    const std::shared_ptr<std::string> &getS3ObjectKey() const noexcept;
+    ///Set the value of the column s3_object_key
+    void setS3ObjectKey(const std::string &pS3ObjectKey) noexcept;
+    void setS3ObjectKey(std::string &&pS3ObjectKey) noexcept;
 
     /**  For column uploaded_at  */
     ///Get the value of the column uploaded_at, returns the default value if the column is null
@@ -188,10 +187,10 @@ class Attachments
     void updateId(const uint64_t id);
     std::shared_ptr<int64_t> id_;
     std::shared_ptr<int64_t> messageId_;
-    std::shared_ptr<int64_t> postId_;
+    std::shared_ptr<std::string> fileName_;
     std::shared_ptr<std::string> fileType_;
-    std::shared_ptr<int64_t> fileSize_;
-    std::shared_ptr<std::string> filePath_;
+    std::shared_ptr<int64_t> fileSizeBytes_;
+    std::shared_ptr<std::string> s3ObjectKey_;
     std::shared_ptr<::trantor::Date> uploadedAt_;
     struct MetaData
     {
@@ -231,7 +230,7 @@ class Attachments
         }
         if(dirtyFlag_[2])
         {
-            sql += "post_id,";
+            sql += "file_name,";
             ++parametersCount;
         }
         if(dirtyFlag_[3])
@@ -241,12 +240,12 @@ class Attachments
         }
         if(dirtyFlag_[4])
         {
-            sql += "file_size,";
+            sql += "file_size_bytes,";
             ++parametersCount;
         }
         if(dirtyFlag_[5])
         {
-            sql += "file_path,";
+            sql += "s3_object_key,";
             ++parametersCount;
         }
         sql += "uploaded_at,";

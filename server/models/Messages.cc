@@ -22,6 +22,7 @@ const std::string Messages::Cols::_forwarded_from_user_name = "\"forwarded_from_
 const std::string Messages::Cols::_text = "\"text\"";
 const std::string Messages::Cols::_sent_at = "\"sent_at\"";
 const std::string Messages::Cols::_edited_at = "\"edited_at\"";
+const std::string Messages::Cols::_discussion_message_id = "\"discussion_message_id\"";
 const std::string Messages::primaryKeyName = "id";
 const bool Messages::hasPrimaryKey = true;
 const std::string Messages::tableName = "\"messages\"";
@@ -35,7 +36,8 @@ const std::vector<typename Messages::MetaData> Messages::metaData_={
 {"forwarded_from_user_name","std::string","character varying",100,0,0,0},
 {"text","std::string","text",0,0,0,1},
 {"sent_at","::trantor::Date","timestamp with time zone",0,0,0,0},
-{"edited_at","::trantor::Date","timestamp with time zone",0,0,0,0}
+{"edited_at","::trantor::Date","timestamp with time zone",0,0,0,0},
+{"discussion_message_id","int64_t","bigint",8,0,0,0}
 };
 const std::string &Messages::getColumnName(size_t index) noexcept(false)
 {
@@ -118,11 +120,15 @@ Messages::Messages(const Row &r, const ssize_t indexOffset) noexcept
                 editedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["discussion_message_id"].isNull())
+        {
+            discussionMessageId_=std::make_shared<int64_t>(r["discussion_message_id"].as<int64_t>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 9 > r.size())
+        if(offset + 10 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -209,13 +215,18 @@ Messages::Messages(const Row &r, const ssize_t indexOffset) noexcept
                 editedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 9;
+        if(!r[index].isNull())
+        {
+            discussionMessageId_=std::make_shared<int64_t>(r[index].as<int64_t>());
+        }
     }
 
 }
 
 Messages::Messages(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 9)
+    if(pMasqueradingVector.size() != 10)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -326,6 +337,14 @@ Messages::Messages(const Json::Value &pJson, const std::vector<std::string> &pMa
                 }
                 editedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
+    {
+        dirtyFlag_[9] = true;
+        if(!pJson[pMasqueradingVector[9]].isNull())
+        {
+            discussionMessageId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[9]].asInt64());
         }
     }
 }
@@ -440,12 +459,20 @@ Messages::Messages(const Json::Value &pJson) noexcept(false)
             }
         }
     }
+    if(pJson.isMember("discussion_message_id"))
+    {
+        dirtyFlag_[9]=true;
+        if(!pJson["discussion_message_id"].isNull())
+        {
+            discussionMessageId_=std::make_shared<int64_t>((int64_t)pJson["discussion_message_id"].asInt64());
+        }
+    }
 }
 
 void Messages::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 9)
+    if(pMasqueradingVector.size() != 10)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -557,6 +584,14 @@ void Messages::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
+    {
+        dirtyFlag_[9] = true;
+        if(!pJson[pMasqueradingVector[9]].isNull())
+        {
+            discussionMessageId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[9]].asInt64());
+        }
+    }
 }
 
 void Messages::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -666,6 +701,14 @@ void Messages::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 editedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("discussion_message_id"))
+    {
+        dirtyFlag_[9] = true;
+        if(!pJson["discussion_message_id"].isNull())
+        {
+            discussionMessageId_=std::make_shared<int64_t>((int64_t)pJson["discussion_message_id"].asInt64());
         }
     }
 }
@@ -868,6 +911,28 @@ void Messages::setEditedAtToNull() noexcept
     dirtyFlag_[8] = true;
 }
 
+const int64_t &Messages::getValueOfDiscussionMessageId() const noexcept
+{
+    static const int64_t defaultValue = int64_t();
+    if(discussionMessageId_)
+        return *discussionMessageId_;
+    return defaultValue;
+}
+const std::shared_ptr<int64_t> &Messages::getDiscussionMessageId() const noexcept
+{
+    return discussionMessageId_;
+}
+void Messages::setDiscussionMessageId(const int64_t &pDiscussionMessageId) noexcept
+{
+    discussionMessageId_ = std::make_shared<int64_t>(pDiscussionMessageId);
+    dirtyFlag_[9] = true;
+}
+void Messages::setDiscussionMessageIdToNull() noexcept
+{
+    discussionMessageId_.reset();
+    dirtyFlag_[9] = true;
+}
+
 void Messages::updateId(const uint64_t id)
 {
 }
@@ -882,7 +947,8 @@ const std::vector<std::string> &Messages::insertColumns() noexcept
         "forwarded_from_user_name",
         "text",
         "sent_at",
-        "edited_at"
+        "edited_at",
+        "discussion_message_id"
     };
     return inCols;
 }
@@ -977,6 +1043,17 @@ void Messages::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[9])
+    {
+        if(getDiscussionMessageId())
+        {
+            binder << getValueOfDiscussionMessageId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> Messages::updateColumns() const
@@ -1013,6 +1090,10 @@ const std::vector<std::string> Messages::updateColumns() const
     if(dirtyFlag_[8])
     {
         ret.push_back(getColumnName(8));
+    }
+    if(dirtyFlag_[9])
+    {
+        ret.push_back(getColumnName(9));
     }
     return ret;
 }
@@ -1107,6 +1188,17 @@ void Messages::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[9])
+    {
+        if(getDiscussionMessageId())
+        {
+            binder << getValueOfDiscussionMessageId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value Messages::toJson() const
 {
@@ -1183,6 +1275,14 @@ Json::Value Messages::toJson() const
     {
         ret["edited_at"]=Json::Value();
     }
+    if(getDiscussionMessageId())
+    {
+        ret["discussion_message_id"]=(Json::Int64)getValueOfDiscussionMessageId();
+    }
+    else
+    {
+        ret["discussion_message_id"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1195,7 +1295,7 @@ Json::Value Messages::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 9)
+    if(pMasqueradingVector.size() == 10)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1296,6 +1396,17 @@ Json::Value Messages::toMasqueradedJson(
                 ret[pMasqueradingVector[8]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[9].empty())
+        {
+            if(getDiscussionMessageId())
+            {
+                ret[pMasqueradingVector[9]]=(Json::Int64)getValueOfDiscussionMessageId();
+            }
+            else
+            {
+                ret[pMasqueradingVector[9]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -1371,6 +1482,14 @@ Json::Value Messages::toMasqueradedJson(
     {
         ret["edited_at"]=Json::Value();
     }
+    if(getDiscussionMessageId())
+    {
+        ret["discussion_message_id"]=(Json::Int64)getValueOfDiscussionMessageId();
+    }
+    else
+    {
+        ret["discussion_message_id"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1426,13 +1545,18 @@ bool Messages::validateJsonForCreation(const Json::Value &pJson, std::string &er
         if(!validJsonOfField(8, "edited_at", pJson["edited_at"], err, true))
             return false;
     }
+    if(pJson.isMember("discussion_message_id"))
+    {
+        if(!validJsonOfField(9, "discussion_message_id", pJson["discussion_message_id"], err, true))
+            return false;
+    }
     return true;
 }
 bool Messages::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                   const std::vector<std::string> &pMasqueradingVector,
                                                   std::string &err)
 {
-    if(pMasqueradingVector.size() != 9)
+    if(pMasqueradingVector.size() != 10)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1515,6 +1639,14 @@ bool Messages::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[9].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[9]))
+          {
+              if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -1575,13 +1707,18 @@ bool Messages::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(8, "edited_at", pJson["edited_at"], err, false))
             return false;
     }
+    if(pJson.isMember("discussion_message_id"))
+    {
+        if(!validJsonOfField(9, "discussion_message_id", pJson["discussion_message_id"], err, false))
+            return false;
+    }
     return true;
 }
 bool Messages::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                 const std::vector<std::string> &pMasqueradingVector,
                                                 std::string &err)
 {
-    if(pMasqueradingVector.size() != 9)
+    if(pMasqueradingVector.size() != 10)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1635,6 +1772,11 @@ bool Messages::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
       {
           if(!validJsonOfField(8, pMasqueradingVector[8], pJson[pMasqueradingVector[8]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
+      {
+          if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, false))
               return false;
       }
     }
@@ -1763,6 +1905,17 @@ bool Messages::validJsonOfField(size_t index,
                 return true;
             }
             if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 9:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isInt64())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
