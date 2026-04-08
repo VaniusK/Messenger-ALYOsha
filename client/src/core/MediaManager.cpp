@@ -1,9 +1,12 @@
 #include "MediaManager.hpp"
+#include <qobject.h>
+#include <qurl.h>
 #include <QApplication>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMetaObject>
 #include <QTimer>
+#include <QUrl>
 #include <QWidget>
 #include "ConnectionManager.hpp"
 #include "StateManager.hpp"
@@ -38,9 +41,8 @@ void MediaManager::uploadFile(
                 timer->deleteLater();
                 delete progress;
 
-                emit uploadFinished(
-                    "file://" + localFilePath, fileType, fileSize, fileName
-                );
+                QString fileUrl = QUrl::fromLocalFile(localFilePath).toString();
+                emit uploadFinished(fileUrl, fileType, fileSize, fileName);
             }
         }
     );
@@ -69,7 +71,8 @@ void MediaManager::openFileDialog(const QString &type) {
 
             if (!filePath.isEmpty()) {
                 QFileInfo info(filePath);
-                emit fileSelected(filePath, type, info.size(), info.fileName());
+                QString fileUrl = QUrl::fromLocalFile(filePath).toString();
+                emit fileSelected(fileUrl, type, info.size(), info.fileName());
             }
         },
         Qt::QueuedConnection

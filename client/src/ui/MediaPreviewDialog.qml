@@ -122,9 +122,12 @@ Popup {
                     id: previewImage
                     anchors.fill: parent
                     source: (dialogRoot.fileType === "image" && !dialogRoot.sendAsFile)
-                            ? ("file://" + dialogRoot.filePath) : ""
+                            ? dialogRoot.filePath : ""                            
                     fillMode: Image.PreserveAspectFit
                     visible: dialogRoot.fileType === "image" && !dialogRoot.sendAsFile
+
+                    asynchronous: true
+                    sourceSize: Qt.size(1280, 1280) 
                 }
 
 
