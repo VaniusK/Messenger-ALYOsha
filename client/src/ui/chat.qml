@@ -10,7 +10,9 @@ Rectangle {
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (sidebar.isSearching || sidebar.hasSearchFocus) {
+            if (VoiceLayer.isRecording) {
+                chatArea.showCancelPrompt()
+            } else if (sidebar.isSearching || sidebar.hasSearchFocus) {
                 sidebar.clearSearch()
             } else if (chatArea.activeChatId !== "") {
                 chatArea.activeChatId = ""
@@ -30,6 +32,10 @@ Rectangle {
             activeChatId: chatArea.activeChatId
 
             onChatSelected: function(chatId, chatName) {
+                if (VoiceLayer.isRecording) {
+                    chatArea.showCancelPrompt()
+                    return
+                }
                 chatArea.activeChatId = chatId
                 chatArea.activeChatName = chatName
             }

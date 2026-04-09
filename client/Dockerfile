@@ -14,6 +14,10 @@ RUN apt-get update && apt-get install -y \
     qt6-websockets-dev \
     qt6-svg-dev \
     qt6-wayland \
+    libqt6multimedia6 \
+    qt6-multimedia-dev \
+    qml6-module-qtmultimedia \
+    gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
     && rm -rf /var/lib/apt/lists/*
     
 WORKDIR /usr/src/client

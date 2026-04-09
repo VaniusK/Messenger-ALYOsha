@@ -122,7 +122,7 @@ Popup {
                     id: previewImage
                     anchors.fill: parent
                     source: (dialogRoot.fileType === "image" && !dialogRoot.sendAsFile)
-                            ? dialogRoot.filePath : ""                            
+                            ? dialogRoot.filePath : ""
                     fillMode: Image.PreserveAspectFit
                     visible: dialogRoot.fileType === "image" && !dialogRoot.sendAsFile
 

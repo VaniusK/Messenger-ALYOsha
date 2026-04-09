@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import QtQuick.Controls
+import QtMultimedia
 import Messenger 1.0
 
 Rectangle {
@@ -15,6 +16,44 @@ Rectangle {
     property bool hasMoreHistory: true
     property bool isUploading: false
     property string pendingMediaCaption: ""
+
+    MediaPlayer {
+        id: globalAudioPlayer
+        audioOutput: AudioOutput {
+            volume: 1.0
+        }
+
+        readonly property int customPlaybackState: {
+            if (playbackState === MediaPlayer.PlayingState) return 1;
+            if (playbackState === MediaPlayer.PausedState) return 2;
+            return 0;
+        }
+
+        onMediaStatusChanged: {
+            if (mediaStatus === MediaPlayer.EndOfMedia) {
+                globalPlayingMsgId = "" 
+                source = "" 
+            }
+        }
+
+        property int playState: MediaPlayer.StoppedState
+        onPlaybackStateChanged: playState = playbackState
+    }
+    
+    property string globalPlayingMsgId: ""
+    property string globalActiveVoiceAuthor: ""
+    property string globalActiveVoiceDate: ""
+    
+    function formatGlobalTime(ms) {
+        var totalSec = Math.floor(ms / 1000)
+        var m = Math.floor(totalSec / 60)
+        var s = totalSec % 60
+        return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s
+    }
+
+    function showCancelPrompt() {
+        cancelVoiceDialog.open()
+    }
 
     Connections {
         target: MediaLayer
@@ -41,13 +80,10 @@ Rectangle {
             if (pendingMediaCaption !== "") {
                 finalMsg += "\n" + pendingMediaCaption
             }
-            ChatLayer.sendMessage(activeChatId, finalMsg,
-                                fileUrl, fileType, fileSize, fileName)
+            ChatLayer.sendMessage(activeChatId, finalMsg, fileUrl, fileType, fileSize, fileName)
             pendingMediaCaption = ""
         }
-        function onUploadProgress(percent) {
-            // Здесь будет прогресс-бар
-        }
+        function onUploadProgress(percent) {}
         function onUploadFailed(error) {
             isUploading = false
         }
@@ -152,26 +188,137 @@ Rectangle {
         }
     }
 
+    Connections {
+        target: VoiceLayer
+        function onVoiceMessageReady(audioUrl) {
+            ChatLayer.sendMessage(activeChatId, "VOICE::" + audioUrl)
+        }
+    }
+
     Rectangle {
-        anchors.centerIn: parent
-        width: Math.min(300, placeholderText.width + 40)
-        height: 36
-        radius: 18
+        id: globalPlayerUI
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: globalPlayingMsgId !== "" ? 45 : 0
+        visible: height > 0
         color: "#1c242f"
+        clip: true
+        z: 10 
+        
+        Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 10
+            anchors.leftMargin: 20
+            spacing: 15
+            
+            Rectangle {
+                width: 30; height: 30; radius: 15
+                color: "transparent"
+                
+                Image {
+                    anchors.centerIn: parent
+                    width: 14; height: 14
+                    source: globalAudioPlayer.playbackState === MediaPlayer.PlayingState 
+                            ? "qrc:/messenger_client_uri/assets/icons/pause_blue.svg" 
+                            : "qrc:/messenger_client_uri/assets/icons/play_blue.svg"
+                    sourceSize: Qt.size(14, 14)
+                }
+                
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (globalAudioPlayer.playbackState === 1) {
+                            globalAudioPlayer.pause()
+                        } else {
+                            globalAudioPlayer.play()
+                        }
+                    }
+                }
+            }
+            
+            Text {
+                text: globalActiveVoiceAuthor + "  " + globalActiveVoiceDate
+                color: "white"
+                font.pixelSize: 14
+                font.family: "Segoe UI"
+                font.bold: true
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
+            
+            Text {
+                text: formatGlobalTime(globalAudioPlayer.position) + " / " + formatGlobalTime(globalAudioPlayer.duration)
+                color: "#728392"
+                font.pixelSize: 14
+                font.family: "Segoe UI"
+            }
+
+            Rectangle {
+                width: 30; height: 30; radius: 15
+                color: closeHoverArea.containsMouse ? "#2b3644" : "transparent"
+                
+                Text {
+                    anchors.centerIn: parent
+                    text: "✕"
+                    color: "#728392"
+                    font.pixelSize: 16
+                }
+                
+                MouseArea {
+                    id: closeHoverArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        globalAudioPlayer.stop()
+                        globalPlayingMsgId = ""
+                    }
+                }
+            }
+        }
+        
+        Rectangle {
+            width: parent.width; height: 1
+            color: "#18222d"
+            anchors.bottom: parent.bottom
+        }
+    }
+
+    Rectangle {
+        anchors.top: globalPlayerUI.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        color: "transparent"
         visible: !isChatActive
 
-        Text {
-            id: placeholderText
-            text: "Выберите чат, чтобы начать общение"
-            color: "white"
-            font.pixelSize: 14
-            font.family: "Segoe UI"
+        Rectangle {
             anchors.centerIn: parent
+            width: Math.min(300, placeholderText.width + 40)
+            height: 36
+            radius: 18
+            color: "#1c242f"
+
+            Text {
+                id: placeholderText
+                text: "Выберите чат, чтобы начать общение"
+                color: "white"
+                font.pixelSize: 14
+                font.family: "Segoe UI"
+                anchors.centerIn: parent
+            }
         }
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        anchors.top: globalPlayerUI.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         spacing: 0
         visible: isChatActive
 
@@ -263,14 +410,21 @@ Rectangle {
             delegate: Item {
                 id: msgDelegateItem
                 width: messageList.width
-                height: messageBubble.height + 6
                 
                 property bool isMe: model.is_me !== undefined ? model.is_me : false
+                property bool isVoice: typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0
+                property string voiceUrl: isVoice ? model.text.substring(7) : ""
+                property string uniqueId: model._id || model.id || index.toString()
+                property bool isPlayingThis: globalPlayingMsgId === uniqueId && globalAudioPlayer.playbackState === 1
+                
+                height: messageBubble.height + 6
                 
                 Rectangle {
                     id: messageBubble
-                    width: Math.min(Math.max(60, messageText.implicitWidth + timeText.implicitWidth + 30), parent.width * 0.75)
-                    height: messageText.implicitHeight + 20
+                    width: isVoice 
+                        ? Math.min(270, parent.width * 0.75) 
+                        : Math.min(Math.max(60, messageText.implicitWidth + timeText.implicitWidth + 30), parent.width * 0.75)
+                    height: isVoice ? 58 : messageText.implicitHeight + 20
                     radius: 12
                     
                     color: isMe ? "#2b5278" : "#18222d"
@@ -316,7 +470,8 @@ Rectangle {
 
                     TextEdit {
                         id: messageText
-                        text: model.text !== undefined ? model.text : ""
+                        visible: !isVoice
+                        text: !isVoice && model.text !== undefined ? model.text : ""
                         anchors.fill: parent
                         anchors.margins: 8
                         anchors.leftMargin: 12
@@ -337,6 +492,121 @@ Rectangle {
                         cursorVisible: false
                         selectedTextColor: "white"
                         selectionColor: "#4a90d9"
+                    }
+
+                    RowLayout {
+                        visible: isVoice
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 48 
+                        spacing: 12
+                        
+                        Rectangle {
+                            width: 44; height: 44; radius: 22
+                            color: playMouseArea.pressed 
+                                   ? (isMe ? "#2b5278" : "#0e1621") 
+                                   : (isMe ? "#4a90d9" : "#2b5278")
+                            
+                            Image {
+                                anchors.centerIn: parent
+                                width: 16; height: 16
+                                source: isPlayingThis 
+                                    ? "qrc:/messenger_client_uri/assets/icons/pause.svg"
+                                    : "qrc:/messenger_client_uri/assets/icons/play.svg"
+                                sourceSize: Qt.size(16, 16)
+                            }
+                            
+                            MouseArea {
+                                id: playMouseArea
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (globalPlayingMsgId === uniqueId) {
+                                        if (globalAudioPlayer.playbackState === MediaPlayer.PlayingState) {
+                                            globalAudioPlayer.pause()
+                                        } else {
+                                            globalAudioPlayer.play()
+                                        }
+                                    } else {
+                                        globalAudioPlayer.stop() 
+                                        
+                                        globalPlayingMsgId = uniqueId
+                                        globalActiveVoiceAuthor = isMe ? AppState.currentUserHandle : activeChatName
+                                        globalActiveVoiceDate = timeText.text
+                                        globalAudioPlayer.source = ""
+                                        globalAudioPlayer.source = voiceUrl
+                                        globalAudioPlayer.play()
+                                    }
+                                }
+                            }
+                        }
+                        
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            
+                            Item {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 6
+                                height: 20 
+                                
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width
+                                    height: 3
+                                    radius: 1.5
+                                    color: isMe ? "#18222d" : "#0e1621"
+                                    
+                                    Rectangle {
+                                        height: parent.height
+                                        radius: 1.5
+                                        color: "white"
+                                        width: {
+                                            if (globalPlayingMsgId === uniqueId && globalAudioPlayer.duration > 0) {
+                                                return parent.width * (globalAudioPlayer.position / globalAudioPlayer.duration)
+                                            }
+                                            return 0
+                                        }
+                                    }
+                                }
+                                
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    
+                                    function seekToPosition(xPos) {
+                                        if (globalPlayingMsgId === uniqueId && globalAudioPlayer.duration > 0) {
+                                            var safeX = Math.max(0, Math.min(xPos, width));
+                                            var newPos = (safeX / width) * globalAudioPlayer.duration;
+                                            globalAudioPlayer.position = newPos;
+                                        }
+                                    }
+                                    
+                                    onClicked: seekToPosition(mouseX)
+                                    onPositionChanged: { 
+                                        if (pressed) seekToPosition(mouseX) 
+                                    }
+                                }
+                            }
+                            
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    text: {
+                                        if (globalPlayingMsgId === uniqueId && globalAudioPlayer.duration > 0) {
+                                            return formatGlobalTime(globalAudioPlayer.position) + " / " + formatGlobalTime(globalAudioPlayer.duration)
+                                        }
+                                        return "00:00" 
+                                    }
+                                    color: isMe ? "#78aee3" : "#728392"
+                                    font.pixelSize: 11
+                                    font.family: "Segoe UI"
+                                }
+                                Item { Layout.fillWidth: true }
+                            }
+                            Item { Layout.fillHeight: true }
+                        }
                     }
 
                     Text {
@@ -395,10 +665,11 @@ Rectangle {
 
                 Rectangle {
                     Layout.alignment: Qt.AlignBottom
-                    width: 36
+                    width: VoiceLayer.isRecording ? 0 : 36
                     height: 36
                     color: "transparent"
-                    visible: isChatActive
+                    visible: isChatActive && !VoiceLayer.isRecording
+
                     Image {
                         anchors.centerIn: parent
                         width: 22; height: 22
@@ -411,7 +682,8 @@ Rectangle {
                     MouseArea {
                         id: clipArea
                         anchors.fill: parent
-                        hoverEnabled: true
+                        hoverEnabled: !VoiceLayer.isRecording
+                        enabled: !VoiceLayer.isRecording
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             mediaPicker.visible = !mediaPicker.visible
@@ -431,6 +703,7 @@ Rectangle {
                         contentWidth: width
                         contentHeight: messageInput.contentHeight
                         clip: true
+                        visible: !VoiceLayer.isRecording
 
                         TextEdit {
                             id: messageInput
@@ -458,12 +731,64 @@ Rectangle {
                         }
                     }
 
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "#1c242f"
+                        visible: VoiceLayer.isRecording
+                        z: 10
+
+                        focus: visible
+                        Keys.onReturnPressed: VoiceLayer.stopRecordingAndSend()
+                        Keys.onEnterPressed: VoiceLayer.stopRecordingAndSend()
+                        
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 2
+                            anchors.rightMargin: 10
+                            spacing: 12
+
+                            Rectangle {
+                                width: 10; height: 10; radius: 5
+                                color: "#ff4d4d"
+                                Layout.leftMargin: 10
+                                SequentialAnimation on opacity {
+                                    loops: Animation.Infinite
+                                    running: VoiceLayer.isRecording
+                                    NumberAnimation { to: 0.1; duration: 700 }
+                                    NumberAnimation { to: 1.0; duration: 700 }
+                                }
+                            }
+                            
+                            Text {
+                                text: VoiceLayer.recordingDuration
+                                color: "white"
+                                font.pixelSize: 16
+                                font.family: "Segoe UI"
+                            }
+                            
+                            Item { Layout.fillWidth: true }
+                            
+                            Text {
+                                text: "Отмена"
+                                color: "#5eb5f7"
+                                font.pixelSize: 15
+                                font.family: "Segoe UI"
+                                
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: VoiceLayer.cancelRecording()
+                                }
+                            }
+                        }
+                    }
+
                     Text {
                         text: isChatActive ? "Сообщение..." : ""
                         color: "#8a96a3"
                         font.family: "Segoe UI"
                         font.pixelSize: 16
-                        visible: !messageInput.text
+                        visible: !messageInput.text && !VoiceLayer.isRecording
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -476,12 +801,15 @@ Rectangle {
                     color: "transparent"
 
                     Image {
-                        source: messageInput.text.trim() === "" 
-                            ? "qrc:/messenger_client_uri/assets/icons/send.svg"
-                            : "qrc:/messenger_client_uri/assets/icons/send_active.svg"
+                        source: VoiceLayer.isRecording 
+                            ? "qrc:/messenger_client_uri/assets/icons/send_active.svg" 
+                            : (messageInput.text.trim() === "" 
+                                ? "qrc:/messenger_client_uri/assets/icons/mic.svg"
+                                : "qrc:/messenger_client_uri/assets/icons/send_active.svg")
+                        
                         width: 24; height: 24; sourceSize: Qt.size(24, 24)
                         anchors.centerIn: parent
-                        anchors.horizontalCenterOffset: 2
+                        anchors.horizontalCenterOffset: (messageInput.text.trim() === "" && !VoiceLayer.isRecording) ? 0 : 2
 
                         Behavior on opacity { NumberAnimation { duration: 150 } }
                     }
@@ -490,8 +818,17 @@ Rectangle {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            if (messageInput.text.trim() != "" && isChatActive) {
-                                ChatLayer.sendMessage(activeChatId, messageInput.text.trim())
+                            if (messageInput.text.trim() !== "") {
+                                if (isChatActive) {
+                                    ChatLayer.sendMessage(activeChatId, messageInput.text.trim());
+                                    messageInput.text = "";
+                                }
+                            } else {
+                                if (VoiceLayer.isRecording) {
+                                    VoiceLayer.stopRecordingAndSend();
+                                } else {
+                                    VoiceLayer.startRecording();
+                                }
                             }
                         }
                     }
@@ -552,6 +889,93 @@ Rectangle {
         }
     }
 
+    Popup {
+        id: cancelVoiceDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 320
+        height: 160
+        modal: true
+        dim: true
+        closePolicy: Popup.NoAutoClose
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
+        
+        background: Rectangle {
+            color: "#1c2733"
+            radius: 10
+        }
+        
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 20
+            
+            Text {
+                text: "Вы точно хотите прекратить запись и удалить записанное голосовое сообщение?"
+                color: "white"
+                font.pixelSize: 16
+                font.family: "Segoe UI"
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                spacing: 20
+                
+                Rectangle {
+                    width: 70
+                    height: 36
+                    radius: 8
+                    color: cancelMouseArea.containsMouse ? "#2b3644" : "transparent"
+
+                    Text {
+                        text: "Отмена"
+                        color: "#5eb5f7"
+                        font.pixelSize: 15
+                        font.bold: true
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        id: cancelMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: cancelVoiceDialog.close()
+                    }
+                }
+                
+                Rectangle {
+                    width: 80
+                    height: 36
+                    radius: 8
+                    color: deleteMouseArea.containsMouse ? "#3d2a2d" : "transparent"
+
+                    Text {
+                        text: "Удалить"
+                        color: "#ff4d4d"
+                        font.pixelSize: 15
+                        font.bold: true
+                        anchors.centerIn: parent
+                    }
+                    
+                    MouseArea {
+                        id: deleteMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onPressed: parent.color = "#33181a"
+                        onReleased: parent.color = deleteMouseArea.containsMouse ? "#3d2a2d" : "transparent"
+                        onClicked: {
+                            VoiceLayer.cancelRecording()
+                            cancelVoiceDialog.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     MediaPickerPopup {
         id: mediaPicker
