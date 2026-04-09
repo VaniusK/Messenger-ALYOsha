@@ -15,20 +15,20 @@ namespace v1 {
 class UserController : public drogon::HttpController<UserController> {
 public:
     METHOD_LIST_BEGIN
-    ADD_METHOD_TO(UserController::getUserById, "/api/v1/users/{1:user_id}", Get);
+    ADD_METHOD_TO(UserController::getUserById, "/v1/users/{1:user_id}", Get);
     ADD_METHOD_TO(
         UserController::getUserByHandle,
-        "/api/v1/users/handle/{1:user_handle}",
+        "/v1/users/handle/{1:user_handle}",
         Get
     );
     ADD_METHOD_TO(
         UserController::searchUser,
-        "/api/v1/users/search",
+        "/v1/users/search",
         Get,
         "api::v1::JsonValidatorFilter"
     );
-    ADD_METHOD_TO(UserController::registerUser, "/api/v1/auth/register", Post, "api::v1::JsonValidatorFilter");
-    ADD_METHOD_TO(UserController::loginUser, "/api/v1/auth/login", Post, "api::v1::JsonValidatorFilter");
+    ADD_METHOD_TO(UserController::registerUser, "/v1/auth/register", Post, "api::v1::JsonValidatorFilter");
+    ADD_METHOD_TO(UserController::loginUser, "/v1/auth/login", Post, "api::v1::JsonValidatorFilter");
 
     METHOD_LIST_END
     Task<HttpResponsePtr>
