@@ -24,7 +24,7 @@ using ::testing::Return;
 TEST_F(ControllerTestFixture, E2ETest) {
     // Иван регистрируется
     auto result1 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/auth/register",
+        Post, "/v1/auth/register",
         makeJson(
             {{"handle", "Ivan"},
              {"password", "secret123"},
@@ -36,7 +36,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Иван пытается войти в аккаунт, но неправильно вводит пароль
     auto result2 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/auth/login",
+        Post, "/v1/auth/login",
         makeJson({
             {"handle", "Ivan"},
             {"password", "secret12"},
@@ -47,7 +47,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Иван входит в аккаунт
     auto result3 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/auth/login",
+        Post, "/v1/auth/login",
         makeJson({
             {"handle", "Ivan"},
             {"password", "secret123"},
@@ -59,7 +59,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Получаем айди Ивана
     auto result4 = sync_wait(sendReqTask(form_request(
-        Get, "/api/v1/users/handle/Ivan",
+        Get, "/v1/users/handle/Ivan",
         makeJson({
 
         })
@@ -70,7 +70,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Пётр регистрируется
     auto result5 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/auth/register",
+        Post, "/v1/auth/register",
         makeJson(
             {{"handle", "Petr"},
              {"password", "secret123"},
@@ -82,7 +82,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Пётр входит в аккаунт
     auto result6 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/auth/login",
+        Post, "/v1/auth/login",
         makeJson({
             {"handle", "Petr"},
             {"password", "secret123"},
@@ -94,7 +94,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Получаем айди Петра
     auto result7 = sync_wait(sendReqTask(form_request(
-        Get, "/api/v1/users/handle/Petr",
+        Get, "/v1/users/handle/Petr",
         makeJson({
 
         })
@@ -105,7 +105,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Дима регистрируется
     auto result8 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/auth/register",
+        Post, "/v1/auth/register",
         makeJson(
             {{"handle", "Dima"},
              {"password", "secret123"},
@@ -117,7 +117,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Дима входит в аккаунт
     auto result9 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/auth/login",
+        Post, "/v1/auth/login",
         makeJson({
             {"handle", "Dima"},
             {"password", "secret123"},
@@ -129,7 +129,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Получаем айди Димы
     auto result10 = sync_wait(sendReqTask(form_request(
-        Get, "/api/v1/users/handle/Dima",
+        Get, "/v1/users/handle/Dima",
         makeJson({
 
         })
@@ -140,7 +140,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Иван смотрит свои чаты - там только сохранёнки
     auto result11 = sync_wait(sendReqTask(form_request(
-        Get, "/api/v1/chats/user/" + std::to_string(ivan_id), makeJson({}),
+        Get, "/v1/chats/user/" + std::to_string(ivan_id), makeJson({}),
         ivan_token
     )));
 
@@ -149,7 +149,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Иван создаёт личный чат с Петром
     auto result12 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/chats/direct", makeJson({{"target_user_id", petr_id}}),
+        Post, "/v1/chats/direct", makeJson({{"target_user_id", petr_id}}),
         ivan_token
     )));
 
@@ -157,7 +157,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Пётр пытает создать личный чат с Иваном, но он уже есть, просто получает
     auto result13 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/chats/direct", makeJson({{"target_user_id", ivan_id}}),
+        Post, "/v1/chats/direct", makeJson({{"target_user_id", ivan_id}}),
         petr_token
     )));
 
@@ -165,7 +165,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Дима создаёт личный чат с Петром
     auto result14 = sync_wait(sendReqTask(form_request(
-        Post, "/api/v1/chats/direct", makeJson({{"target_user_id", petr_id}}),
+        Post, "/v1/chats/direct", makeJson({{"target_user_id", petr_id}}),
         dima_token
     )));
 
@@ -173,7 +173,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Дима получает свои чаты: там сохранённые и чат с Петром
     auto result15 = sync_wait(sendReqTask(form_request(
-        Get, "/api/v1/chats/user/" + std::to_string(dima_id), makeJson({}),
+        Get, "/v1/chats/user/" + std::to_string(dima_id), makeJson({}),
         dima_token
     )));
 
@@ -191,8 +191,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     // Дима отправляет Пете сообщение
     auto result16 = sync_wait(sendReqTask(form_request(
         Post,
-        "/api/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
-            "/messages",
+        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
         makeJson({{"text", "Прив ну чё там с проектом"}}), dima_token
     )));
 
@@ -205,8 +204,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     // Петя отправляет Диме сообщение
     auto result17 = sync_wait(sendReqTask(form_request(
         Post,
-        "/api/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
-            "/messages",
+        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
         makeJson({{"text", "Работаем"}}), petr_token
     )));
 
@@ -214,7 +212,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     // Дима снова получает свои чаты: там сохранённые и чат с Петром
     auto result18 = sync_wait(sendReqTask(form_request(
-        Get, "/api/v1/chats/user/" + std::to_string(dima_id), makeJson({}),
+        Get, "/v1/chats/user/" + std::to_string(dima_id), makeJson({}),
         dima_token
     )));
 
@@ -232,8 +230,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     // Иван пытается отправить сообщение в чужой чат, не может
     auto result19 = sync_wait(sendReqTask(form_request(
         Post,
-        "/api/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
-            "/messages",
+        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
         makeJson({{"text", "Всем привет"}}), ivan_token
     )));
 
@@ -242,8 +239,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     // Дима получает историю сообщений чата с Петей
     auto result20 = sync_wait(sendReqTask(form_request(
         Get,
-        "/api/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
-            "/messages",
+        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
         makeJson({}), dima_token
     )));
 
@@ -259,7 +255,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     for (int i = 0; i < 100; i++) {
         auto result = sync_wait(sendReqTask(form_request(
             Post,
-            "/api/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
+            "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
                 "/messages",
             makeJson({{"text", "Работаем"}}), petr_token
         )));
@@ -269,8 +265,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     // Проверяем, что можем достать старые
     auto result21 = sync_wait(sendReqTask(form_request(
         Get,
-        "/api/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
-            "/messages",
+        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
         makeJson(
             {{"before_id",
               (*result17->getJsonObject())["message"]["id"].asInt64()}}
