@@ -1,6 +1,4 @@
 #include "MediaManager.hpp"
-#include <qobject.h>
-#include <qurl.h>
 #include <QApplication>
 #include <QFileDialog>
 #include <QFileInfo>

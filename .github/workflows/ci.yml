@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Qt
-          key: qt-6.7.3-linux-gcc
+          key: qt-6.7.3-linux-gcc-multimedia
 
       - name: Install system build dependencies
         run: |
@@ -48,7 +48,14 @@ jobs:
             libssl-dev \
             libglib2.0-dev \
             imagemagick \
-            libfuse2
+            libfuse2 \
+            libasound2-dev \
+            libpulse-dev \
+            libgstreamer1.0-0 \
+            libgstreamer-plugins-base1.0-0 \
+            libgstreamer-gl1.0-0 \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -56,7 +63,7 @@ jobs:
           python3 -m pip install aqtinstall
           aqt install-qt linux desktop 6.7.3 linux_gcc_64 \
             --outputdir ~/Qt \
-            -m qtwebsockets
+            -m qtwebsockets qtmultimedia
 
       - name: Export Qt path
         run: echo "QT_ROOT=$HOME/Qt/6.7.3/gcc_64" >> $GITHUB_ENV
@@ -122,7 +129,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:\Qt
-          key: qt-6.7.3-windows-msvc2019
+          key: qt-6.7.3-windows-msvc2019-multimedia
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt-win.outputs.cache-hit != 'true'
@@ -130,7 +137,7 @@ jobs:
           python -m pip install aqtinstall
           aqt install-qt windows desktop 6.7.3 win64_msvc2019_64 `
             --outputdir C:\Qt `
-            -m qtwebsockets
+            -m qtwebsockets qtmultimedia
 
       - name: Configure & Build client
         run: |
@@ -192,7 +199,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Qt
-          key: qt-6.7.3-macos-clang
+          key: qt-6.7.3-macos-clang-multimedia
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt-mac.outputs.cache-hit != 'true'
@@ -200,7 +207,7 @@ jobs:
           pipx install aqtinstall
           aqt install-qt mac desktop 6.7.3 clang_64 \
             --outputdir ~/Qt \
-            -m qtwebsockets
+            -m qtwebsockets qtmultimedia
 
       - name: Export Qt path
         run: echo "QT_ROOT=$HOME/Qt/6.7.3/macos" >> $GITHUB_ENV

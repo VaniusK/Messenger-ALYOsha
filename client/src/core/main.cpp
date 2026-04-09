@@ -8,6 +8,7 @@
 #include "ConnectionManager.hpp"
 #include "MediaManager.hpp"
 #include "StateManager.hpp"
+#include "VoiceManager.hpp"
 
 void noMessageOutput(
     QtMsgType type,
@@ -31,6 +32,7 @@ int main(int argc, char *argv[]) {
     auto *chatManager = new ChatManager(connectionManager, stateManager, &app);
     auto *mediaManager =
         new MediaManager(connectionManager, stateManager, &app);
+    auto *voiceManager = new VoiceManager(&app);
 
     QQmlApplicationEngine engine;
     qmlRegisterSingletonInstance("Messenger", 1, 0, "AppState", stateManager);
@@ -40,6 +42,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterSingletonInstance("Messenger", 1, 0, "Auth", authManager);
     qmlRegisterSingletonInstance("Messenger", 1, 0, "ChatLayer", chatManager);
     qmlRegisterSingletonInstance("Messenger", 1, 0, "MediaLayer", mediaManager);
+    qmlRegisterSingletonInstance("Messenger", 1, 0, "VoiceLayer", voiceManager);
     const QUrl url(u"qrc:/messenger_client_uri/src/ui/main.qml"_qs);
     engine.load(url);
     return app.exec();
