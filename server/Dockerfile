@@ -3,9 +3,6 @@
 # Build stage
 FROM drogonframework/drogon AS builder
 
-WORKDIR /app
-COPY . .
-
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl zip unzip tar
@@ -13,6 +10,10 @@ RUN apt-get update && \
 RUN git clone https://github.com/microsoft/vcpkg.git /opt/vcpkg
 RUN /opt/vcpkg/bootstrap-vcpkg.sh
 RUN /opt/vcpkg/vcpkg install minio-cpp
+
+WORKDIR /app
+COPY . .
+
 
 
 RUN cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON \
