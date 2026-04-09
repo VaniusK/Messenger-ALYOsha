@@ -17,7 +17,7 @@
             //address: Ip address,0.0.0.0 by default
             "address": "0.0.0.0",
             //port: Port number
-            "port": 5555,
+            "port": 8080,
             //https: If true, use https for security,false by default
             "https": false
         }

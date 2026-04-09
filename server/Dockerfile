@@ -41,6 +41,6 @@ COPY --from=builder /app/build/server_tests .
 # Copy config files if needed
 COPY --from=builder /app/config.json .
 
-EXPOSE 5555
+EXPOSE 8080
 
 CMD ["./alesha_server_app"]
