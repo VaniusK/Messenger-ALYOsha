@@ -208,18 +208,16 @@
 | Поле | Тип | Описание |
 |---|---|---|
 | `id` | `int64` | ID вложения |
-| `message_id` | `int64?` | ID сообщения (XOR post_id) |
-| `post_id` | `int64?` | ID поста (XOR message_id) |
+| `message_id` | `int64` | ID сообщения |
+| `file_name` | `string` | Название файла |
 | `file_type` | `string` | MIME-тип |
-| `file_size` | `int64` | Размер в байтах |
-| `file_path` | `string` | Путь к файлу на сервере |
+| `file_size_bytes` | `int64` | Размер в байтах |
 | `uploaded_at` | `timestamp` | Время загрузки |
 
 
 | Метод                                                               | Описание                      | Возвращает           |
 | ------------------------------------------------------------------- | ----------------------------- | -------------------- |
-| `addMessageAttachment(message_id, file_type, file_size, file_path)` | Добавить вложение к сообщению | `Attachment`         |
-| `addPostAttachment(post_id, file_type, file_size, file_path)`       | Добавить вложение к посту     | `Attachment`         |
-| `getMessageAttachments(message_id)`                                 | Вложения сообщения            | `vector<Attachment>` |
-| `getPostAttachments(post_id)`                                       | Вложения поста                | `vector<Attachment>` |
-| `delete(attachment_id)`                                   | Удалить вложение              | `bool`               |
+| `add(message_id, file_name, file_type, file_size_bytes)` | Добавить вложение к сообщению | `Attachment`         |
+| `getByMessage(message_id)`                                 | Вложения сообщения            | `vector<Attachment>` |
+| `getByMessages(vector<message_id>)`                                 | Вложения сообщений            | `vector<vector<Attachment>>` |
+| `remove(id)`                                   | Удалить вложение              | `bool`               |

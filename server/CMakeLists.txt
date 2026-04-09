@@ -26,6 +26,7 @@ FetchContent_Declare( # download bcrypt from github
 )
 fetchcontent_makeavailable(jwt-cpp bcrypt) # make available for the project
 
+
 configure_file(
     "config.json"
     "${CMAKE_CURRENT_BINARY_DIR}/config.json"
@@ -42,7 +43,8 @@ add_executable(${PROJECT_NAME} src/main.cc) # create executable
 #
 # and comment out the following lines
 find_package(Drogon CONFIG REQUIRED) # find drogon
-target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon jwt-cpp::jwt-cpp bcrypt) # link libraries
+find_package(miniocpp REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon jwt-cpp::jwt-cpp bcrypt miniocpp::miniocpp) # link libraries
 
 # ##############################################################################
 
