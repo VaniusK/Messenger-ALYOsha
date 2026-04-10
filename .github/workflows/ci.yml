@@ -55,7 +55,9 @@ jobs:
             libgstreamer-plugins-base1.0-0 \
             libgstreamer-gl1.0-0 \
             gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good
+            gstreamer1.0-plugins-good \
+            ca-certificates \
+            openssl
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt.outputs.cache-hit != 'true'

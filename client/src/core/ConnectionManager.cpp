@@ -21,6 +21,24 @@ ConnectionManager::ConnectionManager(
             }
         }
     );
+
+    connect(
+        m_networkManager, &QNetworkAccessManager::sslErrors, this,
+        [](QNetworkReply *reply, const QList<QSslError> &errors) {
+            QString host = reply->url().host();
+            qDebug() << "[ConnectionManager] SSL Errors for"
+                     << reply->url().toString();
+            for (const auto &error : errors) {
+                qDebug() << "  -" << error.errorString();
+            }
+
+            if (host == "api.localhost" || host == "127.0.0.1") {
+                qDebug() << "[ConnectionManager] Automatically ignoring SSL "
+                            "errors for local host.";
+                reply->ignoreSslErrors();
+            }
+        }
+    );
 }
 
 QString ConnectionManager::baseUrl() const {

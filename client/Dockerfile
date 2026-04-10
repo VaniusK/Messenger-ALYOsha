@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y \
     qt6-multimedia-dev \
     qml6-module-qtmultimedia \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+    ca-certificates \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
     
 WORKDIR /usr/src/client

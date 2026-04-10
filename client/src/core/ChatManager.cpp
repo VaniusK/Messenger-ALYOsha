@@ -30,6 +30,24 @@ ChatManager::ChatManager(
         QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), this,
         &ChatManager::onWebSocketError
     );
+
+    connect(
+        m_webSocket, &QWebSocket::sslErrors, this,
+        [this](const QList<QSslError> &errors) {
+            QString host = m_webSocket->requestUrl().host();
+            qDebug() << "[ChatManager] WebSocket SSL Errors for"
+                     << m_webSocket->requestUrl().toString();
+            for (const auto &error : errors) {
+                qDebug() << "  -" << error.errorString();
+            }
+
+            if (host == "api.localhost" || host == "127.0.0.1") {
+                qDebug() << "[ChatManager] Automatically ignoring SSL errors "
+                            "for local host.";
+                m_webSocket->ignoreSslErrors();
+            }
+        }
+    );
 }
 
 void ChatManager::connectWebSocket() {
