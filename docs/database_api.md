@@ -212,12 +212,13 @@
 | `file_name` | `string` | Название файла |
 | `file_type` | `string` | MIME-тип |
 | `file_size_bytes` | `int64` | Размер в байтах |
+| `s3_object_key` | `string` | Ключ в S3 |
 | `uploaded_at` | `timestamp` | Время загрузки |
 
 
 | Метод                                                               | Описание                      | Возвращает           |
 | ------------------------------------------------------------------- | ----------------------------- | -------------------- |
-| `add(message_id, file_name, file_type, file_size_bytes)` | Добавить вложение к сообщению | `Attachment`         |
+| `add(message_id, file_name, file_type, file_size_bytes, s3_object_key)` | Добавить вложение к сообщению | `Attachment`         |
 | `getByMessage(message_id)`                                 | Вложения сообщения            | `vector<Attachment>` |
 | `getByMessages(vector<message_id>)`                                 | Вложения сообщений            | `vector<vector<Attachment>>` |
 | `remove(id)`                                   | Удалить вложение              | `bool`               |
