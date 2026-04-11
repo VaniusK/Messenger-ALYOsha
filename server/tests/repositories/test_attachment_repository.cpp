@@ -92,10 +92,11 @@ TEST_F(AttachmentTestFixture, TestGetByMessages) {
     auto attachments = sync_wait(repo_.getByMessages(
         {dummy_message_1.getValueOfId(), dummy_message_2.getValueOfId()}
     ));
-    EXPECT_EQ(attachments.size(), 3);
+    EXPECT_EQ(attachments.size(), 2);
+    EXPECT_EQ(attachments[0].size(), 2);
     EXPECT_EQ(
         std::count_if(
-            attachments.begin(), attachments.end(),
+            attachments[0].begin(), attachments[0].end(),
             [attachment1](const Attachment &a) {
                 return a.getValueOfId() == attachment1.getValueOfId();
             }
@@ -104,7 +105,7 @@ TEST_F(AttachmentTestFixture, TestGetByMessages) {
     );
     EXPECT_EQ(
         std::count_if(
-            attachments.begin(), attachments.end(),
+            attachments[0].begin(), attachments[0].end(),
             [attachment2](const Attachment &a) {
                 return a.getValueOfId() == attachment2.getValueOfId();
             }
@@ -113,7 +114,7 @@ TEST_F(AttachmentTestFixture, TestGetByMessages) {
     );
     EXPECT_EQ(
         std::count_if(
-            attachments.begin(), attachments.end(),
+            attachments[1].begin(), attachments[1].end(),
             [attachment3](const Attachment &a) {
                 return a.getValueOfId() == attachment3.getValueOfId();
             }

@@ -21,7 +21,7 @@ public:
     virtual drogon::Task<std::vector<Attachment>> getByMessage(
         int64_t message_id
     ) = 0;
-    virtual drogon::Task<std::vector<Attachment>> getByMessages(
+    virtual drogon::Task<std::vector<std::vector<Attachment>>> getByMessages(
         std::vector<int64_t> message_ids
     ) = 0;
     virtual drogon::Task<bool> remove(int64_t id) = 0;
@@ -38,7 +38,7 @@ public:
     ) override;
     drogon::Task<std::vector<Attachment>> getByMessage(int64_t message_id
     ) override;
-    drogon::Task<std::vector<Attachment>> getByMessages(
+    drogon::Task<std::vector<std::vector<Attachment>>> getByMessages(
         std::vector<int64_t> message_ids
     ) override;
     drogon::Task<bool> remove(int64_t id) override;
