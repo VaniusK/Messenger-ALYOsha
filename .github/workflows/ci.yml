@@ -287,6 +287,7 @@ jobs:
           echo "JWT_KEY=cool_key_sosite" >> .env
           echo "SERVER_WINDOW_FOR_REQUESTS_SECONDS=10" >> .env
           echo "SERVER_MAX_REQUESTS_PER_WINDOW=1000000" >> .env
+          echo "SERVER_IP_LIST_CLEANING_SECONDS_COOLDOWN=60" >> .env
           echo "S3_BASE_URL=storage.yandexcloud.net" >> .env
           echo "S3_PRIVATE_BUCKETNAME=who_knows" >> .env
           echo "S3_ACCESS_KEY=idk" >> .env
