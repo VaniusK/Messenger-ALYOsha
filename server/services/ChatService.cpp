@@ -1,6 +1,8 @@
 #include "services/ChatService.hpp"
 #include <drogon/HttpController.h>
+#include <drogon/HttpResponse.h>
 #include <json/value.h>
+#include <cstddef>
 #include <cstdint>
 #include "controllers/ServerWebSocketController.h"
 #include "include/repositories/ChatRepository.hpp"
@@ -9,11 +11,13 @@
 
 using namespace drogon;
 using namespace api::v1;
+using namespace minio::s3;
 
 using ChatRepo = messenger::repositories::ChatRepository;
 using Message = drogon_model::messenger_db::Messages;
 using Chat = drogon_model::messenger_db::Chats;
 using ChatPreview = messenger::dto::ChatPreview;
+using Attachment = drogon_model::messenger_db::Attachments;
 
 Task<bool> ChatService::checkChatAccess(int64_t user_id, int64_t chat_id) {
     std::vector<messenger::repositories::ChatMember> chat_members =
@@ -134,9 +138,28 @@ Task<HttpResponsePtr> ChatService::getChatMessages(
     std::vector<Message> chat_messages = co_await chat_repo->getMessagesByChat(
         chat_id, before_message_id, limit
     );
-    Json::Value jsonArray(Json::arrayValue);
+    std::vector<int64_t> message_ids;
     for (const auto &message : chat_messages) {
-        jsonArray.append(message.toJson());
+        message_ids.push_back(message.getValueOfId());
+    }
+    std::vector<std::vector<Attachment>> attachments =
+        co_await attachment_repo->getByMessages(message_ids);
+    Json::Value jsonArray(Json::arrayValue);
+    for (std::size_t i = 0; i < chat_messages.size(); i++) {
+        Json::Value message_json = chat_messages[i].toJson();
+        message_json["attachments"] = Json::Value(Json::arrayValue);
+        for (const auto &attachment : attachments[i]) {
+            Json::Value attachment_json = attachment.toJson();
+            std::optional<std::string> download_url =
+                s3_service_.generateDownloadUrl(
+                    attachment.getValueOfS3ObjectKey(),
+                    attachment.getValueOfFileName()
+                );
+            attachment_json["download_url"] =
+                download_url.has_value() ? download_url.value() : "";
+            message_json["attachments"].append(attachment_json);
+        }
+        jsonArray.append(message_json);
     }
     response_json["messages"] = jsonArray;
     RETURN_RESPONSE_CODE_200(response_json)
@@ -149,8 +172,7 @@ Task<HttpResponsePtr> ChatService::sendMessage(
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
 
-    bool is_member =
-        co_await checkChatAccess((*request_json)["user_id"].asInt64(), chat_id);
+    bool is_member = co_await checkChatAccess(user_id, chat_id);
     if (!is_member) {
         response_json["message"] = "Access denied";
         RETURN_RESPONSE_CODE_403(response_json);
@@ -212,4 +234,56 @@ Task<HttpResponsePtr> ChatService::readMessages(
         response_json["message"] = "Something went wrong";
         RETURN_RESPONSE_CODE_500(response_json)
     }
+}
+
+Task<HttpResponsePtr> ChatService::getAttachmentLink(
+    const std::shared_ptr<Json::Value> request_json
+) {
+    Json::Value response_json;
+    int64_t user_id = (*request_json)["user_id"].asInt64();
+    int64_t chat_id = (*request_json)["user_id"].asInt64();
+    bool is_member = co_await checkChatAccess(user_id, chat_id);
+    if (!is_member) {
+        response_json["message"] = "Access denied";
+        RETURN_RESPONSE_CODE_403(response_json);
+    }
+    bool upload_as_file = false;
+    if ((*request_json)["upload_as_file"] == "true") {
+        upload_as_file = true;
+    }
+    std::optional<UploadPresignedResult> upload_presigned_result =
+        s3_service_.generateUploadUrl(
+            chat_id, (*request_json)["original_filename"].asString(),
+            upload_as_file
+        );
+    if (!upload_presigned_result.has_value()) {
+        response_json["message"] = "Failed to generate presigned URL";
+        RETURN_RESPONSE_CODE_500(response_json);
+    }
+    response_json["upload_url"] = upload_presigned_result->upload_url;
+    response_json["attachment_key"] = upload_presigned_result->attachment_key;
+    response_json["content_type"] = upload_presigned_result->content_type;
+    RETURN_RESPONSE_CODE_200(response_json)
+}
+
+Task<HttpResponsePtr> ChatService::createAttachment(
+    const std::shared_ptr<Json::Value> request_json
+) {
+    Json::Value response_json;
+    int64_t user_id = (*request_json)["user_id"].asInt64();
+    int64_t chat_id = (*request_json)["chat_id"].asInt64();
+    bool is_member = co_await checkChatAccess(user_id, chat_id);
+    if (!is_member) {
+        response_json["message"] = "Access denied";
+        RETURN_RESPONSE_CODE_403(response_json);
+    }
+    Attachment attachment = co_await attachment_repo->create(
+        (*request_json)["message_id"].asInt64(),
+        (*request_json)["file_name"].asString(),
+        (*request_json)["file_type"].asString(),
+        (*request_json)["file_size_bytes"].asInt64(),
+        (*request_json)["s3_object_key"].asString()
+    );
+    response_json["attachment"] = attachment.toJson();
+    RETURN_RESPONSE_CODE_201(response_json);
 }

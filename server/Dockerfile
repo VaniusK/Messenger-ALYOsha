@@ -5,7 +5,9 @@ FROM drogonframework/drogon AS builder
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    curl zip unzip tar
+    curl zip unzip tar \
+    pkg-config perl cpanminus && \
+    cpanm IPC::Cmd
 
 RUN git clone https://github.com/microsoft/vcpkg.git /opt/vcpkg
 RUN /opt/vcpkg/bootstrap-vcpkg.sh

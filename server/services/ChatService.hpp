@@ -1,8 +1,11 @@
 #pragma once
 
 #include <drogon/HttpController.h>
+#include <drogon/HttpResponse.h>
 #include <memory>
+#include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
+#include "services/S3Service.hpp"
 
 using namespace drogon;
 
@@ -33,6 +36,12 @@ public:
         const std::shared_ptr<Json::Value> request_json,
         int64_t chat_id
     );
+    Task<HttpResponsePtr> getAttachmentLink(
+        const std::shared_ptr<Json::Value> request_json
+    );
+    Task<HttpResponsePtr> createAttachment(
+        const std::shared_ptr<Json::Value> request_json
+    );
 
     void setChatRepo(
         std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
@@ -41,8 +50,23 @@ public:
         this->chat_repo = chat_repo;
     }
 
+    void setAttachmentRepo(
+        std::shared_ptr<messenger::repositories::AttachmentRepositoryInterface>
+            attachment_repo
+    ) {
+        this->attachment_repo = attachment_repo;
+    }
+
 private:
     std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
+    std::shared_ptr<messenger::repositories::AttachmentRepositoryInterface>
+        attachment_repo;
+    S3Service s3_service_ = S3Service(
+        std::getenv("S3_ACCESS_KEY"),
+        std::getenv("S3_SECRET_KEY"),
+        std::getenv("S3_BASE_URL"),
+        std::getenv("S3_PRIVATE_BUCKETNAME")
+    );
     Task<bool> checkChatAccess(int64_t user_id, int64_t chat_id);
 };
 }  // namespace v1

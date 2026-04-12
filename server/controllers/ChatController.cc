@@ -1,4 +1,5 @@
 #include "ChatController.h"
+#include <drogon/HttpResponse.h>
 #include "services/ChatService.hpp"
 #include "utils/controller_utils.hpp"
 #include "utils/server_response_macro.hpp"
@@ -63,4 +64,26 @@ Task<HttpResponsePtr> ChatController::getMessageById(const HttpRequestPtr req, i
     auto request_json = std::make_shared<Json::Value>();
     (*request_json)["user_id"] = req->getAttributes()->get<int64_t>("user_id");
     co_return co_await chat_service.getMessageById(request_json, message_id);
+}
+
+Task<HttpResponsePtr> ChatController::getAttachmentLink(const HttpRequestPtr req){
+    LOG_INFO << "Entered ChatController -> getAttachmentLink";
+    auto request_json = req->getJsonObject();
+    (*request_json)["user_id"] = req->getAttributes()->get<int64_t>("user_id");
+    Json::Value response_json;
+    if (utils::find_missed_fields(response_json, request_json, {"chat_id", "original_filename", "upload_as_file"})){
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
+    co_return co_await chat_service.getAttachmentLink(request_json);
+}
+
+Task<HttpResponsePtr> ChatController::createAttachment(const HttpRequestPtr req){
+    LOG_INFO << "Entered ChatController -> createAttachment";
+    auto request_json = req->getJsonObject();
+    (*request_json)["user_id"] = req->getAttributes()->get<int64_t>("user_id");
+    Json::Value response_json;
+    if (utils::find_missed_fields(response_json, request_json, {"chat_id", "message_id", "file_name", "file_type", "file_size_bytes", "s3_object_key"})){
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
+    co_return co_await chat_service.createAttachment(request_json);
 }

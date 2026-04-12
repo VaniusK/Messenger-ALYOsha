@@ -35,18 +35,9 @@ configure_file(
 
 add_executable(${PROJECT_NAME} src/main.cc) # create executable
 
-# ##############################################################################
-# If you include the drogon source code locally in your project, use this method
-# to add drogon 
-# add_subdirectory(drogon) 
-# target_link_libraries(${PROJECT_NAME} PRIVATE drogon jwt-cpp::jwt-cpp bcrypt)
-#
-# and comment out the following lines
 find_package(Drogon CONFIG REQUIRED) # find drogon
 find_package(miniocpp REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon jwt-cpp::jwt-cpp bcrypt miniocpp::miniocpp) # link libraries
-
-# ##############################################################################
 
 if (CMAKE_CXX_STANDARD LESS 20)
     message(FATAL_ERROR "c++20 or higher is required")
@@ -114,7 +105,7 @@ if(BUILD_TESTS)
         ${TEST_FILES}
     )
     target_link_libraries(server_tests GTest::gtest GTest::gmock)
-    target_link_libraries(server_tests Drogon::Drogon jwt-cpp::jwt-cpp bcrypt)
+    target_link_libraries(server_tests Drogon::Drogon jwt-cpp::jwt-cpp bcrypt miniocpp::miniocpp)
 
     aux_source_directory(src SRC_SRC) # get all files from src
     aux_source_directory(src/repositories REPO_SRC) # get all files from src/repositories
