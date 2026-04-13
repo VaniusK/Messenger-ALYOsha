@@ -254,7 +254,7 @@ Task<HttpResponsePtr> ChatService::getAttachmentLink(
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
-    int64_t chat_id = (*request_json)["user_id"].asInt64();
+    int64_t chat_id = (*request_json)["chat_id"].asInt64();
     bool is_member = co_await checkChatAccess(user_id, chat_id);
     if (!is_member) {
         response_json["message"] = "Access denied";
