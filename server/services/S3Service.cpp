@@ -33,14 +33,14 @@ S3Service::S3Service(
     minio::s3::BucketExistsArgs exists_args;
     exists_args.bucket = private_bucket_name_;
     minio::s3::BucketExistsResponse resp = s3_client_.BucketExists(exists_args);
-    if (resp) {
+    if (!resp) {
         throw std::runtime_error("S3: Failed to check if bucket exists");
     }
     if (!resp.exist) {
         minio::s3::MakeBucketArgs make_args;
         make_args.bucket = private_bucket_name_;
         minio::s3::MakeBucketResponse resp = s3_client_.MakeBucket(make_args);
-        if (resp) {
+        if (!resp) {
             throw std::runtime_error("S3: Failed to create bucket");
         }
     }
