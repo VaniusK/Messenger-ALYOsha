@@ -52,8 +52,10 @@ services:
     command: ["./server_tests"]
     env_file: .env
     depends_on:
-      - db
-      - minio
+      db:
+        condition: service_started
+      minio:
+        condition: service_healthy
     profiles:
       - test
     environment:
@@ -75,6 +77,11 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
     profiles:
       - test
 

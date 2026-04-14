@@ -316,17 +316,8 @@ jobs:
           ls -la artifacts/
           test -f artifacts/client || (echo "Client binary not found!" && exit 1)
       
-      - name: Start services
-        run: docker compose --profile test up -d db minio
-    
-      - name: Check services are running
-        run: |
-          sleep 3
-          docker compose --profile test ps
-          docker compose --profile test logs db minio
-      
       - name: Run server tests
-        run: docker compose run test-server
+        run: docker compose --profile test run test-server
       
       - name: Cleanup
-        run: docker compose down -v
+        run: docker compose --profile test down -v
