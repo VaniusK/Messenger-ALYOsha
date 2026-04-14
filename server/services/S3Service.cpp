@@ -9,6 +9,13 @@
 
 using namespace api::v1;
 
+namespace {
+template <typename TResponse>
+std::string formatS3Failure(const std::string &operation, const TResponse &resp) {
+    return "S3: Failed to " + operation + ": " + resp.Error().String();
+}
+}  // namespace
+
 minio::s3::BaseUrl S3Service::formBaseUrl(
     const std::string &url,
     bool should_use_https,
@@ -34,14 +41,14 @@ S3Service::S3Service(
     exists_args.bucket = private_bucket_name_;
     minio::s3::BucketExistsResponse resp = s3_client_.BucketExists(exists_args);
     if (!resp) {
-        throw std::runtime_error("S3: Failed to check if bucket exists");
+        throw std::runtime_error(formatS3Failure("check if bucket exists", resp));
     }
     if (!resp.exist) {
         minio::s3::MakeBucketArgs make_args;
         make_args.bucket = private_bucket_name_;
         minio::s3::MakeBucketResponse resp = s3_client_.MakeBucket(make_args);
         if (!resp) {
-            throw std::runtime_error("S3: Failed to create bucket");
+            throw std::runtime_error(formatS3Failure("create bucket", resp));
         }
     }
 }
