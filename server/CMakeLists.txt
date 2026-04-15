@@ -47,6 +47,10 @@ else ()
     message(STATUS "use c++20")
 endif ()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror=return-type -Werror=maybe-uninitialized)
+endif()
+
 aux_source_directory(src SRC_SRC) # get all files from src
 aux_source_directory(src/repositories REPO_SRC) # get all files from src/repositories
 aux_source_directory(src/utils UTILS_SRC) # get all files from src/utils

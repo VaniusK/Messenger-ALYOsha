@@ -19,7 +19,8 @@ public:
         std::string access_key,
         std::string secret_key,
         std::string url,
-        std::string private_bucket_name
+        std::string private_bucket_name,
+        bool should_use_https
     );
     std::optional<UploadPresignedResult> generateUploadUrl(
         int64_t chat_id,
@@ -39,6 +40,11 @@ private:
 
     std::string getExtension(const std::string &filename);
     std::string getMimeType(const std::string &ext);
+    minio::s3::BaseUrl formBaseUrl(
+        const std::string &url,
+        bool should_use_https,
+        const std::string &region
+    );
 };
 }  // namespace v1
 }  // namespace api

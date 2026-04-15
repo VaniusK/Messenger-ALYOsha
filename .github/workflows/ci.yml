@@ -288,10 +288,11 @@ jobs:
           echo "SERVER_WINDOW_FOR_REQUESTS_SECONDS=10" >> .env
           echo "SERVER_MAX_REQUESTS_PER_WINDOW=1000000" >> .env
           echo "SERVER_IP_LIST_CLEANING_SECONDS_COOLDOWN=60" >> .env
-          echo "S3_BASE_URL=storage.yandexcloud.net" >> .env
-          echo "S3_PRIVATE_BUCKETNAME=who_knows" >> .env
-          echo "S3_ACCESS_KEY=idk" >> .env
-          echo "S3_SECRET_KEY=secret" >> .env
+          echo "S3_BASE_URL=minio:9000" >> .env
+          echo "S3_PRIVATE_BUCKETNAME=messenger-alyosha" >> .env
+          echo "S3_ACCESS_KEY=minioadmin" >> .env
+          echo "S3_SECRET_KEY=minioadmin" >> .env
+          echo "S3_SHOULD_USE_HTTPS=false" >> .env
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -315,17 +316,28 @@ jobs:
           ls -la artifacts/
           test -f artifacts/client || (echo "Client binary not found!" && exit 1)
       
-      - name: Start services
-        run: docker compose up -d
-    
-      - name: Check services are running
+      - name: Debug MinIO connectivity
         run: |
-          sleep 3
-          docker compose ps
-          docker compose logs
-      
+          docker compose --profile test up -d db minio
+          echo "=== Waiting for minio healthcheck ==="
+          for i in $(seq 1 30); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' $(docker compose --profile test ps -q minio) 2>/dev/null || echo "unknown")
+            echo "Attempt $i: minio health=$STATUS"
+            [ "$STATUS" = "healthy" ] && break
+            sleep 2
+          done
+          echo "=== Docker network info ==="
+          docker network ls
+          docker compose --profile test ps
+          echo "=== Testing connectivity from inside the network ==="
+          docker run --rm --network $(docker network ls --filter name=default -q | head -1) curlimages/curl:latest \
+            -sf http://minio:9000/minio/health/live && echo "MinIO reachable!" || echo "MinIO NOT reachable!"
+          echo "=== MinIO logs ==="
+          docker compose --profile test logs minio
+
       - name: Run server tests
-        run: docker compose run test-server
+        run: docker compose --profile test run test-server
+        
       
       - name: Cleanup
-        run: docker compose down -v
+        run: docker compose --profile test down -v

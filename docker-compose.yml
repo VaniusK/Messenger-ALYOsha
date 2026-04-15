@@ -29,12 +29,16 @@ services:
       - ./server/certbot/conf:/etc/letsencrypt:ro
     depends_on:
       - server
+    profiles:
+      - prod
   
   certbot:
     image: certbot/certbot
     volumes:
       - ./server/certbot/www:/var/www/certbot:rw
       - ./server/certbot/conf:/etc/letsencrypt:rw
+    profiles:
+      - prod
     
   client-build:
     build: ./client
@@ -48,11 +52,39 @@ services:
     command: ["./server_tests"]
     env_file: .env
     depends_on:
-      - db
+      db:
+        condition: service_started
+      minio:
+        condition: service_healthy
     profiles:
       - test
     environment:
       POSTGRES_DB: messenger_db_test
+      S3_BASE_URL: minio:9000
+      S3_PRIVATE_BUCKETNAME: messenger-alyosha
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_SHOULD_USE_HTTPS: false
+    
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    profiles:
+      - test
 
 volumes:
   postgres_data:
+  minio_data:

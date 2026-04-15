@@ -65,7 +65,8 @@ private:
         std::getenv("S3_ACCESS_KEY"),
         std::getenv("S3_SECRET_KEY"),
         std::getenv("S3_BASE_URL"),
-        std::getenv("S3_PRIVATE_BUCKETNAME")
+        std::getenv("S3_PRIVATE_BUCKETNAME"),
+        std::getenv("S3_SHOULD_USE_HTTPS") == std::string("true")
     );
     Task<bool> checkChatAccess(int64_t user_id, int64_t chat_id);
 };

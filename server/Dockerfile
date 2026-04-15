@@ -51,6 +51,9 @@ RUN ["mkdir", "logs"]
 # Copy tests executable
 COPY --from=builder /app/build/server_tests .
 
+# Copy test data
+COPY --from=builder /app/tests/test_data ./tests/test_data
+
 # Copy config files if needed
 COPY --from=builder /app/config.json .
 
