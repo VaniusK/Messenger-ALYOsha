@@ -72,9 +72,33 @@ S3Service::S3Service(
             return;
         }
 
+        std::string err_str = resp.Error().String();
         std::cerr << "S3Service: BucketExists failed (attempt " << attempt
-                  << "/" << kMaxRetries << "): " << resp.Error().String()
-                  << std::endl;
+                  << "/" << kMaxRetries << "): " << err_str << std::endl;
+
+        if (err_str.find("ResourceNotFound") != std::string::npos ||
+            err_str.find("NoSuchBucket") != std::string::npos) {
+            std::cout << "S3Service: Assuming bucket doesn't exist. Attempting "
+                         "MakeBucket..."
+                      << std::endl;
+            minio::s3::MakeBucketArgs make_args;
+            make_args.bucket = private_bucket_name_;
+            minio::s3::MakeBucketResponse make_resp =
+                s3_client_.MakeBucket(make_args);
+
+            if (make_resp) {
+                std::cout << "S3Service: bucket created successfully (attempt "
+                          << attempt << ")" << std::endl;
+                return;
+            } else if (make_resp.Error().String().find("BucketAlreadyOwnedByYou") != std::string::npos ||
+                       make_resp.Error().String().find("BucketAlreadyExists") != std::string::npos) {
+                std::cout << "S3Service: bucket already exists." << std::endl;
+                return;
+            } else {
+                std::cerr << "S3Service: MakeBucket also failed: "
+                          << make_resp.Error().String() << std::endl;
+            }
+        }
 
         if (attempt < kMaxRetries) {
             std::this_thread::sleep_for(std::chrono::seconds(kRetryDelaySec));
