@@ -29,6 +29,8 @@ minio::s3::BaseUrl S3Service::formBaseUrl(
     return base_url;
 }
 
+#include <iostream>
+
 S3Service::S3Service(
     std::string access_key,
     std::string secret_key,
@@ -40,9 +42,9 @@ S3Service::S3Service(
       provider_(access_key, secret_key),
       s3_client_(base_url_, &provider_),
       private_bucket_name_(private_bucket_name) {
-    LOG_INFO << "S3Service: connecting to " << url
-             << " (https=" << should_use_https << ")"
-             << ", bucket=" << private_bucket_name_;
+    std::cout << "S3Service: connecting to " << url
+              << " (https=" << should_use_https << ")"
+              << ", bucket=" << private_bucket_name_ << std::endl;
 
     constexpr int kMaxRetries = 10;
     constexpr int kRetryDelaySec = 2;
@@ -65,13 +67,14 @@ S3Service::S3Service(
                     );
                 }
             }
-            LOG_INFO << "S3Service: bucket '" << private_bucket_name_
-                     << "' is ready (attempt " << attempt << ")";
+            std::cout << "S3Service: bucket '" << private_bucket_name_
+                      << "' is ready (attempt " << attempt << ")" << std::endl;
             return;
         }
 
-        LOG_WARN << "S3Service: BucketExists failed (attempt " << attempt << "/"
-                 << kMaxRetries << "): " << resp.Error().String();
+        std::cerr << "S3Service: BucketExists failed (attempt " << attempt
+                  << "/" << kMaxRetries << "): " << resp.Error().String()
+                  << std::endl;
 
         if (attempt < kMaxRetries) {
             std::this_thread::sleep_for(std::chrono::seconds(kRetryDelaySec));
