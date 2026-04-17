@@ -7,6 +7,7 @@
 #include "controllers/ServerWebSocketController.h"
 #include "include/repositories/ChatRepository.hpp"
 #include "models/Messages.h"
+#include "utils/Enum.hpp"
 #include "utils/server_response_macro.hpp"
 
 using namespace drogon;
@@ -202,8 +203,12 @@ Task<HttpResponsePtr> ChatService::sendMessage(
               ))
             : std::nullopt;
     Message message = co_await chat_repo->sendMessage(
-        chat_id, user_id, text, reply_to_id, forward_from_id
+        chat_id, user_id, text, reply_to_id, forward_from_id,
+        messenger::models::MessageType::Text
     );
+    // Дима, Петя, измените свой код, чтобы добавить тип.
+    // Пока я текст захардкордил.
+    // Заодно в end_to_end к сообщениям тип добавь
     bool successfully_read_sended_message = co_await chat_repo->markAsRead(
         message.getValueOfChatId(), user_id, message.getValueOfId()
     );
