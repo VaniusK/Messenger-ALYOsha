@@ -48,6 +48,7 @@ public:
             chat_repo
     ) {
         this->chat_repo = chat_repo;
+        s3_service_.setChatRepo(this->chat_repo);
     }
 
     void setAttachmentRepo(
@@ -69,6 +70,7 @@ private:
         std::getenv("S3_SHOULD_USE_HTTPS") == std::string("true")
     );
     Task<bool> checkChatAccess(int64_t user_id, int64_t chat_id);
+    bool validateMessageType(std::string &message_type);
 };
 }  // namespace v1
 }  // namespace api

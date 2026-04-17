@@ -71,7 +71,7 @@ Task<HttpResponsePtr> ChatController::getAttachmentLink(const HttpRequestPtr req
     auto request_json = req->getJsonObject();
     (*request_json)["user_id"] = req->getAttributes()->get<int64_t>("user_id");
     Json::Value response_json;
-    if (utils::find_missed_fields(response_json, request_json, {"chat_id", "original_filename", "upload_as_file"})){
+    if (utils::find_missed_fields(response_json, request_json, {"chat_id", "original_filename", "upload_as_file", "message_id"})){
         RETURN_RESPONSE_CODE_400(response_json)
     }
     co_return co_await chat_service.getAttachmentLink(request_json);

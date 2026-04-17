@@ -323,6 +323,20 @@ TEST_F(ControllerTestFixture, E2ETest) {
         (*result21->getJsonObject())["messages"];
     ASSERT_EQ(direct_chat_dima_petr_messages_with_before_id.size(), 1);
 
+    // Петя отправляет Диме сообщение
+    std::cout << "Executing result"
+              << "\n";
+    auto result24 = sync_wait(sendReqTask(form_request(
+        Post,
+        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
+        makeJson({{"text", "Смотри на баклажан"}}), petr_token
+    )));
+
+    ASSERT_EQ(result24->getStatusCode(), k201Created);
+
+    int64_t eggplant_message_id =
+        (*result24->getJsonObject())["message"]["id"].asInt64();
+
     // Петя получает ссылку для загрузки картинки
     std::cout << "Executing result"
               << "\n";
@@ -331,7 +345,8 @@ TEST_F(ControllerTestFixture, E2ETest) {
         makeJson(
             {{"chat_id", direct_chat_dima_petr_id},
              {"original_filename", "eggplant.png"},
-             {"upload_as_file", false}}
+             {"upload_as_file", false},
+             {"message_id", eggplant_message_id}}
         ),
         petr_token
     )));
@@ -358,20 +373,6 @@ TEST_F(ControllerTestFixture, E2ETest) {
     )));
 
     ASSERT_EQ(result23->getStatusCode(), k200OK);
-
-    // Петя отправляет Диме сообщение
-    std::cout << "Executing result"
-              << "\n";
-    auto result24 = sync_wait(sendReqTask(form_request(
-        Post,
-        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
-        makeJson({{"text", "Смотри на баклажан"}}), petr_token
-    )));
-
-    ASSERT_EQ(result24->getStatusCode(), k201Created);
-
-    int64_t eggplant_message_id =
-        (*result24->getJsonObject())["message"]["id"].asInt64();
 
     /*
     (*request_json)["message_id"].asInt64(),
