@@ -43,7 +43,8 @@ Task<Message> MessageRepository::send(
     int64_t sender_id,
     std::string text,
     std::optional<int64_t> reply_to_id,
-    std::optional<int64_t> forwarded_from_id
+    std::optional<int64_t> forwarded_from_id,
+    std::string type
 ) {
     auto mapper = getMapper();
 
@@ -64,6 +65,7 @@ Task<Message> MessageRepository::send(
                 forwarded_from_user.getValueOfDisplayName()
             );
         }
+        message.setType(type);
         message = co_await mapper.insert(message);
         co_return message;
     } catch (const DrogonDbException &e) {

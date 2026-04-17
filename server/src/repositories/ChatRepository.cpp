@@ -34,10 +34,11 @@ Task<Message> ChatRepository::sendMessage(
     int64_t sender_id,
     std::string text,
     std::optional<int64_t> reply_to_id,
-    std::optional<int64_t> forwarded_from_id
+    std::optional<int64_t> forwarded_from_id,
+    std::string type
 ) {
     auto result = co_await message_repo_->send(
-        chat_id, sender_id, text, reply_to_id, forwarded_from_id
+        chat_id, sender_id, text, reply_to_id, forwarded_from_id, type
     );
     co_return result;
 }
