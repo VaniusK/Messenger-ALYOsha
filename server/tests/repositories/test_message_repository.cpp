@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include "../fixtures/MessageTestFixture.hpp"
+#include "utils/Enum.hpp"
 
 using MessageRepository = messenger::repositories::MessageRepository;
 using Message = drogon_model::messenger_db::Messages;
@@ -15,11 +16,14 @@ TEST_F(MessageTestFixture, TestSend) {
     and it should be retrievable via getAll()*/
     Message message = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     std::vector<Message> messages = sync_wait(repo_.getAll());
     EXPECT_EQ(messages.size(), 1);
     EXPECT_EQ(messages[0].getValueOfId(), message.getValueOfId());
+    EXPECT_EQ(
+        messages[0].getValueOfType(), messenger::models::MessageType::Text
+    );
 }
 
 TEST_F(MessageTestFixture, TestSendInvalidChatId) {
@@ -28,7 +32,8 @@ TEST_F(MessageTestFixture, TestSendInvalidChatId) {
     EXPECT_THROW(
         sync_wait(repo_.send(
             dummy_chat_1.getValueOfId() - 1, dummy_user1_.getValueOfId(),
-            "my message", std::nullopt, std::nullopt
+            "my message", std::nullopt, std::nullopt,
+            messenger::models::MessageType::Text
         )),
         std::runtime_error
     );
@@ -40,7 +45,8 @@ TEST_F(MessageTestFixture, TestSendInvalidSenderId) {
     EXPECT_THROW(
         sync_wait(repo_.send(
             dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId() - 1,
-            "my message", std::nullopt, std::nullopt
+            "my message", std::nullopt, std::nullopt,
+            messenger::models::MessageType::Text
         )),
         std::runtime_error
     );
@@ -52,11 +58,12 @@ TEST_F(MessageTestFixture, TestSendOptionals) {
     and it should be retrievable via getAll()*/
     Message original_message = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     Message message = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        original_message.getValueOfId(), dummy_user2_.getValueOfId()
+        original_message.getValueOfId(), dummy_user2_.getValueOfId(),
+        messenger::models::MessageType::Text
     ));
     std::vector<Message> messages = sync_wait(repo_.getAll());
     EXPECT_EQ(messages.size(), 2);
@@ -78,15 +85,15 @@ TEST_F(MessageTestFixture, TestSendMultiple) {
     and they should be retrievable via getAll()*/
     Message message1 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     Message message2 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     Message message3 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     std::vector<Message> messages = sync_wait(repo_.getAll());
     EXPECT_EQ(messages.size(), 3);
@@ -97,7 +104,7 @@ TEST_F(MessageTestFixture, TestGetById) {
     getById() should return in*/
     Message message = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     auto result = sync_wait(repo_.getById(message.getValueOfId()));
     EXPECT_TRUE(result.has_value());
@@ -109,7 +116,7 @@ TEST_F(MessageTestFixture, TestGetByIdFail) {
     getById() should return nullopt*/
     Message message = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     auto result = sync_wait(repo_.getById(message.getValueOfId() + 1));
     EXPECT_FALSE(result.has_value());
@@ -121,15 +128,15 @@ TEST_F(MessageTestFixture, TestGetByChat) {
     and nothing else*/
     Message message1 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     Message message2 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     Message message3 = sync_wait(repo_.send(
         dummy_chat_2.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     std::vector<Message> messages = sync_wait(
         repo_.getByChat(dummy_chat_1.getValueOfId(), std::nullopt, 100)
@@ -169,15 +176,15 @@ TEST_F(MessageTestFixture, TestGetByChatOptionals) {
     respecting before_id and limit params*/
     Message message1 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     Message message2 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     Message message3 = sync_wait(repo_.send(
         dummy_chat_2.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     std::vector<Message> messages = sync_wait(
         repo_.getByChat(dummy_chat_1.getValueOfId(), message2.getValueOfId(), 1)
@@ -200,7 +207,7 @@ TEST_F(MessageTestFixture, TestEdit) {
     and the text should be updated*/
     Message message1 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     bool result = sync_wait(repo_.edit(message1.getValueOfId(), "new text"));
     EXPECT_TRUE(result);
@@ -215,7 +222,7 @@ TEST_F(MessageTestFixture, TestEditFail) {
     and the text should be updated*/
     Message message1 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     bool result =
         sync_wait(repo_.edit(message1.getValueOfId() - 1, "new text"));
@@ -228,7 +235,7 @@ TEST_F(MessageTestFixture, TestRemove) {
     and the message should be deleted*/
     Message message1 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     bool result = sync_wait(repo_.remove(message1.getValueOfId()));
     EXPECT_TRUE(result);
@@ -241,7 +248,7 @@ TEST_F(MessageTestFixture, TestRemoveFail) {
     remove() should return false*/
     Message message1 = sync_wait(repo_.send(
         dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "text",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     bool result = sync_wait(repo_.remove(message1.getValueOfId() - 1));
     EXPECT_FALSE(result);

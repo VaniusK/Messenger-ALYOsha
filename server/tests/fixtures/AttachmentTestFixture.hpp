@@ -5,6 +5,7 @@
 #include "repositories/ChatRepository.hpp"
 #include "repositories/MessageRepository.hpp"
 #include "repositories/UserRepository.hpp"
+#include "utils/Enum.hpp"
 
 using MessageRepository = messenger::repositories::MessageRepository;
 using ChatRepository = messenger::repositories::ChatRepository;
@@ -42,15 +43,15 @@ protected:
             );
         dummy_message_1 = drogon::sync_wait(message_repo_.send(
             dummy_chat.getValueOfId(), dummy_user.getValueOfId(), "hey",
-            std::nullopt, std::nullopt
+            std::nullopt, std::nullopt, messenger::models::MessageType::Text
         ));
         dummy_message_2 = drogon::sync_wait(message_repo_.send(
             dummy_chat.getValueOfId(), dummy_user.getValueOfId(), "hey",
-            std::nullopt, std::nullopt
+            std::nullopt, std::nullopt, messenger::models::MessageType::Text
         ));
         dummy_message_3 = drogon::sync_wait(message_repo_.send(
             dummy_chat.getValueOfId(), dummy_user.getValueOfId(), "hey",
-            std::nullopt, std::nullopt
+            std::nullopt, std::nullopt, messenger::models::MessageType::Text
         ));
     }
 };

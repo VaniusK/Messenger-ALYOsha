@@ -26,7 +26,8 @@ public:
          int64_t,
          std::string,
          std::optional<int64_t>,
-         std::optional<int64_t>),
+         std::optional<int64_t>,
+         std::string),
         (override)
     );
     MOCK_METHOD(

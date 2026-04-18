@@ -3,6 +3,7 @@
 #include <miniocpp/client.h>
 #include <optional>
 #include <string>
+#include "repositories/ChatRepository.hpp"
 
 namespace api {
 namespace v1 {
@@ -22,15 +23,23 @@ public:
         std::string private_bucket_name,
         bool should_use_https
     );
-    std::optional<UploadPresignedResult> generateUploadUrl(
+    drogon::Task<std::optional<UploadPresignedResult>> generateUploadUrl(
         int64_t chat_id,
         const std::string &original_filename,
-        bool upload_as_file
+        bool upload_as_file,
+        int64_t message_id
     );
     std::optional<std::string> generateDownloadUrl(
         const std::string &attachment_key,
         const std::string &original_filename
     );
+
+    void setChatRepo(
+        std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
+            chat_repo
+    ) {
+        this->chat_repo_ = chat_repo;
+    }
 
 private:
     minio::s3::BaseUrl base_url_;
@@ -38,8 +47,12 @@ private:
     minio::creds::StaticProvider provider_;
     std::string private_bucket_name_;
 
+    std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
+        chat_repo_;
+
     std::string getExtension(const std::string &filename);
     std::string getMimeType(const std::string &ext);
+    std::string getFolderName(const std::string &message_type);
     minio::s3::BaseUrl formBaseUrl(
         const std::string &url,
         bool should_use_https,

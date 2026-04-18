@@ -2,6 +2,7 @@
 
 CREATE TYPE chat_role AS ENUM ('member', 'moderator', 'admin', 'owner');
 CREATE TYPE chat_type AS ENUM ('direct', 'group', 'discussion', 'saved', 'channel');
+CREATE TYPE message_type AS ENUM ('text', 'voice', 'round', 'sticker');
 
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
@@ -51,7 +52,8 @@ CREATE TABLE messages (
     text TEXT NOT NULL DEFAULT '',
     sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     edited_at TIMESTAMP WITH TIME ZONE, -- NULL if not edited
-    discussion_message_id BIGINT REFERENCES messages(id) -- NULL if comments disabled(or not a channel)
+    discussion_message_id BIGINT REFERENCES messages(id), -- NULL if comments disabled(or not a channel)
+    type message_type NOT NULL
     
 );
 

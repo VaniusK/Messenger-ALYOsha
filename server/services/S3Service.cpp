@@ -6,8 +6,10 @@
 #include <trantor/utils/Logger.h>
 #include <algorithm>
 #include <chrono>
+#include <optional>
 #include <string>
 #include <thread>
+#include "utils/Enum.hpp"
 
 using namespace api::v1;
 
@@ -132,20 +134,47 @@ std::string S3Service::getMimeType(const std::string &ext) {
     if (ext == ".webp") {
         return "image/webp";
     }
-    if (ext == ".pdf") {
-        return "application/pdf";
+    if (ext == ".gif") {
+        return "image/gif";
     }
+    if (ext == ".bmp") {
+        return "image/bmp";
+    }
+
     if (ext == ".mp4") {
         return "video/mp4";
+    }
+    if (ext == ".webm") {
+        return "video/webm";
+    }
+    if (ext == ".mov") {
+        return "video/quicktime";
+    }
+    if (ext == ".avi") {
+        return "video/x-msvideo";
     }
 
     return "application/octet-stream";
 }
 
-std::optional<UploadPresignedResult> S3Service::generateUploadUrl(
+std::string S3Service::getFolderName(const std::string &message_type) {
+    if (message_type == messenger::models::MessageType::Text) {
+        return "attachments";
+    }
+    if (message_type == messenger::models::MessageType::Voice) {
+        return "voice-messages";
+    }
+    if (message_type == messenger::models::MessageType::Round) {
+        return "round-messages";
+    }
+    return "attachments";
+}
+
+drogon::Task<std::optional<UploadPresignedResult>> S3Service::generateUploadUrl(
     int64_t chat_id,
     const std::string &original_filename,
-    bool upload_as_file
+    bool upload_as_file,
+    int64_t message_id
 ) {
     std::string ext = getExtension(original_filename);
     std::string mime_type =
@@ -155,8 +184,18 @@ std::optional<UploadPresignedResult> S3Service::generateUploadUrl(
         trantor::Date::now().toCustomFormattedString("%Y-%m-%d", false);
     std::string uuid = drogon::utils::getUuid(false);
 
+    std::optional<Message> message =
+        co_await chat_repo_->getMessageById(message_id);
+    if (!message.has_value()) {
+        LOG_ERROR << "Failed to generate PUT presigned URL: couldn't get "
+                     "message for attachment";
+        co_return std::nullopt;
+    }
+    std::string folder_name;
+    folder_name = getFolderName(message->getValueOfType());
+
     std::string object_key = "chat_" + std::to_string(chat_id) + "/" +
-                             date_prefix + "/" + uuid + ext;
+                             folder_name + "/" + date_prefix + "/" + uuid + ext;
 
     minio::s3::GetPresignedObjectUrlArgs args;
     args.bucket = private_bucket_name_;
@@ -169,9 +208,9 @@ std::optional<UploadPresignedResult> S3Service::generateUploadUrl(
     if (result.url.empty()) {
         LOG_ERROR << "Failed to generate PUT presigned URL: "
                   << result.status_code << " " << result.message;
-        return std::nullopt;
+        co_return std::nullopt;
     }
-    return UploadPresignedResult{object_key, result.url, mime_type};
+    co_return UploadPresignedResult{object_key, result.url, mime_type};
 }
 
 std::optional<std::string> S3Service::generateDownloadUrl(

@@ -37,7 +37,8 @@ public:
         int64_t sender_id,
         std::string text,
         std::optional<int64_t> reply_to_id,
-        std::optional<int64_t> forwarded_from_id
+        std::optional<int64_t> forwarded_from_id,
+        std::string type
     ) = 0;
     virtual drogon::Task<std::vector<Message>> getMessagesByChat(
         int64_t chat_id,
@@ -104,7 +105,8 @@ public:
         int64_t sender_id,
         std::string text,
         std::optional<int64_t> reply_to_id,
-        std::optional<int64_t> forwarded_from_id
+        std::optional<int64_t> forwarded_from_id,
+        std::string type
     ) override;
     drogon::Task<std::vector<Message>> getMessagesByChat(
         int64_t chat_id,

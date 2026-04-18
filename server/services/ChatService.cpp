@@ -7,6 +7,7 @@
 #include "controllers/ServerWebSocketController.h"
 #include "include/repositories/ChatRepository.hpp"
 #include "models/Messages.h"
+#include "utils/Enum.hpp"
 #include "utils/server_response_macro.hpp"
 
 using namespace drogon;
@@ -178,6 +179,22 @@ Task<HttpResponsePtr> ChatService::getChatMessages(
     RETURN_RESPONSE_CODE_200(response_json)
 }
 
+bool ChatService::validateMessageType(std::string &message_type) {
+    if (message_type == messenger::models::MessageType::Text) {
+        return true;
+    }
+    if (message_type == messenger::models::MessageType::Voice) {
+        return true;
+    }
+    if (message_type == messenger::models::MessageType::Round) {
+        return true;
+    }
+    if (message_type == messenger::models::MessageType::Sticker) {
+        return true;
+    }
+    return false;
+}
+
 Task<HttpResponsePtr> ChatService::sendMessage(
     const std::shared_ptr<Json::Value> request_json,
     int64_t chat_id
@@ -201,8 +218,14 @@ Task<HttpResponsePtr> ChatService::sendMessage(
             ? std::optional<int64_t>((*request_json)["forward_from_id"].asInt64(
               ))
             : std::nullopt;
+    std::string message_type = request_json->isMember("type")
+                                   ? (*request_json)["type"].asString()
+                                   : messenger::models::MessageType::Text;
+    if (!validateMessageType(message_type)) {
+        message_type = messenger::models::MessageType::Text;
+    }
     Message message = co_await chat_repo->sendMessage(
-        chat_id, user_id, text, reply_to_id, forward_from_id
+        chat_id, user_id, text, reply_to_id, forward_from_id, message_type
     );
     bool successfully_read_sended_message = co_await chat_repo->markAsRead(
         message.getValueOfChatId(), user_id, message.getValueOfId()
@@ -255,6 +278,7 @@ Task<HttpResponsePtr> ChatService::getAttachmentLink(
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
     int64_t chat_id = (*request_json)["chat_id"].asInt64();
+    int64_t message_id = (*request_json)["message_id"].asInt64();
     bool is_member = co_await checkChatAccess(user_id, chat_id);
     if (!is_member) {
         response_json["message"] = "Access denied";
@@ -264,10 +288,16 @@ Task<HttpResponsePtr> ChatService::getAttachmentLink(
     if ((*request_json)["upload_as_file"] == "true") {
         upload_as_file = true;
     }
+    std::string message_type = request_json->isMember("type")
+                                   ? (*request_json)["type"].asString()
+                                   : messenger::models::MessageType::Text;
+    if (!validateMessageType(message_type)) {
+        message_type = messenger::models::MessageType::Text;
+    }
     std::optional<UploadPresignedResult> upload_presigned_result =
-        s3_service_.generateUploadUrl(
+        co_await s3_service_.generateUploadUrl(
             chat_id, (*request_json)["original_filename"].asString(),
-            upload_as_file
+            upload_as_file, message_id
         );
     if (!upload_presigned_result.has_value()) {
         response_json["message"] = "Failed to generate presigned URL";

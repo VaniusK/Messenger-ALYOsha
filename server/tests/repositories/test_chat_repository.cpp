@@ -95,7 +95,7 @@ TEST_F(ChatTestFixture, TestGetByUserDirect) {
     ));
     Message message = sync_wait(repo_.sendMessage(
         chat1.getValueOfId(), dummy_user2_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     std::vector<ChatPreview> chatPreviews =
         sync_wait(repo_.getByUser(dummy_user1_.getValueOfId()));
@@ -181,7 +181,7 @@ TEST_F(ChatTestFixture, TestMarkAsRead) {
     ));
     Message message = sync_wait(repo_.sendMessage(
         chat.getValueOfId(), dummy_user2_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     bool result = sync_wait(repo_.markAsRead(
         chat.getValueOfId(), dummy_user1_.getValueOfId(), message.getValueOfId()
@@ -201,7 +201,7 @@ TEST_F(ChatTestFixture, TestMarkAsReadFailNoChat) {
     ));
     Message message = sync_wait(repo_.sendMessage(
         chat.getValueOfId(), dummy_user2_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     bool result = sync_wait(repo_.markAsRead(
         chat.getValueOfId() - 1, dummy_user1_.getValueOfId(),
@@ -218,7 +218,7 @@ TEST_F(ChatTestFixture, TestMarkAsReadFailNoUser) {
     ));
     Message message = sync_wait(repo_.sendMessage(
         chat.getValueOfId(), dummy_user2_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text
     ));
     bool result = sync_wait(repo_.markAsRead(
         chat.getValueOfId(), dummy_user1_.getValueOfId() - 1,
