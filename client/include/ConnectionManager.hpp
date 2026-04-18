@@ -1,5 +1,4 @@
 #pragma once
-
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -26,10 +25,11 @@ public:
     post(const QString &endpoint, const QByteArray &body);
     virtual QNetworkReply *
     getWithBody(const QString &endpoint, const QByteArray &body);
+    QNetworkAccessManager *networkManager() const;
 
 private:
     QNetworkAccessManager *m_networkManager;
     std::function<QString()> m_tokenProvider;
-    QString m_baseUrl = "https://api.alyosha.su/v1";
-    QString m_wsUrl = "wss://api.alyosha.su/ws/chat";
+    QString m_baseUrl = "https://api.localhost/v1";
+    QString m_wsUrl = "wss://api.localhost/ws/chat";
 };

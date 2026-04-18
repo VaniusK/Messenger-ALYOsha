@@ -243,3 +243,70 @@ void ChatManager::onWebSocketError(QAbstractSocket::SocketError error) {
     qDebug() << "[ChatManager] WS error:" << error;
     emit chatError("WebSocket error: " + QString::number(error));
 }
+
+void ChatManager::sendMessageWithAttachment(
+    const QString &chatId,
+    const QString &caption,
+    const QString &fileName,
+    const QString &fileType,
+    qint64 fileSizeBytes,
+    const QString &s3ObjectKey
+) {
+    QJsonObject json;
+    json["text"] = caption.trimmed();
+
+    QNetworkReply *reply = m_connection->post(
+        "/chats/" + chatId + "/messages", QJsonDocument(json).toJson()
+    );
+
+    connect(
+        reply, &QNetworkReply::finished, this,
+        [this, reply, chatId, fileName, fileType, fileSizeBytes,
+         s3ObjectKey]() {
+            reply->deleteLater();
+
+            if (reply->error() != QNetworkReply::NoError) {
+                emit chatError(
+                    "Не удалось создать сообщение: " + reply->errorString()
+                );
+                return;
+            }
+
+            QJsonObject obj =
+                QJsonDocument::fromJson(reply->readAll()).object();
+            QJsonObject msg = obj["message"].toObject();
+            msg["is_me"] = true;
+            emit messageSentSuccess(msg);
+
+            QJsonValue idVal = msg["id"];
+            qint64 messageId = idVal.isString()
+                                   ? idVal.toString().toLongLong()
+                                   : static_cast<qint64>(idVal.toDouble());
+
+            QJsonObject attachJson;
+            attachJson["chat_id"] = chatId.toLongLong();
+            attachJson["message_id"] = messageId;
+            attachJson["file_name"] = fileName;
+            attachJson["file_type"] = fileType;
+            attachJson["file_size_bytes"] = fileSizeBytes;
+            attachJson["s3_object_key"] = s3ObjectKey;
+
+            QNetworkReply *attachReply = m_connection->post(
+                "/chats/attachments", QJsonDocument(attachJson).toJson()
+            );
+
+            connect(
+                attachReply, &QNetworkReply::finished,
+                [this, attachReply]() {
+                    attachReply->deleteLater();
+                    if (attachReply->error() != QNetworkReply::NoError) {
+                        qDebug() << "[ChatManager] Ошибка привязки файла:"
+                                 << attachReply->errorString();
+                    } else {
+                        qDebug() << "[ChatManager] Файл успешно привязан";
+                    }
+                }
+            );
+        }
+    );
+}

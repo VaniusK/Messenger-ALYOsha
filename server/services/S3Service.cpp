@@ -134,11 +134,24 @@ std::string S3Service::getMimeType(const std::string &ext) {
     if (ext == ".webp") {
         return "image/webp";
     }
-    if (ext == ".pdf") {
-        return "application/pdf";
+    if (ext == ".gif") {
+        return "image/gif";
     }
+    if (ext == ".bmp") {
+        return "image/bmp";
+    }
+
     if (ext == ".mp4") {
         return "video/mp4";
+    }
+    if (ext == ".webm") {
+        return "video/webm";
+    }
+    if (ext == ".mov") {
+        return "video/quicktime";
+    }
+    if (ext == ".avi") {
+        return "video/x-msvideo";
     }
 
     return "application/octet-stream";

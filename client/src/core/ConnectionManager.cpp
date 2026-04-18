@@ -77,3 +77,7 @@ QNetworkReply *ConnectionManager::getWithBody(
         createAuthRequest(endpoint), "GET", body
     );
 }
+
+QNetworkAccessManager *ConnectionManager::networkManager() const {
+    return m_networkManager;
+}

@@ -15,7 +15,6 @@ Rectangle {
     property bool isLoadingHistory: false
     property bool hasMoreHistory: true
     property bool isUploading: false
-    property string pendingMediaCaption: ""
 
     MediaPlayer {
         id: globalAudioPlayer
@@ -64,28 +63,16 @@ Rectangle {
             systemDialogBlocker.close()
         }
         function onFileSelected(filePath, fileType, fileSize, fileName) {
-            if (fileSize === 0) {
-                errorToast.show("Невозможно отправить пустой файл:\n" + filePath)
-                return
-            }
-            if (fileSize >= 1073741824) { // 1 GB
-                errorToast.show("Невозможно отправить файл больше 1 ГБ:\n" + filePath)
-                return
-            }
             mediaPreview.openWith(filePath, fileType, fileSize, fileName, messageInput.text.trim())
         }
-        function onUploadFinished(fileUrl, fileType, fileSize, fileName) {
+        function onUploadFinished() {
             isUploading = false
-            var finalMsg = "Отправлено: " + fileName
-            if (pendingMediaCaption !== "") {
-                finalMsg += "\n" + pendingMediaCaption
-            }
-            ChatLayer.sendMessage(activeChatId, finalMsg, fileUrl, fileType, fileSize, fileName)
-            pendingMediaCaption = ""
+            ChatLayer.fetchChatHistory(activeChatId, 0)
         }
         function onUploadProgress(percent) {}
         function onUploadFailed(error) {
             isUploading = false
+            errorToast.show("Ошибка загрузки: " + error)
         }
     }
 
@@ -191,7 +178,8 @@ Rectangle {
     Connections {
         target: VoiceLayer
         function onVoiceMessageReady(audioUrl) {
-            ChatLayer.sendMessage(activeChatId, "VOICE::" + audioUrl)
+            isUploading = true
+            MediaLayer.uploadFile(activeChatId, audioUrl, false, "", "voice")
         }
     }
 
@@ -412,8 +400,30 @@ Rectangle {
                 width: messageList.width
                 
                 property bool isMe: model.is_me !== undefined ? model.is_me : false
-                property bool isVoice: typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0
-                property string voiceUrl: isVoice ? model.text.substring(7) : ""
+                property var msgAttachments: (model.attachments !== undefined && model.attachments !== null) 
+                                             ? model.attachments : []
+                property var firstAttachment: (msgAttachments && msgAttachments.length > 0) 
+                                              ? msgAttachments[0] : null
+                
+                property string fileTypeStr: firstAttachment && typeof firstAttachment.file_type === 'string' 
+                                             ? firstAttachment.file_type.toLowerCase() : ""
+
+                property bool isVoice: (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0)
+                                        || (model.type !== undefined && model.type === "voice")
+
+                property bool isImage: !isVoice && fileTypeStr.indexOf("image/") === 0
+                property bool isVideo: !isVoice && fileTypeStr.indexOf("video/") === 0
+
+                property bool hasFileAttachment: firstAttachment !== null && !isVoice && !isImage && !isVideo
+
+                property string fileUrl: {
+                    if (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0)
+                        return model.text.substring(7)
+                    if (firstAttachment !== null && firstAttachment !== undefined && firstAttachment.download_url)
+                        return firstAttachment.download_url
+                    return ""
+                }
+                
                 property string uniqueId: model._id || model.id || index.toString()
                 property bool isPlayingThis: globalPlayingMsgId === uniqueId && globalAudioPlayer.playbackState === 1
                 
@@ -421,12 +431,21 @@ Rectangle {
                 
                 Rectangle {
                     id: messageBubble
-                    width: isVoice 
-                        ? Math.min(270, parent.width * 0.75) 
+
+                    width: (isVoice || isImage || isVideo || hasFileAttachment)
+                        ? Math.min(280, parent.width * 0.75) 
                         : Math.min(Math.max(60, messageText.implicitWidth + timeText.implicitWidth + 30), parent.width * 0.75)
-                    height: isVoice ? 58 : messageText.implicitHeight + 20
-                    radius: 12
+
+                    height: {
+                        if (isVoice) return 58;
+                        if (hasFileAttachment) return fileAttachCol.implicitHeight + 32;
+
+                        let mediaHeight = (isImage || isVideo) ? (width * 0.75) : 0; 
+                        let textHeight = (model.text && model.text.trim() !== "") ? messageText.implicitHeight + 16 : 8;
+                        return mediaHeight + textHeight;
+                    }
                     
+                    radius: 12
                     color: isMe ? "#2b5278" : "#18222d"
                     
                     anchors.right: isMe ? parent.right : undefined
@@ -435,8 +454,7 @@ Rectangle {
                     anchors.leftMargin: isMe ? 0 : 15
 
                     Rectangle {
-                        width: 12; height: 12
-                        color: parent.color
+                        width: 12; height: 12; color: parent.color
                         anchors.bottom: parent.bottom
                         anchors.right: isMe ? parent.right : undefined
                         anchors.left: isMe ? undefined : parent.left
@@ -446,198 +464,226 @@ Rectangle {
                         anchors.bottom: parent.bottom
                         anchors.right: isMe ? parent.right : undefined
                         anchors.left: isMe ? undefined : parent.left
-                        anchors.rightMargin: isMe ? -8 : 0
-                        anchors.leftMargin: isMe ? 0 : -8
+                        anchors.rightMargin: isMe ? -8 : 0; anchors.leftMargin: isMe ? 0 : -8
                         width: 8; height: 16
-                        
+
                         Rectangle {
-                            width: 16; height: 16
-                            color: messageBubble.color; radius: 4
+                            width: 16; height: 16; color: messageBubble.color; radius: 4
                             anchors.bottom: parent.bottom
                             anchors.right: isMe ? parent.right : undefined
                             anchors.left: isMe ? undefined : parent.left
                         }
                         Rectangle {
-                            width: 16; height: 16
-                            color: "#0e1621"; radius: 8
+                            width: 16; height: 16; color: "#0e1621"; radius: 8
                             anchors.bottom: parent.bottom; anchors.bottomMargin: 6
-                            anchors.right: isMe ? parent.right : undefined
-                            anchors.left: isMe ? undefined : parent.left
-                            anchors.rightMargin: isMe ? -8 : 0
-                            anchors.leftMargin: isMe ? 0 : -8
+                            anchors.right: isMe ? parent.right : undefined; anchors.left: isMe ? undefined : parent.left
+                            anchors.rightMargin: isMe ? -8 : 0; anchors.leftMargin: isMe ? 0 : -8
+                        }
+                    }
+
+                    Item {
+                        id: imageContainer
+                        visible: isImage
+                        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 4
+                        height: isImage ? (width * 0.75) : 0
+                        
+                        Rectangle {
+                            anchors.fill: parent; radius: 10; clip: true; color: "transparent"
+                            Image {
+                                anchors.fill: parent
+                                source: isImage ? fileUrl : ""
+                                fillMode: Image.PreserveAspectCrop
+                                cache: true; asynchronous: true
+                            }
+                            MouseArea {
+                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                onClicked: Qt.openUrlExternally(fileUrl)
+                            }
+                        }
+                    }
+
+                    Item {
+                        id: videoContainer
+                        visible: isVideo
+                        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 4
+                        height: isVideo ? (width * 0.75) : 0
+                        
+                        Rectangle {
+                            anchors.fill: parent; radius: 10; clip: true; color: "black"
+                            
+                            MediaPlayer {
+                                id: videoPlayer
+                                source: isVideo ? fileUrl : ""
+                                videoOutput: videoOut
+                            }
+
+                            VideoOutput {
+                                id: videoOut
+                                anchors.fill: parent
+                                fillMode: VideoOutput.PreserveAspectCrop
+                            }
+                            
+                            Image {
+                                anchors.centerIn: parent
+                                source: "qrc:/messenger_client_uri/assets/icons/play_circle.svg" 
+                                width: 48; height: 48; sourceSize: Qt.size(48, 48); z: 2
+                                visible: videoPlayer.playbackState !== MediaPlayer.PlayingState
+                            }
+                            
+                            MouseArea {
+                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (videoPlayer.playbackState === MediaPlayer.PlayingState) {
+                                        videoPlayer.pause()
+                                    } else {
+                                        videoPlayer.play()
+                                    }
+                                }
+                                onDoubleClicked: Qt.openUrlExternally(fileUrl)
+                            }
                         }
                     }
 
                     TextEdit {
                         id: messageText
-                        visible: !isVoice
-                        text: !isVoice && model.text !== undefined ? model.text : ""
-                        anchors.fill: parent
-                        anchors.margins: 8
-                        anchors.leftMargin: 12
-                        anchors.rightMargin: 12
-                        anchors.bottomMargin: 12
+                        visible: !isVoice && !hasFileAttachment && text.trim() !== ""
+                        text: (model.text !== undefined && model.text !== null) ? model.text.trim() : ""
+                        
+                        anchors.top: isImage ? imageContainer.bottom : (isVideo ? videoContainer.bottom : parent.top)
+                        anchors.left: parent.left; anchors.right: parent.right
+                        anchors.margins: 8; anchors.leftMargin: 12; anchors.rightMargin: 12
+                        anchors.topMargin: (isImage || isVideo) ? 8 : 12
 
-                        wrapMode: TextEdit.Wrap
-                        textFormat: TextEdit.PlainText
-                        verticalAlignment: TextEdit.AlignVCenter
-                        horizontalAlignment: TextEdit.AlignLeft
-
-                        color: "white"
-                        font.pixelSize: 15
-                        font.family: "Segoe UI"
-
-                        readOnly: true
+                        wrapMode: TextEdit.Wrap; textFormat: TextEdit.PlainText
+                        color: "white"; font.pixelSize: 15; font.family: "Segoe UI"
+                        readOnly: true 
                         selectByMouse: true
                         cursorVisible: false
                         selectedTextColor: "white"
                         selectionColor: "#4a90d9"
                     }
 
+                    Column {
+                        id: fileAttachCol
+                        visible: hasFileAttachment
+                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                        anchors.margins: 12; spacing: 6
+
+                        RowLayout {
+                            width: parent.width; height: 48; spacing: 12
+
+                            Rectangle {
+                                width: 44; height: 44; radius: 22
+                                color: isMe ? "#1e3d5e" : "#0d1825"
+                                Layout.alignment: Qt.AlignVCenter
+                                Image {
+                                    anchors.centerIn: parent; width: 22; height: 22
+                                    source: "qrc:/messenger_client_uri/assets/icons/document.svg"
+                                    sourceSize: Qt.size(22, 22)
+                                }
+                            }
+
+                            Column {
+                                Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; spacing: 2
+                                Text {
+                                    text: firstAttachment ? (firstAttachment.file_name || "Файл") : "Файл"
+                                    color: "white"; font.pixelSize: 14; font.family: "Segoe UI"
+                                    elide: Text.ElideMiddle; width: parent.width
+                                }
+                                Text {
+                                    text: {
+                                        if (!firstAttachment || !firstAttachment.file_size_bytes) return "0 Б"
+                                        var b = firstAttachment.file_size_bytes
+                                        if (b < 1024) return b + " Б"
+                                        if (b < 1048576) return (b / 1024).toFixed(1) + " КБ"
+                                        if (b < 1073741824) return (b / 1048576).toFixed(1) + " МБ"
+                                        return (b / 1073741824).toFixed(1) + " ГБ"
+                                    }
+                                    color: isMe ? "#78aee3" : "#728392"
+                                    font.pixelSize: 12; font.family: "Segoe UI"
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                onClicked: if (fileUrl) Qt.openUrlExternally(fileUrl)
+                            }
+                        }
+
+                        Text {
+                            visible: model.text && model.text.trim() !== ""
+                            text: model.text ? model.text.trim() : ""
+                            color: "white"; font.pixelSize: 14; font.family: "Segoe UI"
+                            wrapMode: Text.Wrap; width: parent.width
+                        }
+                    }
+
                     RowLayout {
                         visible: isVoice
-                        anchors.fill: parent
-                        anchors.margins: 4
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 48 
-                        spacing: 12
-                        
+                        anchors.fill: parent; anchors.margins: 4; anchors.leftMargin: 8; anchors.rightMargin: 48; spacing: 8
+
                         Rectangle {
                             width: 44; height: 44; radius: 22
-                            color: playMouseArea.pressed 
-                                   ? (isMe ? "#2b5278" : "#0e1621") 
-                                   : (isMe ? "#4a90d9" : "#2b5278")
+                            color: isMe ? "#1e3d5e" : "#0d1825"
+                            Layout.alignment: Qt.AlignVCenter
                             
                             Image {
                                 anchors.centerIn: parent
-                                width: 16; height: 16
                                 source: isPlayingThis 
                                     ? "qrc:/messenger_client_uri/assets/icons/pause.svg"
-                                    : "qrc:/messenger_client_uri/assets/icons/play.svg"
-                                sourceSize: Qt.size(16, 16)
+                                    : "qrc:/messenger_client_uri/assets/icons/play_circle.svg"
+                                width: 24; height: 24; sourceSize: Qt.size(24, 24)
                             }
                             
                             MouseArea {
-                                id: playMouseArea
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
+                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    if (globalPlayingMsgId === uniqueId) {
-                                        if (globalAudioPlayer.playbackState === MediaPlayer.PlayingState) {
-                                            globalAudioPlayer.pause()
-                                        } else {
-                                            globalAudioPlayer.play()
-                                        }
-                                    } else {
-                                        globalAudioPlayer.stop() 
-                                        
+                                    if (isPlayingThis) globalAudioPlayer.pause()
+                                    else {
                                         globalPlayingMsgId = uniqueId
-                                        globalActiveVoiceAuthor = isMe ? AppState.currentUserHandle : activeChatName
-                                        globalActiveVoiceDate = timeText.text
-                                        globalAudioPlayer.source = ""
-                                        globalAudioPlayer.source = voiceUrl
+                                        globalAudioPlayer.source = fileUrl
                                         globalAudioPlayer.play()
                                     }
                                 }
                             }
                         }
-                        
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-                            
-                            Item {
-                                Layout.fillWidth: true
-                                Layout.topMargin: 6
-                                height: 20 
-                                
-                                Rectangle {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: parent.width
-                                    height: 3
-                                    radius: 1.5
-                                    color: isMe ? "#18222d" : "#0e1621"
-                                    
-                                    Rectangle {
-                                        height: parent.height
-                                        radius: 1.5
-                                        color: "white"
-                                        width: {
-                                            if (globalPlayingMsgId === uniqueId && globalAudioPlayer.duration > 0) {
-                                                return parent.width * (globalAudioPlayer.position / globalAudioPlayer.duration)
-                                            }
-                                            return 0
-                                        }
-                                    }
-                                }
-                                
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    
-                                    function seekToPosition(xPos) {
-                                        if (globalPlayingMsgId === uniqueId && globalAudioPlayer.duration > 0) {
-                                            var safeX = Math.max(0, Math.min(xPos, width));
-                                            var newPos = (safeX / width) * globalAudioPlayer.duration;
-                                            globalAudioPlayer.position = newPos;
-                                        }
-                                    }
-                                    
-                                    onClicked: seekToPosition(mouseX)
-                                    onPositionChanged: { 
-                                        if (pressed) seekToPosition(mouseX) 
+
+                        Rectangle {
+                            Layout.fillWidth: true; height: 24; color: "transparent"
+                            Canvas {
+                                id: waveCanvas
+                                anchors.fill: parent
+                                property real progress: isPlayingThis
+                                    ? globalAudioPlayer.position / globalAudioPlayer.duration : 0.0
+                                onProgressChanged: requestPaint()
+                                onPaint: {
+                                    var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height)
+                                    var bars = 25; var spacing = 2; var barWidth = (width - spacing * (bars - 1)) / bars
+                                    for (var i = 0; i < bars; i++) {
+                                        var h = 4 + Math.abs(Math.sin((i + uniqueId.length) * 0.5)) * 16
+                                        var x = i * (barWidth + spacing); var y = (height - h) / 2
+                                        ctx.fillStyle = (i / bars <= progress) ? "white" : (isMe ? "#78aee3" : "#4a5a6a")
+                                        ctx.beginPath(); ctx.roundRect(x, y, barWidth, h, barWidth/2, barWidth/2); ctx.fill()
                                     }
                                 }
                             }
-                            
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Text {
-                                    text: {
-                                        if (globalPlayingMsgId === uniqueId && globalAudioPlayer.duration > 0) {
-                                            return formatGlobalTime(globalAudioPlayer.position) + " / " + formatGlobalTime(globalAudioPlayer.duration)
-                                        }
-                                        return "00:00" 
-                                    }
-                                    color: isMe ? "#78aee3" : "#728392"
-                                    font.pixelSize: 11
-                                    font.family: "Segoe UI"
-                                }
-                                Item { Layout.fillWidth: true }
-                            }
-                            Item { Layout.fillHeight: true }
                         }
                     }
 
                     Text {
                         id: timeText
                         text: {
-                            var t = model.sent_at;
-                            if (!t) return "12:00"; 
-
-                            if (typeof t === "string" && t.indexOf(" ") !== -1) {
-                                t = t.replace(" ", "T");
+                            if (model.created_at) {
+                                var d = new Date(model.created_at);
+                                var h = d.getHours(); var m = d.getMinutes();
+                                return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
                             }
-
-                            if (t.indexOf("Z") === -1) {
-                                t += "Z";
-                            }
-
-                            var d = new Date(t);
-                            if (isNaN(d.getTime())) return "??:??";
-
-                            var hrs = d.getHours();
-                            var mins = d.getMinutes();
-                            return (hrs < 10 ? "0" : "") + hrs + ":" + (mins < 10 ? "0" : "") + mins;
+                            return "12:00";
                         }
                         color: isMe ? "#78aee3" : "#728392"
-                        font.pixelSize: 11
-                        font.family: "Segoe UI"
-                        
-                        anchors.bottom: parent.bottom
-                        anchors.right: parent.right
-                        anchors.bottomMargin: 4
-                        anchors.rightMargin: 12
+                        font.pixelSize: 11; font.family: "Segoe UI"
+                        anchors.right: parent.right; anchors.bottom: parent.bottom
+                        anchors.rightMargin: 12; anchors.bottomMargin: 6; z: 5
                     }
                 }
             }
@@ -992,10 +1038,9 @@ Rectangle {
         id: mediaPreview
         z: 200
         onSendRequested: function(filePath, fileType, asFile, caption) {
-            pendingMediaCaption = caption
             messageInput.text = ""
             isUploading = true
-            MediaLayer.uploadFile(filePath, fileType)
+            MediaLayer.uploadFile(activeChatId, filePath, asFile, caption, "text")
         }
         onCancelRequested: {}
     }
