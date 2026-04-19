@@ -204,3 +204,36 @@ void MediaManager::openFileDialog(const QString &type) {
         Qt::QueuedConnection
     );
 }
+
+void MediaManager::downloadFile(const QString &url, const QString &fileName) {
+    QMetaObject::invokeMethod(
+        this,
+        [this, url, fileName]() {
+            emit fileDialogOpened();
+            QString savePath = QFileDialog::getSaveFileName(
+                nullptr, "Сохранить файл", fileName, "All Files (*.*)", nullptr,
+                QFileDialog::DontUseNativeDialog
+            );
+            emit fileDialogClosed();
+
+            if (savePath.isEmpty()) {
+                return;
+            }
+
+            QNetworkRequest request((QUrl(url)));
+            QNetworkReply *reply = m_connection->networkManager()->get(request);
+
+            connect(reply, &QNetworkReply::finished, this, [reply, savePath]() {
+                reply->deleteLater();
+                if (reply->error() == QNetworkReply::NoError) {
+                    QFile file(savePath);
+                    if (file.open(QIODevice::WriteOnly)) {
+                        file.write(reply->readAll());
+                        file.close();
+                    }
+                }
+            });
+        },
+        Qt::QueuedConnection
+    );
+}

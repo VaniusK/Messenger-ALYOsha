@@ -23,6 +23,7 @@ public:
     );
 
     Q_INVOKABLE void openFileDialog(const QString &type);
+    Q_INVOKABLE void downloadFile(const QString &url, const QString &fileName);
 
 signals:
     void fileDialogOpened();
