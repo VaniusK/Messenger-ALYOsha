@@ -99,6 +99,31 @@ TEST_F(MessageTestFixture, TestSendMultiple) {
     EXPECT_EQ(messages.size(), 3);
 }
 
+TEST_F(MessageTestFixture, TestSendWithAttachment) {
+    /* When valid data with attachmentsis provided
+    send() should create a new message,
+    and its attachments()*/
+    Message message = sync_wait(repo_.send(
+        dummy_chat_1.getValueOfId(), dummy_user1_.getValueOfId(), "my message",
+        std::nullopt, std::nullopt, messenger::models::MessageType::Text,
+        {{"a", "b", 1, "c"}}
+    ));
+    std::vector<Message> messages = sync_wait(repo_.getAll());
+    EXPECT_EQ(messages.size(), 1);
+    EXPECT_EQ(messages[0].getValueOfId(), message.getValueOfId());
+    EXPECT_EQ(
+        messages[0].getValueOfType(), messenger::models::MessageType::Text
+    );
+    auto attachments =
+        sync_wait(attachment_repo_.getByMessage(message.getValueOfId()));
+    EXPECT_EQ(attachments.size(), 1);
+    auto attachment = attachments[0];
+    EXPECT_EQ(attachment.getValueOfFileName(), "a");
+    EXPECT_EQ(attachment.getValueOfFileType(), "b");
+    EXPECT_EQ(attachment.getValueOfFileSizeBytes(), 1);
+    EXPECT_EQ(attachment.getValueOfS3ObjectKey(), "c");
+}
+
 TEST_F(MessageTestFixture, TestGetById) {
     /* When message with given id exists
     getById() should return in*/

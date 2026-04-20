@@ -1,5 +1,6 @@
 #pragma once
 #include "DbTestFixture.hpp"
+#include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
 #include "repositories/MessageRepository.hpp"
 #include "repositories/UserRepository.hpp"
@@ -7,19 +8,24 @@
 using MessageRepository = messenger::repositories::MessageRepository;
 using ChatRepository = messenger::repositories::ChatRepository;
 using UserRepository = messenger::repositories::UserRepository;
+using AttachmentRepository = messenger::repositories::AttachmentRepository;
 using User = messenger::repositories::User;
 using Chat = messenger::repositories::Chat;
 
 class MessageTestFixture : public DbTestFixture {
 private:
     ChatRepository chat_repo_ = ChatRepository(
-        std::make_unique<MessageRepository>(),
+        std::make_unique<MessageRepository>(
+            std::make_unique<AttachmentRepository>()
+        ),
         std::make_unique<UserRepository>()
     );
 
 protected:
-    MessageRepository repo_ = MessageRepository();
+    MessageRepository repo_ =
+        MessageRepository(std::make_unique<AttachmentRepository>());
     UserRepository user_repo_ = UserRepository();
+    AttachmentRepository attachment_repo_ = AttachmentRepository();
     User dummy_user1_;
     User dummy_user2_;
     User dummy_user3_;

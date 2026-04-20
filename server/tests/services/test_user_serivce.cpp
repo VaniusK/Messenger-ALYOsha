@@ -53,7 +53,9 @@ protected:
     void SetUp() override {
         mock_user_repo = std::make_shared<MockUserRepository>();
 
-        auto chat_msg_repo = std::make_unique<MockMessageRepository>();
+        auto chat_msg_repo = std::make_unique<MockMessageRepository>(
+            std::make_unique<messenger::repositories::AttachmentRepository>()
+        );
         auto chat_usr_repo = std::make_unique<MockUserRepository>();
 
         mock_chat_repo = std::make_shared<MockChatRepository>(

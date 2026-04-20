@@ -40,6 +40,7 @@ public:
         std::optional<int64_t> reply_to_id,
         std::optional<int64_t> forwarded_from_id,
         std::string type,
+        std::vector<dto::AttachmentData> attachments = {},
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     virtual drogon::Task<std::vector<Message>> getMessagesByChat(
@@ -128,6 +129,7 @@ public:
         std::optional<int64_t> reply_to_id,
         std::optional<int64_t> forwarded_from_id,
         std::string type,
+        std::vector<dto::AttachmentData> attachments = {},
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
     drogon::Task<std::vector<Message>> getMessagesByChat(

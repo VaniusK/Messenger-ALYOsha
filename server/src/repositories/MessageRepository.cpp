@@ -45,8 +45,16 @@ Task<Message> MessageRepository::send(
     std::optional<int64_t> reply_to_id,
     std::optional<int64_t> forwarded_from_id,
     std::string type,
+    std::vector<dto::AttachmentData> attachments,
     std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
+    bool own_transaction = false;
+    if (!transaction_ptr) {
+        transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+        own_transaction = true;
+    }
+
     auto mapper = getMapper(transaction_ptr);
 
     try {
@@ -68,6 +76,16 @@ Task<Message> MessageRepository::send(
         }
         message.setType(type);
         message = co_await mapper.insert(message);
+        for (auto &attachmentData : attachments) {
+            co_await attachment_repo_->create(
+                message.getValueOfId(), attachmentData.file_name,
+                attachmentData.file_type, attachmentData.file_size_bytes,
+                attachmentData.s3_object_key, transaction_ptr
+            );
+        }
+        if (own_transaction) {
+            co_await transaction_ptr->execSqlCoro("COMMIT;");
+        }
         co_return message;
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");

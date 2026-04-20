@@ -18,10 +18,13 @@ using Attachment = messenger::repositories::Attachment;
 class AttachmentTestFixture : public DbTestFixture {
 private:
     ChatRepository chat_repo_ = ChatRepository(
-        std::make_unique<MessageRepository>(),
+        std::make_unique<MessageRepository>(
+            std::make_unique<AttachmentRepository>()
+        ),
         std::make_unique<UserRepository>()
     );
-    MessageRepository message_repo_ = MessageRepository();
+    MessageRepository message_repo_ =
+        MessageRepository(std::make_unique<AttachmentRepository>());
 
 protected:
     AttachmentRepository repo_ = AttachmentRepository();

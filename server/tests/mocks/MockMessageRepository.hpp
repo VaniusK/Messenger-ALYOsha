@@ -12,6 +12,7 @@ using Message = drogon_model::messenger_db::Messages;
 class MockMessageRepository
     : public messenger::repositories::MessageRepositoryInterface {
 public:
+    using MessageRepositoryInterface::MessageRepositoryInterface;
     MOCK_METHOD(
         drogon::Task<std::optional<Message>>,
         getById,
@@ -28,6 +29,7 @@ public:
          std::optional<int64_t>,
          std::optional<int64_t>,
          std::string,
+         std::vector<messenger::dto::AttachmentData>,
          std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );

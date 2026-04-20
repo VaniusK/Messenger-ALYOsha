@@ -39,6 +39,7 @@ public:
          std::optional<int64_t>,
          std::optional<int64_t>,
          std::string,
+         std::vector<messenger::dto::AttachmentData>,
          std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );

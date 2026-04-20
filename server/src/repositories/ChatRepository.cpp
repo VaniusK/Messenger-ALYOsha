@@ -36,11 +36,12 @@ Task<Message> ChatRepository::sendMessage(
     std::optional<int64_t> reply_to_id,
     std::optional<int64_t> forwarded_from_id,
     std::string type,
+    std::vector<dto::AttachmentData> attachments,
     std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
     auto result = co_await message_repo_->send(
         chat_id, sender_id, text, reply_to_id, forwarded_from_id, type,
-        transaction_ptr
+        attachments, transaction_ptr
     );
     co_return result;
 }

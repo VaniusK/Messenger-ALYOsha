@@ -49,7 +49,7 @@ public:
         );
         user_service.setChatRepo(
             std::make_shared<messenger::repositories::ChatRepository>(
-                std::make_unique<messenger::repositories::MessageRepository>(),
+                std::make_unique<messenger::repositories::MessageRepository>(std::make_unique<messenger::repositories::AttachmentRepository>()),
                 std::make_unique<messenger::repositories::UserRepository>()
             )
         );
