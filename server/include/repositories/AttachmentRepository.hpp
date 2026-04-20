@@ -16,7 +16,8 @@ public:
         std::string file_name,
         std::string file_type,
         int64_t file_size_bytes,
-        std::string s3_object_key
+        std::string s3_object_key,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     virtual drogon::Task<std::vector<Attachment>> getByMessage(
         int64_t message_id
@@ -24,7 +25,10 @@ public:
     virtual drogon::Task<std::vector<std::vector<Attachment>>> getByMessages(
         std::vector<int64_t> message_ids
     ) = 0;
-    virtual drogon::Task<bool> remove(int64_t id) = 0;
+    virtual drogon::Task<bool> remove(
+        int64_t id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) = 0;
 };
 
 class AttachmentRepository : public AttachmentRepositoryInterface {
@@ -34,17 +38,26 @@ public:
         std::string file_name,
         std::string file_type,
         int64_t file_size_bytes,
-        std::string s3_object_key
+        std::string s3_object_key,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
     drogon::Task<std::vector<Attachment>> getByMessage(int64_t message_id
     ) override;
     drogon::Task<std::vector<std::vector<Attachment>>> getByMessages(
         std::vector<int64_t> message_ids
     ) override;
-    drogon::Task<bool> remove(int64_t id) override;
+    drogon::Task<bool> remove(
+        int64_t id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
 
 private:
-    drogon::orm::CoroMapper<Attachment> getMapper() {
+    drogon::orm::CoroMapper<Attachment> getMapper(
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) {
+        if (transaction_ptr) {
+            return drogon::orm::CoroMapper<Attachment>(transaction_ptr);
+        }
         return drogon::orm::CoroMapper<Attachment>(drogon::app().getDbClient());
     }
 };

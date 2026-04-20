@@ -19,15 +19,23 @@ public:
         std::string text,
         std::optional<int64_t> reply_to_id,
         std::optional<int64_t> forwarded_from_id,
-        std::string type
+        std::string type,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     virtual drogon::Task<std::vector<Message>> getByChat(
         int64_t chat_id,
         std::optional<int64_t> before_id,
         int64_t limit
     ) = 0;
-    virtual drogon::Task<bool> edit(int64_t id, std::string text) = 0;
-    virtual drogon::Task<bool> remove(int64_t id) = 0;
+    virtual drogon::Task<bool> edit(
+        int64_t id,
+        std::string text,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) = 0;
+    virtual drogon::Task<bool> remove(
+        int64_t id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) = 0;
 };
 
 class MessageRepository : public MessageRepositoryInterface {
@@ -40,7 +48,8 @@ public:
         std::string text,
         std::optional<int64_t> reply_to_id,
         std::optional<int64_t> forwarded_from_id,
-        std::string type
+        std::string type,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
     drogon::Task<std::vector<Message>> getByChat(
         int64_t chat_id,
@@ -48,11 +57,23 @@ public:
         int64_t limit
     ) override;
 
-    drogon::Task<bool> edit(int64_t id, std::string text) override;
-    drogon::Task<bool> remove(int64_t id) override;
+    drogon::Task<bool> edit(
+        int64_t id,
+        std::string text,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
+    drogon::Task<bool> remove(
+        int64_t id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
 
 private:
-    drogon::orm::CoroMapper<Message> getMapper() {
+    drogon::orm::CoroMapper<Message> getMapper(
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) {
+        if (transaction_ptr) {
+            return drogon::orm::CoroMapper<Message>(transaction_ptr);
+        }
         return drogon::orm::CoroMapper<Message>(drogon::app().getDbClient());
     }
 };

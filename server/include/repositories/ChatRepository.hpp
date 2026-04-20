@@ -1,6 +1,7 @@
 #pragma once
 #include <drogon/drogon.h>
 #include <drogon/orm/CoroMapper.h>
+#include <drogon/orm/DbClient.h>
 #include <drogon/utils/coroutine.h>
 #include "dto/ChatPreview.hpp"
 #include "models/ChatMembers.h"
@@ -38,17 +39,28 @@ public:
         std::string text,
         std::optional<int64_t> reply_to_id,
         std::optional<int64_t> forwarded_from_id,
-        std::string type
+        std::string type,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     virtual drogon::Task<std::vector<Message>> getMessagesByChat(
         int64_t chat_id,
         std::optional<int64_t> before_id,
         int64_t limit
     ) = 0;
-    virtual drogon::Task<bool> editMessage(int64_t id, std::string text) = 0;
-    virtual drogon::Task<bool> removeMessage(int64_t id) = 0;
-    virtual drogon::Task<Chat>
-    getOrCreateDirect(int64_t user1_id, int64_t user2_id) = 0;
+    virtual drogon::Task<bool> editMessage(
+        int64_t id,
+        std::string text,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) = 0;
+    virtual drogon::Task<bool> removeMessage(
+        int64_t id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) = 0;
+    virtual drogon::Task<Chat> getOrCreateDirect(
+        int64_t user1_id,
+        int64_t user2_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) = 0;
     virtual drogon::Task<std::optional<Chat>>
     getDirect(int64_t user1_id, int64_t user2_id) = 0;
     virtual drogon::Task<std::optional<Chat>> getById(int64_t id) = 0;
@@ -57,36 +69,45 @@ public:
     virtual drogon::Task<bool> markAsRead(
         int64_t chat_id,
         int64_t user_id,
-        int64_t last_read_message_id
+        int64_t last_read_message_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     virtual drogon::Task<Chat> createGroup(
         std::string name,
         int64_t creator_id,
-        std::vector<int64_t> member_ids
+        std::vector<int64_t> member_ids,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     virtual drogon::Task<std::vector<ChatMember>> getMembers(int64_t chat_id
     ) = 0;
     drogon::Task<ChatMember> virtual addMember(
         int64_t chat_id,
         int64_t user_id,
-        std::string role
+        std::string role,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     drogon::Task<bool> virtual removeMember(
         int64_t chat_id,
-        int64_t user_id
+        int64_t user_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     drogon::Task<bool> virtual updateMemberRole(
         int64_t chat_id,
         int64_t user_id,
-        std::string new_role
+        std::string new_role,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     drogon::Task<bool> virtual updateInfo(
         int64_t chat_id,
         std::optional<std::string> name,
         std::optional<std::string> avatar,
-        std::optional<std::string> description
+        std::optional<std::string> description,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
-    drogon::Task<Chat> virtual createSaved(int64_t user_id) = 0;
+    drogon::Task<Chat> virtual createSaved(
+        int64_t user_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) = 0;
     drogon::Task<Chat> virtual getSaved(int64_t user_id) = 0;
 
 protected:
@@ -106,7 +127,8 @@ public:
         std::string text,
         std::optional<int64_t> reply_to_id,
         std::optional<int64_t> forwarded_from_id,
-        std::string type
+        std::string type,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
     drogon::Task<std::vector<Message>> getMessagesByChat(
         int64_t chat_id,
@@ -114,10 +136,20 @@ public:
         int64_t limit
     ) override;
 
-    drogon::Task<bool> editMessage(int64_t id, std::string text) override;
-    drogon::Task<bool> removeMessage(int64_t id) override;
-    drogon::Task<Chat> getOrCreateDirect(int64_t user1_id, int64_t user2_id)
-        override;
+    drogon::Task<bool> editMessage(
+        int64_t id,
+        std::string text,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
+    drogon::Task<bool> removeMessage(
+        int64_t id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
+    drogon::Task<Chat> getOrCreateDirect(
+        int64_t user1_id,
+        int64_t user2_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
     drogon::Task<std::optional<Chat>>
     getDirect(int64_t user1_id, int64_t user2_id) override;
     drogon::Task<std::optional<Chat>> getById(int64_t id) override;
@@ -125,45 +157,80 @@ public:
     drogon::Task<bool> markAsRead(
         int64_t chat_id,
         int64_t user_id,
-        int64_t last_read_message_id
+        int64_t last_read_message_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
     drogon::Task<Chat> createGroup(
         std::string name,
         int64_t creator_id,
-        std::vector<int64_t> member_ids
+        std::vector<int64_t> member_ids,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
     drogon::Task<std::vector<ChatMember>> getMembers(int64_t chat_id) override;
-    drogon::Task<ChatMember>
-    addMember(int64_t chat_id, int64_t user_id, std::string role) override;
-    drogon::Task<bool> removeMember(int64_t chat_id, int64_t user_id) override;
+    drogon::Task<ChatMember> addMember(
+        int64_t chat_id,
+        int64_t user_id,
+        std::string role,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
+    drogon::Task<bool> removeMember(
+        int64_t chat_id,
+        int64_t user_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
     drogon::Task<bool> updateMemberRole(
         int64_t chat_id,
         int64_t user_id,
-        std::string new_role
+        std::string new_role,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
     drogon::Task<bool> updateInfo(
         int64_t chat_id,
         std::optional<std::string> name,
         std::optional<std::string> avatar,
-        std::optional<std::string> description
+        std::optional<std::string> description,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
-    drogon::Task<Chat> createSaved(int64_t user_id) override;
+    drogon::Task<Chat> createSaved(
+        int64_t user_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
     drogon::Task<Chat> virtual getSaved(int64_t user_id) override;
 
 private:
-    drogon::orm::CoroMapper<Chat> getMapper() {
+    drogon::orm::CoroMapper<Chat> getMapper(
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) {
+        if (transaction_ptr) {
+            return drogon::orm::CoroMapper<Chat>(transaction_ptr);
+        }
         return drogon::orm::CoroMapper<Chat>(drogon::app().getDbClient());
     }
 
-    drogon::orm::CoroMapper<ChatMember> getChatMemberMapper() {
+    drogon::orm::CoroMapper<ChatMember> getChatMemberMapper(
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) {
+        if (transaction_ptr) {
+            return drogon::orm::CoroMapper<ChatMember>(transaction_ptr);
+        }
         return drogon::orm::CoroMapper<ChatMember>(drogon::app().getDbClient());
     }
 
-    drogon::orm::CoroMapper<Message> getMessageMapper() {
+    drogon::orm::CoroMapper<Message> getMessageMapper(
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) {
+        if (transaction_ptr) {
+            return drogon::orm::CoroMapper<Message>(transaction_ptr);
+        }
         return drogon::orm::CoroMapper<Message>(drogon::app().getDbClient());
     }
 
-    drogon::orm::CoroMapper<User> getUserMapper() {
+    drogon::orm::CoroMapper<User> getUserMapper(
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) {
+        if (transaction_ptr) {
+            return drogon::orm::CoroMapper<User>(transaction_ptr);
+        }
         return drogon::orm::CoroMapper<User>(drogon::app().getDbClient());
     }
 

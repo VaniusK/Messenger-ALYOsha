@@ -15,9 +15,10 @@ Task<Attachment> AttachmentRepository::create(
     std::string file_name,
     std::string file_type,
     int64_t file_size_bytes,
-    std::string s3_object_key
+    std::string s3_object_key,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    auto mapper = getMapper();
+    auto mapper = getMapper(transaction_ptr);
     try {
         Attachment attachment;
         attachment.setMessageId(message_id);
@@ -73,8 +74,11 @@ Task<vector<vector<Attachment>>> AttachmentRepository::getByMessages(
     }
 }
 
-Task<bool> AttachmentRepository::remove(int64_t id) {
-    auto mapper = getMapper();
+Task<bool> AttachmentRepository::remove(
+    int64_t id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    auto mapper = getMapper(transaction_ptr);
 
     try {
         co_await mapper.deleteByPrimaryKey(id);

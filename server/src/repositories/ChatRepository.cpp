@@ -35,10 +35,12 @@ Task<Message> ChatRepository::sendMessage(
     std::string text,
     std::optional<int64_t> reply_to_id,
     std::optional<int64_t> forwarded_from_id,
-    std::string type
+    std::string type,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
     auto result = co_await message_repo_->send(
-        chat_id, sender_id, text, reply_to_id, forwarded_from_id, type
+        chat_id, sender_id, text, reply_to_id, forwarded_from_id, type,
+        transaction_ptr
     );
     co_return result;
 }
@@ -52,20 +54,30 @@ Task<std::vector<Message>> ChatRepository::getMessagesByChat(
     co_return result;
 }
 
-Task<bool> ChatRepository::editMessage(int64_t id, std::string text) {
-    auto result = co_await message_repo_->edit(id, text);
+Task<bool> ChatRepository::editMessage(
+    int64_t id,
+    std::string text,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    auto result = co_await message_repo_->edit(id, text, transaction_ptr);
     co_return result;
 }
 
-Task<bool> ChatRepository::removeMessage(int64_t id) {
-    auto result = co_await message_repo_->remove(id);
+Task<bool> ChatRepository::removeMessage(
+    int64_t id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    auto result = co_await message_repo_->remove(id, transaction_ptr);
     co_return result;
 }
 
-Task<Chat>
-ChatRepository::getOrCreateDirect(int64_t user1_id, int64_t user2_id) {
-    auto mapper = getMapper();
-    auto chat_member_mapper = getChatMemberMapper();
+Task<Chat> ChatRepository::getOrCreateDirect(
+    int64_t user1_id,
+    int64_t user2_id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    auto mapper = getMapper(transaction_ptr);
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
 
     if (user1_id > user2_id) {
         std::swap(user1_id, user2_id);
@@ -278,10 +290,11 @@ Task<std::vector<ChatPreview>> ChatRepository::getByUser(int64_t user_id) {
 Task<bool> ChatRepository::markAsRead(
     int64_t chat_id,
     int64_t user_id,
-    int64_t last_read_message_id
+    int64_t last_read_message_id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    auto mapper = getMapper();
-    auto chat_member_mapper = getChatMemberMapper();
+    auto mapper = getMapper(transaction_ptr);
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
 
     try {
         ChatMember member = co_await chat_member_mapper.findOne(
@@ -303,10 +316,16 @@ Task<bool> ChatRepository::markAsRead(
 Task<Chat> ChatRepository::createGroup(
     std::string name,
     int64_t creator_id,
-    std::vector<int64_t> member_ids
+    std::vector<int64_t> member_ids,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    auto mapper = getMapper();
-    auto chat_member_mapper = getChatMemberMapper();
+    auto mapper = getMapper(transaction_ptr);
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
+
+    if (!transaction_ptr) {
+        transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+    }
 
     try {
         Chat chat;
@@ -346,10 +365,19 @@ Task<std::vector<ChatMember>> ChatRepository::getMembers(int64_t chat_id) {
     }
 }
 
-Task<ChatMember>
-ChatRepository::addMember(int64_t chat_id, int64_t user_id, std::string role) {
-    auto chat_member_mapper = getChatMemberMapper();
-    auto mapper = getMapper();
+Task<ChatMember> ChatRepository::addMember(
+    int64_t chat_id,
+    int64_t user_id,
+    std::string role,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    if (!transaction_ptr) {
+        transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+    }
+
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
+    auto mapper = getMapper(transaction_ptr);
     Chat chat;
     try {
         chat = co_await mapper.findByPrimaryKey(chat_id);
@@ -376,8 +404,12 @@ ChatRepository::addMember(int64_t chat_id, int64_t user_id, std::string role) {
     }
 }
 
-Task<bool> ChatRepository::removeMember(int64_t chat_id, int64_t user_id) {
-    auto chat_member_mapper = getChatMemberMapper();
+Task<bool> ChatRepository::removeMember(
+    int64_t chat_id,
+    int64_t user_id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
     try {
         co_await chat_member_mapper.deleteByPrimaryKey({chat_id, user_id});
         co_return true;
@@ -390,9 +422,10 @@ Task<bool> ChatRepository::removeMember(int64_t chat_id, int64_t user_id) {
 Task<bool> ChatRepository::updateMemberRole(
     int64_t chat_id,
     int64_t user_id,
-    std::string new_role
+    std::string new_role,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    auto chat_member_mapper = getChatMemberMapper();
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
     try {
         ChatMember chat_member =
             co_await chat_member_mapper.findByPrimaryKey({chat_id, user_id});
@@ -410,9 +443,14 @@ Task<bool> ChatRepository::updateInfo(
     int64_t chat_id,
     std::optional<std::string> name,
     std::optional<std::string> avatar,
-    std::optional<std::string> description
+    std::optional<std::string> description,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    auto mapper = getMapper();
+    if (!transaction_ptr) {
+        transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+    }
+    auto mapper = getMapper(transaction_ptr);
     try {
         Chat chat = co_await mapper.findByPrimaryKey(chat_id);
         if (name.has_value()) {
@@ -433,9 +471,16 @@ Task<bool> ChatRepository::updateInfo(
     }
 }
 
-Task<Chat> ChatRepository::createSaved(int64_t user_id) {
-    auto mapper = getMapper();
-    auto chat_member_mapper = getChatMemberMapper();
+Task<Chat> ChatRepository::createSaved(
+    int64_t user_id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    if (!transaction_ptr) {
+        transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+    }
+    auto mapper = getMapper(transaction_ptr);
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
     try {
         Chat chat;
         chat.setType(messenger::models::ChatType::Saved);

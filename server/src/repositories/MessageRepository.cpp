@@ -44,9 +44,10 @@ Task<Message> MessageRepository::send(
     std::string text,
     std::optional<int64_t> reply_to_id,
     std::optional<int64_t> forwarded_from_id,
-    std::string type
+    std::string type,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    auto mapper = getMapper();
+    auto mapper = getMapper(transaction_ptr);
 
     try {
         Message message;
@@ -97,8 +98,17 @@ Task<std::vector<Message>> MessageRepository::getByChat(
     }
 }
 
-Task<bool> MessageRepository::edit(int64_t id, std::string text) {
-    auto mapper = getMapper();
+Task<bool> MessageRepository::edit(
+    int64_t id,
+    std::string text,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    if (!transaction_ptr) {
+        transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+    }
+
+    auto mapper = getMapper(transaction_ptr);
     try {
         Message message = co_await mapper.findByPrimaryKey(id);
         message.setText(text);
@@ -113,8 +123,11 @@ Task<bool> MessageRepository::edit(int64_t id, std::string text) {
     }
 }
 
-Task<bool> MessageRepository::remove(int64_t id) {
-    auto mapper = getMapper();
+Task<bool> MessageRepository::remove(
+    int64_t id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    auto mapper = getMapper(transaction_ptr);
     try {
         Message message = co_await mapper.findByPrimaryKey(id);
         co_await mapper.deleteByPrimaryKey(id);
