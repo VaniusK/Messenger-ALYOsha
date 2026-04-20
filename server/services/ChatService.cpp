@@ -8,6 +8,7 @@
 #include <optional>
 #include <vector>
 #include "controllers/ServerWebSocketController.h"
+#include "dto/AttachmentData.hpp"
 #include "include/repositories/ChatRepository.hpp"
 #include "jwt-cpp/jwt.h"
 #include "jwt-cpp/traits/kazuho-picojson/defaults.h"
@@ -228,14 +229,9 @@ Task<HttpResponsePtr> ChatService::sendMessage(
         response_json["message"] = "Invalid message type";
         RETURN_RESPONSE_CODE_400(response_json);
     }
-    Message message;
-    std::vector<UploadPresignedResult> attachments_info;
-    Json::Value json_attachments_array(Json::arrayValue);
-    if (!request_json->isMember("attachment_tokens")) {
-        message = co_await chat_repo->sendMessage(
-            chat_id, user_id, text, reply_to_id, forward_from_id, message_type
-        );
-    } else {
+
+    std::vector<messenger::dto::AttachmentData> attachments_info;
+    if (request_json->isMember("attachment_tokens")) {
         if ((*request_json)["attachment_tokens"].isArray()) {
             std::string key = std::getenv("JWT_KEY");
             auto verifier = jwt::verify()
@@ -254,15 +250,15 @@ Task<HttpResponsePtr> ChatService::sendMessage(
                             "Attachment token file type mismatch";
                         RETURN_RESPONSE_CODE_400(response_json)
                     }
-                    UploadPresignedResult info;
+                    messenger::dto::AttachmentData info;
                     info.file_name =
                         decoded.get_payload_claim("file_name").as_string();
                     info.file_size_bytes = std::stoll(
                         decoded.get_payload_claim("file_size_bytes").as_string()
                     );
-                    info.attachment_key =
+                    info.s3_object_key =
                         decoded.get_payload_claim("object_key").as_string();
-                    info.content_type =
+                    info.file_type =
                         decoded.get_payload_claim("file_type").as_string();
 
                     attachments_info.push_back(info);
@@ -273,30 +269,26 @@ Task<HttpResponsePtr> ChatService::sendMessage(
                     RETURN_RESPONSE_CODE_400(response_json)
                 }
             }
-            message = co_await chat_repo->sendMessage(
-                chat_id, user_id, text, reply_to_id, forward_from_id,
-                message_type
-            );
-            for (const auto &att : attachments_info) {
-                Attachment created_attachment =
-                    co_await attachment_repo->create(
-                        message.getValueOfId(), att.file_name, att.content_type,
-                        att.file_size_bytes, att.attachment_key
-                    );
-                Json::Value attachment_json = created_attachment.toJson();
-                std::optional<std::string> download_url =
-                    s3_service_.generateDownloadUrl(
-                        created_attachment.getValueOfS3ObjectKey(),
-                        created_attachment.getValueOfFileName()
-                    );
-                attachment_json["download_url"] =
-                    download_url.has_value() ? download_url.value() : "";
-                json_attachments_array.append(attachment_json);
-            }
+
         } else {
             response_json["message"] = "attachment_tokens is not array";
             RETURN_RESPONSE_CODE_400(response_json)
         }
+    }
+    Json::Value json_attachments_array(Json::arrayValue);
+    auto [message, created_attachments] = co_await chat_repo->sendMessage(
+        chat_id, user_id, text, reply_to_id, forward_from_id, message_type,
+        attachments_info
+    );
+    for (const auto &att : created_attachments) {
+        Json::Value attachment_json = att.toJson();
+        std::optional<std::string> download_url =
+            s3_service_.generateDownloadUrl(
+                att.getValueOfS3ObjectKey(), att.getValueOfFileName()
+            );
+        attachment_json["download_url"] =
+            download_url.has_value() ? download_url.value() : "";
+        json_attachments_array.append(attachment_json);
     }
 
     bool successfully_read_sended_message = co_await chat_repo->markAsRead(

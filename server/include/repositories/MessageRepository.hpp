@@ -22,7 +22,7 @@ public:
 
     virtual drogon::Task<std::optional<Message>> getById(int64_t id) = 0;
     virtual drogon::Task<std::vector<Message>> getAll() = 0;
-    virtual drogon::Task<Message> send(
+    virtual drogon::Task<std::pair<Message, std::vector<Attachment>>> send(
         int64_t chat_id,
         int64_t sender_id,
         std::string text,
@@ -57,7 +57,7 @@ public:
 
     drogon::Task<std::optional<Message>> getById(int64_t id) override;
     drogon::Task<std::vector<Message>> getAll() override;
-    drogon::Task<Message> send(
+    drogon::Task<std::pair<Message, std::vector<Attachment>>> send(
         int64_t chat_id,
         int64_t sender_id,
         std::string text,

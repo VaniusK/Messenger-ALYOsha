@@ -6,6 +6,7 @@
 
 using Message = drogon_model::messenger_db::Messages;
 using User = drogon_model::messenger_db::Users;
+using Attachment = drogon_model::messenger_db::Attachments;
 using MessageRepository = messenger::repositories::MessageRepository;
 using UserRepository = messenger::repositories::UserRepository;
 
@@ -38,7 +39,7 @@ Task<std::vector<Message>> MessageRepository::getAll() {
     }
 }
 
-Task<Message> MessageRepository::send(
+Task<std::pair<Message, std::vector<Attachment>>> MessageRepository::send(
     int64_t chat_id,
     int64_t sender_id,
     std::string text,
@@ -76,17 +77,19 @@ Task<Message> MessageRepository::send(
         }
         message.setType(type);
         message = co_await mapper.insert(message);
+        std::vector<Attachment> created_attachments;
         for (auto &attachmentData : attachments) {
-            co_await attachment_repo_->create(
+            Attachment created_attachment = co_await attachment_repo_->create(
                 message.getValueOfId(), attachmentData.file_name,
                 attachmentData.file_type, attachmentData.file_size_bytes,
                 attachmentData.s3_object_key, transaction_ptr
             );
+            created_attachments.push_back(created_attachment);
         }
         if (own_transaction) {
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
-        co_return message;
+        co_return {message, created_attachments};
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }
