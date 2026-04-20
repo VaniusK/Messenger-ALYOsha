@@ -319,13 +319,13 @@ Task<Chat> ChatRepository::createGroup(
     std::vector<int64_t> member_ids,
     std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    auto mapper = getMapper(transaction_ptr);
-    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
-
     if (!transaction_ptr) {
         transaction_ptr =
             co_await drogon::app().getDbClient()->newTransactionCoro();
     }
+
+    auto mapper = getMapper(transaction_ptr);
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
 
     try {
         Chat chat;
