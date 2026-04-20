@@ -25,6 +25,7 @@ inline const std::string Saved = "saved";
 
 namespace MessageType {
 inline const std::string Text = "text";
+inline const std::string Media = "media";
 inline const std::string Voice = "voice";
 inline const std::string Round = "round";
 inline const std::string Sticker = "sticker";

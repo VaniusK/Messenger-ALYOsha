@@ -70,7 +70,11 @@ private:
         std::getenv("S3_SHOULD_USE_HTTPS") == std::string("true")
     );
     Task<bool> checkChatAccess(int64_t user_id, int64_t chat_id);
-    bool validateMessageType(std::string &message_type);
+    bool validateMessageType(const std::string &message_type);
+    bool validateFileType(
+        const std::string &message_type,
+        const std::string &mime_type
+    );
 };
 }  // namespace v1
 }  // namespace api

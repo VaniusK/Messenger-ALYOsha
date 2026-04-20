@@ -3,6 +3,7 @@
 #include <miniocpp/client.h>
 #include <optional>
 #include <string>
+#include <vector>
 #include "repositories/ChatRepository.hpp"
 
 namespace api {
@@ -12,6 +13,15 @@ struct UploadPresignedResult {
     std::string attachment_key;
     std::string upload_url;
     std::string content_type;
+    std::string file_name;
+    int64_t file_size_bytes;
+};
+
+struct AttachmentFileInfo {
+    std::string file_name;
+    std::string ext;
+    std::string mime_type;
+    int64_t file_size_bytes;
 };
 
 class S3Service {
@@ -23,11 +33,10 @@ public:
         std::string private_bucket_name,
         bool should_use_https
     );
-    drogon::Task<std::optional<UploadPresignedResult>> generateUploadUrl(
+    std::optional<std::vector<UploadPresignedResult>> generateUploadUrl(
         int64_t chat_id,
-        const std::string &original_filename,
-        bool upload_as_file,
-        int64_t message_id
+        const std::string &message_type,
+        const std::vector<AttachmentFileInfo> &files_info
     );
     std::optional<std::string> generateDownloadUrl(
         const std::string &attachment_key,
@@ -41,6 +50,9 @@ public:
         this->chat_repo_ = chat_repo;
     }
 
+    std::string getExtension(const std::string &filename);
+    std::string getMimeType(const std::string &ext);
+
 private:
     minio::s3::BaseUrl base_url_;
     minio::s3::Client s3_client_;
@@ -50,8 +62,6 @@ private:
     std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
         chat_repo_;
 
-    std::string getExtension(const std::string &filename);
-    std::string getMimeType(const std::string &ext);
     std::string getFolderName(const std::string &message_type);
     minio::s3::BaseUrl formBaseUrl(
         const std::string &url,

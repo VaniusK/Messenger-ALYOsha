@@ -5,6 +5,7 @@
 #include <trantor/utils/Date.h>
 #include <trantor/utils/Logger.h>
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <optional>
 #include <string>
@@ -125,33 +126,57 @@ std::string S3Service::getExtension(const std::string &filename) {
 }
 
 std::string S3Service::getMimeType(const std::string &ext) {
-    if (ext == ".jpg" || ext == ".jpeg") {
-        return "image/jpeg";
-    }
-    if (ext == ".png") {
-        return "image/png";
-    }
-    if (ext == ".webp") {
-        return "image/webp";
-    }
-    if (ext == ".gif") {
-        return "image/gif";
-    }
-    if (ext == ".bmp") {
-        return "image/bmp";
+    static const std::unordered_map<std::string, std::string> mime_types = {
+        {".jpg", "image/jpeg"},
+        {".jpeg", "image/jpeg"},
+        {".png", "image/png"},
+        {".webp", "image/webp"},
+        {".gif", "image/gif"},
+        {".bmp", "image/bmp"},
+        {".svg", "image/svg+xml"},
+
+        {".mp4", "video/mp4"},
+        {".webm", "video/webm"},
+        {".mov", "video/quicktime"},
+        {".avi", "video/x-msvideo"},
+        {".mkv", "video/x-matroska"},
+
+        {".ogg", "audio/ogg"},
+        {".mp3", "audio/mpeg"},
+        {".wav", "audio/wav"},
+        {".m4a", "audio/mp4"},
+
+        {".pdf", "application/pdf"},
+        {".doc", "application/msword"},
+        {".docx",
+         "application/"
+         "vnd.openxmlformats-officedocument.wordprocessingml.document"},
+        {".xls", "application/vnd.ms-excel"},
+        {".xlsx",
+         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+        {".txt", "text/plain"},
+        {".csv", "text/csv"},
+        {".rtf", "application/rtf"},
+
+        {".zip", "application/zip"},
+        {".rar", "application/x-rar-compressed"},
+        {".7z", "application/x-7z-compressed"},
+        {".tar", "application/x-tar"},
+        {".gz", "application/gzip"}
+    };
+
+    if (ext.empty()) {
+        return "application/octet-stream";
     }
 
-    if (ext == ".mp4") {
-        return "video/mp4";
-    }
-    if (ext == ".webm") {
-        return "video/webm";
-    }
-    if (ext == ".mov") {
-        return "video/quicktime";
-    }
-    if (ext == ".avi") {
-        return "video/x-msvideo";
+    std::string lower_ext = ext;
+    std::transform(
+        lower_ext.begin(), lower_ext.end(), lower_ext.begin(),
+        [](unsigned char c) { return std::tolower(c); }
+    );
+    auto it = mime_types.find(lower_ext);
+    if (it != mime_types.end()) {
+        return it->second;
     }
 
     return "application/octet-stream";
@@ -170,47 +195,42 @@ std::string S3Service::getFolderName(const std::string &message_type) {
     return "attachments";
 }
 
-drogon::Task<std::optional<UploadPresignedResult>> S3Service::generateUploadUrl(
+std::optional<std::vector<UploadPresignedResult>> S3Service::generateUploadUrl(
     int64_t chat_id,
-    const std::string &original_filename,
-    bool upload_as_file,
-    int64_t message_id
+    const std::string &message_type,
+    const std::vector<AttachmentFileInfo> &files_info
 ) {
-    std::string ext = getExtension(original_filename);
-    std::string mime_type =
-        upload_as_file ? "application/octet-stream" : getMimeType(ext);
-
+    std::vector<UploadPresignedResult> upload_presigned_results;
+    std::string folder_name = getFolderName(message_type);
     std::string date_prefix =
         trantor::Date::now().toCustomFormattedString("%Y-%m-%d", false);
-    std::string uuid = drogon::utils::getUuid(false);
+    for (const auto &file : files_info) {
+        std::string uuid = drogon::utils::getUuid(false);
 
-    std::optional<Message> message =
-        co_await chat_repo_->getMessageById(message_id);
-    if (!message.has_value()) {
-        LOG_ERROR << "Failed to generate PUT presigned URL: couldn't get "
-                     "message for attachment";
-        co_return std::nullopt;
+        std::string object_key = "chat_" + std::to_string(chat_id) + "/" +
+                                 folder_name + "/" + date_prefix + "/" + uuid +
+                                 file.ext;
+
+        minio::s3::GetPresignedObjectUrlArgs args;
+        args.bucket = private_bucket_name_;
+        args.object = object_key;
+        args.expiry_seconds = 600;
+        args.method = minio::http::Method::kPut;
+
+        args.extra_headers.Add("Content-Type", file.mime_type);
+        auto result = s3_client_.GetPresignedObjectUrl(args);
+        if (result.url.empty()) {
+            LOG_ERROR << "Failed to generate PUT presigned URL: "
+                      << result.status_code << " " << result.message;
+            return std::nullopt;
+        }
+        upload_presigned_results.push_back(
+            {object_key, result.url, file.mime_type, file.file_name,
+             file.file_size_bytes}
+        );
     }
-    std::string folder_name;
-    folder_name = getFolderName(message->getValueOfType());
 
-    std::string object_key = "chat_" + std::to_string(chat_id) + "/" +
-                             folder_name + "/" + date_prefix + "/" + uuid + ext;
-
-    minio::s3::GetPresignedObjectUrlArgs args;
-    args.bucket = private_bucket_name_;
-    args.object = object_key;
-    args.expiry_seconds = 600;
-    args.method = minio::http::Method::kPut;
-
-    args.extra_headers.Add("Content-Type", mime_type);
-    auto result = s3_client_.GetPresignedObjectUrl(args);
-    if (result.url.empty()) {
-        LOG_ERROR << "Failed to generate PUT presigned URL: "
-                  << result.status_code << " " << result.message;
-        co_return std::nullopt;
-    }
-    co_return UploadPresignedResult{object_key, result.url, mime_type};
+    return upload_presigned_results;
 }
 
 std::optional<std::string> S3Service::generateDownloadUrl(

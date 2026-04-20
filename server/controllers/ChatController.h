@@ -24,7 +24,7 @@ class ChatController : public drogon::HttpController<ChatController>
     ADD_METHOD_TO(ChatController::sendMessage, "/v1/chats/{1:chat_id}/messages", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
     ADD_METHOD_TO(ChatController::readMessages, "/v1/chats/{1:chat_id}/read", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
     ADD_METHOD_TO(ChatController::getMessageById, "/v1/chats/messages/{1:message_id}", Get, "api::v1::AuthFilter");
-    ADD_METHOD_TO(ChatController::getAttachmentLink, "/v1/chats/attachments/presigned-link", Get, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
+    ADD_METHOD_TO(ChatController::getAttachmentLinks, "/v1/chats/attachments/presigned-links", Get, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
     ADD_METHOD_TO(ChatController::createAttachment, "/v1/chats/attachments", Post, "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
     METHOD_LIST_END
     Task<HttpResponsePtr> getUserChats(const HttpRequestPtr req, int64_t user_id);
@@ -33,7 +33,7 @@ class ChatController : public drogon::HttpController<ChatController>
     Task<HttpResponsePtr> sendMessage(const HttpRequestPtr req, int64_t chat_id);
     Task<HttpResponsePtr> readMessages(const HttpRequestPtr req, int64_t chat_id);
     Task<HttpResponsePtr> getMessageById(const HttpRequestPtr req, int64_t message_id);
-    Task<HttpResponsePtr> getAttachmentLink(const HttpRequestPtr req);
+    Task<HttpResponsePtr> getAttachmentLinks(const HttpRequestPtr req);
     Task<HttpResponsePtr> createAttachment(const HttpRequestPtr req);
 
     ChatController() {

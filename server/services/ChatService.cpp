@@ -1,12 +1,18 @@
 #include "services/ChatService.hpp"
 #include <drogon/HttpController.h>
 #include <drogon/HttpResponse.h>
+#include <json/forwards.h>
 #include <json/value.h>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <vector>
 #include "controllers/ServerWebSocketController.h"
 #include "include/repositories/ChatRepository.hpp"
+#include "jwt-cpp/jwt.h"
+#include "jwt-cpp/traits/kazuho-picojson/defaults.h"
 #include "models/Messages.h"
+#include "services/S3Service.hpp"
 #include "utils/Enum.hpp"
 #include "utils/server_response_macro.hpp"
 
@@ -54,6 +60,21 @@ Task<HttpResponsePtr> ChatService::getMessageById(
         RETURN_RESPONSE_CODE_403(response_json);
     }
     response_json["message"] = message->getValueOfText();
+    std::vector<Attachment> attachments =
+        co_await attachment_repo->getByMessage(message->getValueOfId());
+    Json::Value json_attachments(Json::arrayValue);
+    for (const auto &attachment : attachments) {
+        Json::Value attachment_json = attachment.toJson();
+        std::optional<std::string> download_url =
+            s3_service_.generateDownloadUrl(
+                attachment.getValueOfS3ObjectKey(),
+                attachment.getValueOfFileName()
+            );
+        attachment_json["download_url"] =
+            download_url.has_value() ? download_url.value() : "";
+        json_attachments.append(attachment_json);
+    }
+    response_json["message"]["attachments"] = json_attachments;
     RETURN_RESPONSE_CODE_200(response_json)
 }
 
@@ -179,22 +200,6 @@ Task<HttpResponsePtr> ChatService::getChatMessages(
     RETURN_RESPONSE_CODE_200(response_json)
 }
 
-bool ChatService::validateMessageType(std::string &message_type) {
-    if (message_type == messenger::models::MessageType::Text) {
-        return true;
-    }
-    if (message_type == messenger::models::MessageType::Voice) {
-        return true;
-    }
-    if (message_type == messenger::models::MessageType::Round) {
-        return true;
-    }
-    if (message_type == messenger::models::MessageType::Sticker) {
-        return true;
-    }
-    return false;
-}
-
 Task<HttpResponsePtr> ChatService::sendMessage(
     const std::shared_ptr<Json::Value> request_json,
     int64_t chat_id
@@ -218,26 +223,94 @@ Task<HttpResponsePtr> ChatService::sendMessage(
             ? std::optional<int64_t>((*request_json)["forward_from_id"].asInt64(
               ))
             : std::nullopt;
-    std::string message_type = request_json->isMember("type")
-                                   ? (*request_json)["type"].asString()
-                                   : messenger::models::MessageType::Text;
+    std::string message_type = (*request_json)["type"].asString();
     if (!validateMessageType(message_type)) {
-        message_type = messenger::models::MessageType::Text;
+        response_json["message"] = "Invalid message type";
+        RETURN_RESPONSE_CODE_400(response_json);
     }
-    Message message = co_await chat_repo->sendMessage(
-        chat_id, user_id, text, reply_to_id, forward_from_id, message_type
-    );
+    Message message;
+    std::vector<UploadPresignedResult> attachments_info;
+    Json::Value json_attachments_array(Json::arrayValue);
+    if (!request_json->isMember("attachment_tokens")) {
+        message = co_await chat_repo->sendMessage(
+            chat_id, user_id, text, reply_to_id, forward_from_id, message_type
+        );
+    } else {
+        if ((*request_json)["attachment_tokens"].isArray()) {
+            std::string key = std::getenv("JWT_KEY");
+            auto verifier = jwt::verify()
+                                .allow_algorithm(jwt::algorithm::hs256{key})
+                                .with_issuer("alesha_messenger");
+
+            for (const auto &token : (*request_json)["attachment_tokens"]) {
+                try {
+                    auto decoded = jwt::decode(token.asString());
+                    verifier.verify(decoded);
+
+                    std::string token_message_type =
+                        decoded.get_payload_claim("message_type").as_string();
+                    if (token_message_type != message_type) {
+                        response_json["message"] =
+                            "Attachment token file type mismatch";
+                        RETURN_RESPONSE_CODE_400(response_json)
+                    }
+                    UploadPresignedResult info;
+                    info.file_name =
+                        decoded.get_payload_claim("file_name").as_string();
+                    info.file_size_bytes = std::stoll(
+                        decoded.get_payload_claim("file_size_bytes").as_string()
+                    );
+                    info.attachment_key =
+                        decoded.get_payload_claim("object_key").as_string();
+                    info.content_type =
+                        decoded.get_payload_claim("file_type").as_string();
+
+                    attachments_info.push_back(info);
+                } catch (const std::exception &e) {
+                    LOG_ERROR << "Invalid JWT token " << e.what();
+                    response_json["message"] =
+                        "Invalid or expired attachment token";
+                    RETURN_RESPONSE_CODE_400(response_json)
+                }
+            }
+            message = co_await chat_repo->sendMessage(
+                chat_id, user_id, text, reply_to_id, forward_from_id,
+                message_type
+            );
+            for (const auto &att : attachments_info) {
+                Attachment created_attachment =
+                    co_await attachment_repo->create(
+                        message.getValueOfId(), att.file_name, att.content_type,
+                        att.file_size_bytes, att.attachment_key
+                    );
+                Json::Value attachment_json = created_attachment.toJson();
+                std::optional<std::string> download_url =
+                    s3_service_.generateDownloadUrl(
+                        created_attachment.getValueOfS3ObjectKey(),
+                        created_attachment.getValueOfFileName()
+                    );
+                attachment_json["download_url"] =
+                    download_url.has_value() ? download_url.value() : "";
+                json_attachments_array.append(attachment_json);
+            }
+        } else {
+            response_json["message"] = "attachment_tokens is not array";
+            RETURN_RESPONSE_CODE_400(response_json)
+        }
+    }
+
     bool successfully_read_sended_message = co_await chat_repo->markAsRead(
         message.getValueOfChatId(), user_id, message.getValueOfId()
     );
     if (!successfully_read_sended_message) {
         LOG_WARN << "Couldnt't mark message as read";
-        response_json["warn"] =
-            "Internal server error: failed to mark message as read";
     }
+
     Json::Value websocket_message_json;
     websocket_message_json["event_type"] = "NEW_MESSAGE";
     websocket_message_json["data"]["message"] = message.toJson();
+    websocket_message_json["data"]["message"]["attachments"] =
+        json_attachments_array;
     std::vector<messenger::repositories::ChatMember> chat_members =
         co_await chat_repo->getMembers(chat_id);
     for (auto &chat_member : chat_members) {
@@ -249,6 +322,8 @@ Task<HttpResponsePtr> ChatService::sendMessage(
         }
     }
     response_json["message"] = message.toJson();
+    response_json["message"]["attachments"] = json_attachments_array;
+
     RETURN_RESPONSE_CODE_201(response_json)
 }
 
@@ -272,40 +347,110 @@ Task<HttpResponsePtr> ChatService::readMessages(
     }
 }
 
+bool ChatService::validateFileType(
+    const std::string &message_type,
+    const std::string &mime_type
+) {
+    if (message_type == messenger::models::MessageType::Media) {
+        if (mime_type.find("image/") != 0 && mime_type.find("video/") != 0) {
+            return false;
+        }
+    }
+    if (message_type == messenger::models::MessageType::Voice) {
+        if (mime_type.find("audio/") != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ChatService::validateMessageType(const std::string &message_type) {
+    if (message_type == messenger::models::MessageType::Text) {
+        return true;
+    }
+    if (message_type == messenger::models::MessageType::Voice) {
+        return true;
+    }
+    if (message_type == messenger::models::MessageType::Round) {
+        return true;
+    }
+    if (message_type == messenger::models::MessageType::Sticker) {
+        return true;
+    }
+    if (message_type == messenger::models::MessageType::Media) {
+        return true;
+    }
+    return false;
+}
+
 Task<HttpResponsePtr> ChatService::getAttachmentLink(
     const std::shared_ptr<Json::Value> request_json
 ) {
     Json::Value response_json;
     int64_t user_id = (*request_json)["user_id"].asInt64();
     int64_t chat_id = (*request_json)["chat_id"].asInt64();
-    int64_t message_id = (*request_json)["message_id"].asInt64();
     bool is_member = co_await checkChatAccess(user_id, chat_id);
     if (!is_member) {
         response_json["message"] = "Access denied";
         RETURN_RESPONSE_CODE_403(response_json);
     }
-    bool upload_as_file = false;
-    if ((*request_json)["upload_as_file"] == "true") {
-        upload_as_file = true;
-    }
-    std::string message_type = request_json->isMember("type")
-                                   ? (*request_json)["type"].asString()
-                                   : messenger::models::MessageType::Text;
+
+    std::string message_type = (*request_json)["message_type"].asString();
     if (!validateMessageType(message_type)) {
-        message_type = messenger::models::MessageType::Text;
+        response_json["message"] = "Invalid message type";
+        RETURN_RESPONSE_CODE_400(response_json)
     }
-    std::optional<UploadPresignedResult> upload_presigned_result =
-        co_await s3_service_.generateUploadUrl(
-            chat_id, (*request_json)["original_filename"].asString(),
-            upload_as_file, message_id
-        );
-    if (!upload_presigned_result.has_value()) {
-        response_json["message"] = "Failed to generate presigned URL";
+    std::vector<AttachmentFileInfo> files_info;
+    Json::Value files_list = (*request_json)["files"];
+    for (Json::ArrayIndex i = 0; i < files_list.size(); i++) {
+        std::string file_name = files_list[i]["original_filename"].asString();
+        std::string ext = s3_service_.getExtension(file_name);
+        std::string mime_type = s3_service_.getMimeType(ext);
+        if (!validateFileType(message_type, mime_type)) {
+            response_json["message"] = "Mismatch message type and file types";
+            RETURN_RESPONSE_CODE_400(response_json)
+        }
+        files_info.push_back({file_name, ext, mime_type});
+    }
+    std::optional<std::vector<UploadPresignedResult>> upload_presigned_results =
+        s3_service_.generateUploadUrl(chat_id, message_type, files_info);
+    if (!upload_presigned_results.has_value()) {
+        response_json["message"] = "Failed to generate presigned URLs";
         RETURN_RESPONSE_CODE_500(response_json);
     }
-    response_json["upload_url"] = upload_presigned_result->upload_url;
-    response_json["attachment_key"] = upload_presigned_result->attachment_key;
-    response_json["content_type"] = upload_presigned_result->content_type;
+
+    Json::Value attachments_array(Json::arrayValue);
+    const std::string jwt_key = std::getenv("JWT_KEY");
+    for (const auto &file : upload_presigned_results.value()) {
+        Json::Value file_json;
+        file_json["upload_url"] = file.upload_url;
+        file_json["attachment_key"] = file.attachment_key;
+        file_json["content_type"] = file.content_type;
+
+        auto token =
+            jwt::create()
+                .set_issuer("alesha_messenger")
+                .set_type("JWT")
+                .set_issued_at(std::chrono::system_clock::now())
+                .set_expires_at(
+                    std::chrono::system_clock::now() + std::chrono::hours(2)
+                )
+                .set_payload_claim(
+                    "object_key", jwt::claim(file.attachment_key)
+                )
+                .set_payload_claim("file_type", jwt::claim(file.content_type))
+                .set_payload_claim("file_name", jwt::claim(file.file_name))
+                .set_payload_claim(
+                    "file_size_bytes",
+                    jwt::claim(std::to_string(file.file_size_bytes))
+                )
+                .set_payload_claim("message_type", jwt::claim(message_type))
+                .sign(jwt::algorithm::hs256{jwt_key});
+        file_json["token"] = token;
+        attachments_array.append(file_json);
+    }
+
+    response_json["attachments"] = attachments_array;
     RETURN_RESPONSE_CODE_200(response_json)
 }
 
