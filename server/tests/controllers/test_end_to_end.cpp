@@ -224,7 +224,8 @@ TEST_F(ControllerTestFixture, E2ETest) {
     auto result16 = sync_wait(sendReqTask(form_request(
         Post,
         "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
-        makeJson({{"text", "Прив ну чё там с проектом"}}), dima_token
+        makeJson({{"text", "Прив ну чё там с проектом"}, {"type", "text"}}),
+        dima_token
     )));
 
     ASSERT_EQ(result16->getStatusCode(), k201Created);
@@ -239,7 +240,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     auto result17 = sync_wait(sendReqTask(form_request(
         Post,
         "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
-        makeJson({{"text", "Работаем"}}), petr_token
+        makeJson({{"text", "Работаем"}, {"type", "text"}}), petr_token
     )));
 
     ASSERT_EQ(result17->getStatusCode(), k201Created);
@@ -269,7 +270,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     auto result19 = sync_wait(sendReqTask(form_request(
         Post,
         "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
-        makeJson({{"text", "Всем привет"}}), ivan_token
+        makeJson({{"text", "Всем привет"}, {"type", "text"}}), ivan_token
     )));
 
     ASSERT_EQ(result19->getStatusCode(), k403Forbidden);
@@ -299,7 +300,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
             Post,
             "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
                 "/messages",
-            makeJson({{"text", "Работаем"}}), petr_token
+            makeJson({{"text", "Работаем"}, {"type", "text"}}), petr_token
         )));
 
         ASSERT_EQ(result->getStatusCode(), k201Created);
@@ -323,38 +324,32 @@ TEST_F(ControllerTestFixture, E2ETest) {
         (*result21->getJsonObject())["messages"];
     ASSERT_EQ(direct_chat_dima_petr_messages_with_before_id.size(), 1);
 
-    // Петя отправляет Диме сообщение
-    std::cout << "Executing result"
-              << "\n";
-    auto result24 = sync_wait(sendReqTask(form_request(
-        Post,
-        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
-        makeJson({{"text", "Смотри на баклажан"}}), petr_token
-    )));
-
-    ASSERT_EQ(result24->getStatusCode(), k201Created);
-
-    int64_t eggplant_message_id =
-        (*result24->getJsonObject())["message"]["id"].asInt64();
-
     // Петя получает ссылку для загрузки картинки
-    std::cout << "Executing result"
-              << "\n";
+    Json::Value file_obj = makeJson(
+        {{"chat_id", direct_chat_dima_petr_id},
+         {"original_filename", "eggplant.png"},
+         {"file_size_bytes", 1337},
+         {"upload_as_file", false}}
+    );
+    Json::Value files_arr(Json::arrayValue);
+    files_arr.append(file_obj);
     auto result22 = sync_wait(sendReqTask(form_request(
-        Get, "/v1/chats/attachments/presigned-link",
+        Get, "/v1/chats/attachments/presigned-links",
         makeJson(
-            {{"chat_id", direct_chat_dima_petr_id},
-             {"original_filename", "eggplant.png"},
-             {"upload_as_file", false},
-             {"message_id", eggplant_message_id}}
+            {{"message_type", "text"},
+             {"chat_id", direct_chat_dima_petr_id},
+             {"files", files_arr}}
         ),
         petr_token
     )));
 
     ASSERT_EQ(result22->getStatusCode(), k200OK);
 
+    std::string eggplant_token =
+        (*result22->getJsonObject())["attachments"][0]["token"].asString();
+
     std::string eggplant_upload_url =
-        (*result22->getJsonObject())["upload_url"].asString();
+        (*result22->getJsonObject())["attachments"][0]["upload_url"].asString();
 
     // Обрезаем ссылку безопасно, находя первый слеш после http://
     size_t upload_path_pos = eggplant_upload_url.find("/", 8);
@@ -374,47 +369,41 @@ TEST_F(ControllerTestFixture, E2ETest) {
 
     ASSERT_EQ(result23->getStatusCode(), k200OK);
 
-    /*
-    (*request_json)["message_id"].asInt64(),
-        (*request_json)["file_name"].asString(),
-        (*request_json)["file_type"].asString(),
-        (*request_json)["file_size_bytes"].asInt64(),
-        (*request_json)["s3_object_key"].asString()
-    */
+    // Петя отправляет Диме сообщение с картинкой
 
-    // Петя прикрепляет к сообщению картинку
-    std::cout << "Executing result"
-              << "\n";
-    auto result25 = sync_wait(sendReqTask(form_request(
-        Post, "/v1/chats/attachments",
-        makeJson({
-            {"chat_id", direct_chat_dima_petr_id},
-            {"message_id", eggplant_message_id},
-            {"file_name", "eggplant.png"},
-            {"file_type", eggplant_content_type},
-            {"file_size_bytes", 1337},
-            {"s3_object_key", eggplant_attachment_key},
-        }),
+    Json::Value tokens_arr(Json::arrayValue);
+    tokens_arr.append(eggplant_token);
+    auto result24 = sync_wait(sendReqTask(form_request(
+        Post,
+        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
+        makeJson(
+            {{"text", "Смотри на баклажан"},
+             {"type", "text"},
+             {"attachment_tokens", tokens_arr}}
+        ),
         petr_token
     )));
 
-    ASSERT_EQ(result25->getStatusCode(), k201Created);
+    ASSERT_EQ(result24->getStatusCode(), k201Created);
+
+    int64_t eggplant_message_id =
+        (*result24->getJsonObject())["message"]["id"].asInt64();
 
     // Дима получает сообщения чата - у последнего должна быть картинка
     std::cout << "Executing result"
               << "\n";
-    auto result26 = sync_wait(sendReqTask(form_request(
+    auto result25 = sync_wait(sendReqTask(form_request(
         Get,
         "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
         makeJson({{"limit", 1}}), dima_token
     )));
 
-    ASSERT_EQ(result26->getStatusCode(), k200OK);
+    ASSERT_EQ(result25->getStatusCode(), k200OK);
     ASSERT_EQ(
-        (*result26->getJsonObject())["messages"][0]["attachments"].size(), 1
+        (*result25->getJsonObject())["messages"][0]["attachments"].size(), 1
     );
 
-    std::string eggplant_download_url = (*result26->getJsonObject()
+    std::string eggplant_download_url = (*result25->getJsonObject()
     )["messages"][0]["attachments"][0]["download_url"]
                                             .asString();
 
@@ -427,9 +416,9 @@ TEST_F(ControllerTestFixture, E2ETest) {
     // прилететь и заменить баклажан по ссылке на арбуз.)
     std::cout << "Executing result"
               << "\n";
-    auto result27 = sync_wait(
+    auto result26 = sync_wait(
         sendMinioReqTask(form_file_download_request(Get, eggplant_download_url))
     );
 
-    ASSERT_EQ(result27->getStatusCode(), k200OK);
+    ASSERT_EQ(result26->getStatusCode(), k200OK);
 }
