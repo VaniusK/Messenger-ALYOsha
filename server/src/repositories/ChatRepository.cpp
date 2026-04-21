@@ -4,11 +4,13 @@
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
+#include "models/Attachments.h"
 #include "repositories/MessageRepository.hpp"
 #include "repositories/UserRepository.hpp"
 #include "utils/Enum.hpp"
 
 using Chat = drogon_model::messenger_db::Chats;
+using Attachment = drogon_model::messenger_db::Attachments;
 using User = drogon_model::messenger_db::Users;
 using Message = drogon_model::messenger_db::Messages;
 using ChatMember = drogon_model::messenger_db::ChatMembers;
@@ -29,7 +31,7 @@ Task<std::vector<Message>> ChatRepository::getAllMessages() {
     co_return result;
 }
 
-Task<Message> ChatRepository::sendMessage(
+Task<std::pair<Message, std::vector<Attachment>>> ChatRepository::sendMessage(
     int64_t chat_id,
     int64_t sender_id,
     std::string text,
