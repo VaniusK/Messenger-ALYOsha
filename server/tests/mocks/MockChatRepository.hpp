@@ -13,6 +13,7 @@ using User = drogon_model::messenger_db::Users;
 using Chat = drogon_model::messenger_db::Chats;
 using ChatPreview = messenger::dto::ChatPreview;
 using ChatMember = drogon_model::messenger_db::ChatMembers;
+using Attachment = drogon_model::messenger_db::Attachments;
 
 class MockChatRepository
     : public messenger::repositories::ChatRepositoryInterface {
@@ -31,7 +32,7 @@ public:
         (override)
     );
     MOCK_METHOD(
-        drogon::Task<Message>,
+        (drogon::Task<std::pair<Message, std::vector<Attachment>>>),
         sendMessage,
         (int64_t,
          int64_t,

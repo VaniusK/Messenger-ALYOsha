@@ -8,6 +8,7 @@
 #include "repositories/MessageRepository.hpp"
 
 using Message = drogon_model::messenger_db::Messages;
+using Attachment = drogon_model::messenger_db::Attachments;
 
 class MockMessageRepository
     : public messenger::repositories::MessageRepositoryInterface {
@@ -21,7 +22,7 @@ public:
     );
     MOCK_METHOD(drogon::Task<std::vector<Message>>, getAll, (), (override));
     MOCK_METHOD(
-        drogon::Task<Message>,
+        (drogon::Task<std::pair<Message, std::vector<Attachment>>>),
         send,
         (int64_t,
          int64_t,
