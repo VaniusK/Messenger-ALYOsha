@@ -235,8 +235,8 @@ void ChatManager::cacheMessageMedia(QJsonObject &message) {
     for (int i = 0; i < attachments.size(); i++) {
         QJsonObject attachment = attachments.at(i).toObject();
         QString cachedFileLocation = m_media_cache->getOrPut(
-            attachment["download_url"].toString(),
-            attachment["s3_object_key"].toString()
+            attachment["s3_object_key"].toString(),
+            attachment["download_url"].toString()
         );
         attachment.insert("download_url", cachedFileLocation);
         attachments.replace(i, attachment);
