@@ -19,10 +19,6 @@ void noMessageOutput(
 }
 
 int main(int argc, char *argv[]) {
-#ifdef QT_NO_DEBUG
-    qInstallMessageHandler(noMessageOutput);
-#endif
-
     QApplication app(argc, argv);
 
     QCoreApplication::setOrganizationName("AlyoshaTeam");
