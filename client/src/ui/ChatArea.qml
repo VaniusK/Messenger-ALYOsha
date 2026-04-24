@@ -508,7 +508,6 @@ Rectangle {
                                 source: isImage ? fileUrl : ""
                                 fillMode: Image.PreserveAspectFit 
                                 cache: false
-                                sourceSize.width: 300
                                 
                                 onStatusChanged: {
                                     if (status === Image.Ready) {
@@ -524,8 +523,10 @@ Rectangle {
 
                                 Connections {
                                     target: MediaCacheLayer
-                                    function onImageLoaded() {
-                                        myImage.reload()
+                                    function onImageLoaded(downloadedPath) {
+                                        if (fileUrl === downloadedPath) {
+                                            attachedImage.reload()
+                                        }
                                     }
                                 }
 
