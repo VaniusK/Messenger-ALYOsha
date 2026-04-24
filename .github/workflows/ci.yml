@@ -154,6 +154,7 @@ jobs:
           copy build\client\Release\client.exe deploy\Messenger-Alesha.exe
           C:\Qt\6.7.3\msvc2019_64\bin\windeployqt.exe `
             --qmldir client\src `
+            --release `
             --no-translations `
             deploy\Messenger-Alesha.exe
           copy common\aleshalogo.ico deploy\app.ico
