@@ -507,8 +507,8 @@ Rectangle {
                                 anchors.fill: parent
                                 source: isImage ? fileUrl : ""
                                 fillMode: Image.PreserveAspectFit 
-                                asynchronous: true
                                 cache: false
+                                sourceSize.width: 300
                                 
                                 onStatusChanged: {
                                     if (status === Image.Ready) {
