@@ -429,13 +429,13 @@ Rectangle {
                     return ""
                 }
 
-                property string img_width: {
+                property int img_width: {
                     if (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0) return 200
                     if (firstAttachment !== null && firstAttachment.img_width) return firstAttachment.img_width
                     return 0
                 }
 
-                property string img_height: {
+                property int img_height: {
                     if (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0) return 100
                     if (firstAttachment !== null && firstAttachment.img_height) return firstAttachment.img_height
                     return 0
