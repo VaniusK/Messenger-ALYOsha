@@ -1171,6 +1171,7 @@ Rectangle {
             source: fullScreenImagePreview.imageUrl
             fillMode: Image.PreserveAspectFit
             asynchronous: true
+            cache: false
             
             MouseArea {
                 anchors.centerIn: parent
