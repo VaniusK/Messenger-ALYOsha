@@ -20,7 +20,7 @@ private:
     ConnectionManager *m_connection;
 
 signals:
-    void ImageLoaded();
+    void onImageLoaded();
 
 private slots:
 
