@@ -514,7 +514,7 @@ Rectangle {
                                 function reload() {
                                     var oldSource = source
                                     source = ""
-                                    Qt.callLater(source = oldSource)
+                                    Qt.callLater(function() { source = oldSource })
                                 }
 
                                 Connections {
