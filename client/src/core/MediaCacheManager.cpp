@@ -38,9 +38,11 @@ QString MediaCacheManager::getOrPut(
                             s3_object_key.toUtf8(), QCryptographicHash::Md5
                         )
                             .toHex() +
-                        "." + QFileInfo(s3_object_key).suffix();
+                        "." + QFileInfo(s3_object_key).suffix().remove('"');
 
-    QDir file_location(QDir::cleanPath(file_name));
+    QDir file_location(
+        QDir(cache_dir).path() + QDir::separator() + s3_object_key
+    );
 
     if (file_location.exists()) {
         return QUrl::fromLocalFile(file_location.path()).toString();
