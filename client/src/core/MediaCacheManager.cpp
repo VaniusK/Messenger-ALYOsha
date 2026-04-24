@@ -33,9 +33,14 @@ QString MediaCacheManager::getOrPut(
     if (!cache_dir.exists()) {
         cache_dir.mkdir(".");
     }
-    QDir file_location(QDir::cleanPath(
-        QDir(cache_dir).path() + QDir::separator() + s3_object_key
-    ));
+
+    QString file_name = QCryptographicHash::hash(
+                            s3_object_key.toUtf8(), QCryptographicHash::Md5
+                        )
+                            .toHex() +
+                        "." + QFileInfo(s3_object_key).suffix();
+
+    QDir file_location(QDir::cleanPath(file_name));
 
     if (file_location.exists()) {
         return QUrl::fromLocalFile(file_location.path()).toString();
@@ -44,7 +49,7 @@ QString MediaCacheManager::getOrPut(
     QFile *file = new QFile(file_location.path());
 
     if (!file->open(QIODevice::WriteOnly)) {
-        qDebug() << "Couldn't open file";
+        qDebug() << "Couldn't open file " << file_name;
         return "";
     }
 
