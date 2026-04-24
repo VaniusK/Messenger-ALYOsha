@@ -14,7 +14,7 @@ find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network WebSockets Tes
 #    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
 #endif()
 
-qt_add_executable(client WIN32
+qt_add_executable(client #WIN32
     src/core/main.cpp
     src/core/AuthManager.cpp
     include/AuthManager.hpp
