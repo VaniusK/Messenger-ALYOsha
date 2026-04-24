@@ -28,6 +28,8 @@ qt_add_executable(client WIN32
     include/MediaManager.hpp
     src/core/VoiceManager.cpp
     include/VoiceManager.hpp
+    src/core/MediaCacheManager.cpp
+    include/MediaCacheManager.hpp
 )
 
 qt_add_qml_module(client
