@@ -193,6 +193,8 @@ Task<HttpResponsePtr> ChatService::getChatMessages(
                 );
             attachment_json["download_url"] =
                 download_url.has_value() ? download_url.value() : "";
+            attachment_json["s3_object_key"] =
+                attachment.getValueOfS3ObjectKey();
             message_json["attachments"].append(attachment_json);
         }
         jsonArray.append(message_json);
