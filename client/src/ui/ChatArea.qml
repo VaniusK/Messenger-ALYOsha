@@ -428,6 +428,18 @@ Rectangle {
                     if (firstAttachment !== null && firstAttachment.download_url) return firstAttachment.download_url
                     return ""
                 }
+
+                property string img_width: {
+                    if (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0) return 200
+                    if (firstAttachment !== null && firstAttachment.img_width) return firstAttachment.img_width
+                    return 0
+                }
+
+                property string img_height: {
+                    if (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0) return 100
+                    if (firstAttachment !== null && firstAttachment.img_height) return firstAttachment.img_height
+                    return 0
+                }
                 
                 property string uniqueId: model._id || model.id || index.toString()
                 property bool isPlayingThis: globalPlayingMsgId === uniqueId && globalAudioPlayer.playbackState === 1
@@ -497,8 +509,8 @@ Rectangle {
                         visible: isImage
                         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 4
                         
-                        property real calculatedHeight: (attachedImage.status === Image.Ready && attachedImage.sourceSize.width > 0) 
-                            ? Math.min(300, Math.max(100, width * (attachedImage.sourceSize.height / attachedImage.sourceSize.width))) 
+                        property real calculatedHeight: (img_width > 0) 
+                            ? Math.min(300, Math.max(100, width * (img_height / img_width))) 
                             : 150
                         height: isImage ? calculatedHeight : 0
                         

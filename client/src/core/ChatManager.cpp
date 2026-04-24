@@ -1,5 +1,6 @@
 #include "ChatManager.hpp"
 #include <QDebug>
+#include <QImageReader>
 #include <QJsonDocument>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -238,7 +239,11 @@ void ChatManager::cacheMessageMedia(QJsonObject &message) {
             attachment["s3_object_key"].toString(),
             attachment["download_url"].toString()
         );
+        QString localFilePath = QUrl(cachedFileLocation).toLocalFile();
+        QImageReader reader(localFilePath);
         attachment.insert("download_url", cachedFileLocation);
+        attachment.insert("img_width", reader.size().width());
+        attachment.insert("img_height", reader.size().height());
         attachments.replace(i, attachment);
         qDebug() << "[ChatManager] saved file " << cachedFileLocation
                  << "to cache";
