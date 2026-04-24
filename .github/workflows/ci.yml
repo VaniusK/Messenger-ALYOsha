@@ -145,7 +145,7 @@ jobs:
         run: |
           cmake -B build/client -S client `
             -DCMAKE_PREFIX_PATH="C:\Qt\6.7.3\msvc2019_64" `
-            -DCMAKE_BUILD_TYPE=Debug
+            -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --config Release
 
       - name: Bundle Qt DLLs with windeployqt and copy icon
