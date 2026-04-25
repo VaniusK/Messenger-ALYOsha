@@ -1,5 +1,6 @@
 #include "ChatManager.hpp"
 #include <QDebug>
+#include <QImageReader>
 #include <QJsonDocument>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -7,9 +8,13 @@
 ChatManager::ChatManager(
     ConnectionManager *connection,
     StateManager *stateManager,
+    MediaCacheManager *media_cache,
     QObject *parent
 )
-    : QObject(parent), m_connection(connection), m_stateManager(stateManager) {
+    : QObject(parent),
+      m_connection(connection),
+      m_stateManager(stateManager),
+      m_media_cache(media_cache) {
     m_webSocket =
         new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
 
@@ -142,6 +147,9 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
             QJsonArray messages;
             for (int i = raw.size() - 1; i >= 0; i--) {
                 QJsonObject msg = raw[i].toObject();
+
+                cacheMessageMedia(msg);
+
                 QJsonValue senderValue = msg["sender_id"];
                 QString senderIdStr =
                     senderValue.isString()
@@ -221,6 +229,26 @@ void ChatManager::openDirectChat(
             emit chatError("Open direct chat failed: " + reply->errorString());
         }
     });
+}
+
+void ChatManager::cacheMessageMedia(QJsonObject &message) {
+    QJsonArray attachments = message["attachments"].toArray();
+    for (int i = 0; i < attachments.size(); i++) {
+        QJsonObject attachment = attachments.at(i).toObject();
+        QString cachedFileLocation = m_media_cache->getOrPut(
+            attachment["s3_object_key"].toString(),
+            attachment["download_url"].toString()
+        );
+        QString localFilePath = QUrl(cachedFileLocation).toLocalFile();
+        QImageReader reader(localFilePath);
+        attachment.insert("download_url", cachedFileLocation);
+        attachment.insert("img_width", reader.size().width());
+        attachment.insert("img_height", reader.size().height());
+        attachments.replace(i, attachment);
+        qDebug() << "[ChatManager] saved file " << cachedFileLocation
+                 << "to cache";
+    }
+    message["attachments"] = attachments;
 }
 
 void ChatManager::onWebSocketConnected() {

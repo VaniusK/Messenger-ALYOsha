@@ -12,3 +12,4 @@ artifacts/
 server/drogon/
 server/certbot/conf
 server/certbot/www
+.cache
