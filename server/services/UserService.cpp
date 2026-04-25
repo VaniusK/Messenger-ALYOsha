@@ -2,6 +2,7 @@
 #include <drogon/HttpController.h>
 #include <json/value.h>
 #include <jwt-cpp/jwt.h>
+#include <trantor/utils/Logger.h>
 #include <chrono>
 #include <optional>
 #include "dto/UserServiceDtos.hpp"
@@ -28,8 +29,7 @@ Task<RegisterUserResponseDto> UserService::registerUser(
     if (success) {
         auto user = co_await user_repo->getByHandle(request_dto.handle);
         auto saved_chat = co_await chat_repo->createSaved(user->getValueOfId());
-        RegisterUserResponseDto response_dto;
-        co_return response_dto;
+        co_return RegisterUserResponseDto();
     } else {
         throw messenger::exceptions::ConflictException("User already exists");
     }
@@ -46,14 +46,20 @@ Task<LoginUserResponseDto> UserService::loginUser(
         );
     } else {
         if (!password_hasher->verifyPassword(
-                std::string(request_dto.password),
-                user->getValueOfPasswordHash()
+                request_dto.password, user->getValueOfPasswordHash()
             )) {
             throw messenger::exceptions::UnauthorizedException(
                 "Invalid handle or password"
             );
         }
-        const std::string JWT_KEY = std::getenv("JWT_KEY");
+        const char *env_key = std::getenv("JWT_KEY");
+        if (env_key) {
+            throw messenger::exceptions::InternalServerErrorException(
+                "JWT_KEY is not set"
+            );
+        }
+        const std::string JWT_KEY = env_key;
+
         std::string token =
             jwt::create()
                 .set_issuer("alesha_messenger")
@@ -85,12 +91,12 @@ Task<GetUserResponseDto> UserService::getUserById(int64_t user_id) {
     co_return response_dto;
 }
 
-Task<GetUserResponseDto> UserService::getUserByHandle(std::string &&user_handle
-) {
-    std::optional<User> user = co_await user_repo->getByHandle(user_handle);
+Task<GetUserResponseDto> UserService::getUserByHandle(std::string user_handle) {
+    std::optional<User> user =
+        co_await user_repo->getByHandle(std::move(user_handle));
     if (!user.has_value()) {
         throw messenger::exceptions::NotFoundException(
-            "User with id " + user_handle + " doesn't exist"
+            "User with handle " + user_handle + " doesn't exist"
         );
     }
     GetUserResponseDto response_dto(std::move(user.value()));

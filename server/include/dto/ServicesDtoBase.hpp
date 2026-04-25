@@ -5,6 +5,7 @@ namespace messenger::dto {
 
 struct ResponseDto {
     virtual Json::Value toJson() = 0;
+    virtual ~ResponseDto() = default;
 };
 
 struct RequestDto {};

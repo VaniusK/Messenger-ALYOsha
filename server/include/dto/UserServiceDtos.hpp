@@ -1,6 +1,7 @@
 #pragma once
 #include <drogon/HttpRequest.h>
 #include <json/value.h>
+#include <memory>
 #include <string>
 #include <vector>
 #include "dto/ServicesDtoBase.hpp"
@@ -32,7 +33,7 @@ struct SearchUserResponseDto : ResponseDto {
         : users(std::move(users_)) {
     }
 
-    Json::Value toJson() {
+    Json::Value toJson() override {
         Json::Value jsonArray(Json::arrayValue);
         for (const auto &user : users) {
             Json::Value user_json = user.toJson();
@@ -49,7 +50,7 @@ struct GetUserResponseDto : ResponseDto {
     GetUserResponseDto(User &&user_) : user(std::move(user_)) {
     }
 
-    Json::Value toJson() {
+    Json::Value toJson() override {
         Json::Value response_json;
         response_json = user.toJson();
         response_json.removeMember("password_hash");
@@ -62,8 +63,7 @@ struct RegisterUserRequestDto : RequestDto {
     std::string password;
     std::string display_name;
 
-    RegisterUserRequestDto(drogon::HttpRequestPtr req) {
-        auto request_json = req->getJsonObject();
+    RegisterUserRequestDto(std::shared_ptr<Json::Value> request_json) {
         handle = (*request_json)["handle"].asString();
         password = (*request_json)["password"].asString();
         display_name = (*request_json)["display_name"].asString();
@@ -71,7 +71,7 @@ struct RegisterUserRequestDto : RequestDto {
 };
 
 struct RegisterUserResponseDto : ResponseDto {
-    Json::Value toJson() {
+    Json::Value toJson() override {
         Json::Value response_json;
         response_json["message"] = "New user was successfully created";
         return response_json;
@@ -82,8 +82,7 @@ struct LoginUserRequestDto : RequestDto {
     std::string handle;
     std::string password;
 
-    LoginUserRequestDto(drogon::HttpRequestPtr req) {
-        auto request_json = req->getJsonObject();
+    LoginUserRequestDto(std::shared_ptr<Json::Value> request_json) {
         handle = (*request_json)["handle"].asString();
         password = (*request_json)["password"].asString();
     }
@@ -95,7 +94,7 @@ struct LoginUserResponseDto : ResponseDto {
     LoginUserResponseDto(std::string &&token_) : token(token_) {
     }
 
-    Json::Value toJson() {
+    Json::Value toJson() override {
         Json::Value response_json;
         response_json["message"] = "Login successful";
         response_json["token"] = std::move(token);

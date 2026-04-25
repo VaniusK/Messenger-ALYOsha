@@ -15,7 +15,7 @@ using namespace api::v1;
 using namespace messenger::dto;
 
 Task<HttpResponsePtr>
-UserController::getUserById(const HttpRequestPtr req, int64_t &&user_id) {
+UserController::getUserById(const HttpRequestPtr req, int64_t user_id) {
     LOG_INFO << "Entered userController -> getUserById";
     Json::Value response_json;
     try{
@@ -27,14 +27,18 @@ UserController::getUserById(const HttpRequestPtr req, int64_t &&user_id) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_404(response_json)
     }
-    catch (std::exception &e){
-        response_json["message"] = "Internal server error";
+    catch (messenger::exceptions::InternalServerErrorException &e) {
+        response_json["messsage"] = e.what();
+        RETURN_RESPONSE_CODE_500(response_json)
+    }
+    catch (std::exception &e) {
+        response_json["message"] = std::string("Internal server error: ") + e.what();
         RETURN_RESPONSE_CODE_500(response_json)
     }
 }
 
 Task<HttpResponsePtr>
-UserController::getUserByHandle(const HttpRequestPtr req, std::string &&user_handle) {
+UserController::getUserByHandle(const HttpRequestPtr req, std::string user_handle) {
     LOG_INFO << "Entered userController -> getUserByHandle";
     Json::Value response_json;
     try{
@@ -46,8 +50,12 @@ UserController::getUserByHandle(const HttpRequestPtr req, std::string &&user_han
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_404(response_json)
     }
-    catch (std::exception &e){
-        response_json["message"] = "Internal server error";
+    catch (messenger::exceptions::InternalServerErrorException &e) {
+        response_json["messsage"] = e.what();
+        RETURN_RESPONSE_CODE_500(response_json)
+    }
+    catch (std::exception &e) {
+        response_json["message"] = std::string("Internal server error: ") + e.what();
         RETURN_RESPONSE_CODE_500(response_json)
     }
 }
@@ -85,7 +93,7 @@ Task<HttpResponsePtr> UserController::registerUser(HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    RegisterUserRequestDto request_dto(req);
+    RegisterUserRequestDto request_dto(request_json);
     if (!isHandleValid(request_dto.handle)){
         response_json["message"] = "Handle is invalid";
         RETURN_RESPONSE_CODE_400(response_json)
@@ -104,8 +112,12 @@ Task<HttpResponsePtr> UserController::registerUser(HttpRequestPtr req) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_409(response_json)
     }
-    catch (std::exception &e){
-        response_json["message"] = "Internal server error";
+    catch (messenger::exceptions::InternalServerErrorException &e) {
+        response_json["messsage"] = e.what();
+        RETURN_RESPONSE_CODE_500(response_json)
+    }
+    catch (std::exception &e) {
+        response_json["message"] = std::string("Internal server error: ") + e.what();
         RETURN_RESPONSE_CODE_500(response_json)
     }
 }
@@ -119,7 +131,7 @@ Task<HttpResponsePtr> UserController::loginUser(HttpRequestPtr req) {
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    LoginUserRequestDto request_dto(req);
+    LoginUserRequestDto request_dto(request_json);
     if (!isHandleValid(request_dto.handle)){
         response_json["message"] = "Handle is invalid";
         RETURN_RESPONSE_CODE_400(response_json)
@@ -135,15 +147,19 @@ Task<HttpResponsePtr> UserController::loginUser(HttpRequestPtr req) {
 
     try{
         LoginUserResponseDto response_dto = co_await user_service.loginUser(request_dto);
-        response_json = std::move(response_dto.toJson());
+        response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     }
     catch (messenger::exceptions::UnauthorizedException &e){
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_401(response_json)
     }
+    catch (messenger::exceptions::InternalServerErrorException &e) {
+        response_json["messsage"] = e.what();
+        RETURN_RESPONSE_CODE_500(response_json)
+    }
     catch (std::exception &e) {
-        response_json["message"] = "Internal server error";
+        response_json["message"] = std::string("Internal server error: ") + e.what();
         RETURN_RESPONSE_CODE_500(response_json)
     }
     

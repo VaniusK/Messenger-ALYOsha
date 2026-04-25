@@ -9,6 +9,7 @@
 #include <vector>
 #include "controllers/ServerWebSocketController.h"
 #include "dto/AttachmentData.hpp"
+#include "dto/ChatServiceDtos.hpp"
 #include "include/repositories/ChatRepository.hpp"
 #include "jwt-cpp/jwt.h"
 #include "jwt-cpp/traits/kazuho-picojson/defaults.h"

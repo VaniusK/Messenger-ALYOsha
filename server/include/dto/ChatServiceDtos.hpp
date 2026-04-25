@@ -80,7 +80,7 @@ struct SendMessageRequestDto : RequestDto {
         if (request_json->isMember("attachment_tokens") &&
             (*request_json)["attachment_tokens"].isArray()) {
             for (const auto &token : (*request_json)["attachment_tokens"]) {
-                attachment_tokens.push_back(token);
+                attachment_tokens.push_back(token.asString());
             }
         }
     }
@@ -97,7 +97,8 @@ struct ReadMessagesRequestDto : RequestDto {
         user_id = req->getAttributes()->get<int64_t>("user_id");
         chat_id = chat_id_;
         auto request_json = req->getJsonObject();
-        last_read_message_id = (*request_json)["last_read_message_id"];
+        last_read_message_id =
+            (*request_json)["last_read_message_id"].asInt64();
     }
 };
 
@@ -137,11 +138,12 @@ struct GetAttachmentLinksRequestDto : RequestDto {
     GetAttachmentLinksRequestDto(drogon::HttpRequestPtr req) {
         user_id = req->getAttributes()->get<int64_t>("user_id");
         auto request_json = req->getJsonObject();
-        chat_id = (*request_json)["chat_id"];
-        message_type = (*request_json)["message_type"];
+        chat_id = (*request_json)["chat_id"].asInt64();
+        message_type = (*request_json)["message_type"].asString();
         for (auto file : (*request_json)["files"]) {
             files.push_back(
-                {file["original_filename"], file["file_size_bytes"].asInt64()}
+                {file["original_filename"].asString(),
+                 file["file_size_bytes"].asInt64()}
             );
         }
     }

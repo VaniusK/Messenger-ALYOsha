@@ -5,6 +5,7 @@
 #include "utils/Enum.hpp"
 #include "utils/controller_utils.hpp"
 #include "utils/server_response_macro.hpp"
+#include "dto/ChatServiceDtos.hpp"
 
 using namespace api::v1;
 

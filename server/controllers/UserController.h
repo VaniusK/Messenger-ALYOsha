@@ -32,9 +32,9 @@ public:
 
     METHOD_LIST_END
     Task<HttpResponsePtr>
-    getUserById(const HttpRequestPtr req, int64_t &&user_id);
+    getUserById(const HttpRequestPtr req, int64_t user_id);
     Task<HttpResponsePtr>
-    getUserByHandle(const HttpRequestPtr req, std::string &&user_handle);
+    getUserByHandle(const HttpRequestPtr req, std::string user_handle);
     Task<HttpResponsePtr> searchUser(const HttpRequestPtr req);
     Task<HttpResponsePtr> registerUser(const HttpRequestPtr req);
     Task<HttpResponsePtr> loginUser(const HttpRequestPtr req);

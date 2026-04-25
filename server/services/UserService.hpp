@@ -19,7 +19,7 @@ public:
     );
     Task<LoginUserResponseDto> loginUser(LoginUserRequestDto request_dto);
     Task<GetUserResponseDto> getUserById(int64_t user_id);
-    Task<GetUserResponseDto> getUserByHandle(std::string &&user_handle);
+    Task<GetUserResponseDto> getUserByHandle(std::string user_handle);
     Task<SearchUserResponseDto> searchUser(SearchUserRequestDto request_dto);
 
     void setUserRepo(

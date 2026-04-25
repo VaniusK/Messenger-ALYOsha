@@ -3,6 +3,7 @@
 #include <drogon/HttpController.h>
 #include <drogon/HttpResponse.h>
 #include <memory>
+#include "dto/ChatServiceDtos.hpp"
 #include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
 #include "services/S3Service.hpp"
