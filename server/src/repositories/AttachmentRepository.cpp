@@ -52,6 +52,9 @@ Task<vector<vector<Attachment>>> AttachmentRepository::getByMessages(
     std::vector<int64_t> message_ids
 ) {
     auto mapper = getMapper();
+    if (message_ids.empty()) {
+        co_return {};
+    }
 
     try {
         auto attachments = co_await mapper.findBy(Criteria(

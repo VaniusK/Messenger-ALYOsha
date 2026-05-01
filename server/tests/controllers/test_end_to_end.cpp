@@ -6,6 +6,7 @@
 #include <json/value.h>
 #include <cstdlib>
 #include <memory>
+#include <string>
 #include "../fixtures/ControllerTestFixture.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -310,12 +311,12 @@ TEST_F(ControllerTestFixture, E2ETest) {
               << "\n";
     auto result21 = sync_wait(sendReqTask(form_request(
         Get,
-        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) + "/messages",
-        makeJson(
-            {{"before_id",
-              (*result17->getJsonObject())["message"]["id"].asInt64()}}
-        ),
-        dima_token
+        "/v1/chats/" + std::to_string(direct_chat_dima_petr_id) +
+            "/messages?before_id=" +
+            std::to_string(
+                (*result17->getJsonObject())["message"]["id"].asInt64()
+            ),
+        makeJson({}), dima_token
     )));
 
     ASSERT_EQ(result21->getStatusCode(), k200OK);
@@ -334,7 +335,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     Json::Value files_arr(Json::arrayValue);
     files_arr.append(file_obj);
     auto result22 = sync_wait(sendReqTask(form_request(
-        Get, "/v1/chats/attachments/presigned-links",
+        Post, "/v1/chats/attachments/presigned-links",
         makeJson(
             {{"message_type", "text"},
              {"chat_id", direct_chat_dima_petr_id},

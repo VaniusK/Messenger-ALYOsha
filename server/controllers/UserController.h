@@ -24,8 +24,7 @@ public:
     ADD_METHOD_TO(
         UserController::searchUser,
         "/v1/users/search",
-        Get,
-        "api::v1::JsonValidatorFilter"
+        Get
     );
     ADD_METHOD_TO(UserController::registerUser, "/v1/auth/register", Post, "api::v1::JsonValidatorFilter");
     ADD_METHOD_TO(UserController::loginUser, "/v1/auth/login", Post, "api::v1::JsonValidatorFilter");
