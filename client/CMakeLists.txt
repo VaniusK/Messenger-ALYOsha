@@ -10,11 +10,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network WebSockets Test Widgets Multimedia Svg)
 
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
-endif()
+#if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+#    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
+#endif()
 
-qt_add_executable(client WIN32
+qt_add_executable(client #WIN32
     src/core/main.cpp
     src/core/AuthManager.cpp
     include/AuthManager.hpp
@@ -28,6 +28,8 @@ qt_add_executable(client WIN32
     include/MediaManager.hpp
     src/core/VoiceManager.cpp
     include/VoiceManager.hpp
+    src/core/MediaCacheManager.cpp
+    include/MediaCacheManager.hpp
 )
 
 qt_add_qml_module(client

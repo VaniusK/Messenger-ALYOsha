@@ -1,4 +1,5 @@
 #pragma once
+#include <qtmetamacros.h>
 #include <QAbstractSocket>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -6,6 +7,7 @@
 #include <QString>
 #include <QWebSocket>
 #include "ConnectionManager.hpp"
+#include "MediaCacheManager.hpp"
 #include "StateManager.hpp"
 
 class ChatManager : public QObject {
@@ -15,6 +17,7 @@ public:
     explicit ChatManager(
         ConnectionManager *connection,
         StateManager *stateManager,
+        MediaCacheManager *media_cache,
         QObject *parent = nullptr
     );
 
@@ -33,6 +36,7 @@ public:
         qint64 fileSizeBytes,
         const QString &s3ObjectKey
     );
+    Q_INVOKABLE void cacheMessageMedia(QJsonObject &message);
 
 signals:
     void usersFound(const QJsonArray &users);
@@ -55,5 +59,6 @@ private slots:
 private:
     ConnectionManager *m_connection;
     StateManager *m_stateManager;
+    MediaCacheManager *m_media_cache;
     QWebSocket *m_webSocket;
 };

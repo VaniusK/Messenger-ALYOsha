@@ -97,7 +97,7 @@ Rectangle {
         function onChatsHistoryLoaded(messages) {
             isLoadingHistory = true
             chatModel.clear()
-            for (var i = 0; i < messages.length; i++) {
+            for (var i = messages.length - 1; i >= 0; i--) {
                 chatModel.append(messages[i])
             }
 
@@ -107,7 +107,7 @@ Rectangle {
 
             if (chatModel.count > 0) {
                 Qt.callLater(function() {
-                    messageList.positionViewAtEnd()
+                    // messageList.positionViewAtEnd()
 
                     if (messageList.contentHeight < messageList.height && chatModel.count > 0) {
                         var topmostMsgId = chatModel.get(0)._id || chatModel.get(0).id;
@@ -383,6 +383,7 @@ Rectangle {
             spacing: 8
             topMargin: 15
             bottomMargin: 15
+            verticalLayoutDirection: ListView.BottomToTop
 
             onContentYChanged: {
                 if (contentY <= 0 && chatModel.count > 0) {
@@ -427,6 +428,18 @@ Rectangle {
                     if (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0) return model.text.substring(7)
                     if (firstAttachment !== null && firstAttachment.download_url) return firstAttachment.download_url
                     return ""
+                }
+
+                property int img_width: {
+                    if (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0) return 200
+                    if (firstAttachment !== null && firstAttachment.img_width) return firstAttachment.img_width
+                    return 0
+                }
+
+                property int img_height: {
+                    if (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0) return 100
+                    if (firstAttachment !== null && firstAttachment.img_height) return firstAttachment.img_height
+                    return 0
                 }
                 
                 property string uniqueId: model._id || model.id || index.toString()
@@ -497,7 +510,9 @@ Rectangle {
                         visible: isImage
                         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 4
                         
-                        property real calculatedHeight: 150 
+                        property real calculatedHeight: (img_width > 0) 
+                            ? Math.min(300, Math.max(100, width * (img_height / img_width))) 
+                            : 150
                         height: isImage ? calculatedHeight : 0
                         
                         Rectangle {
@@ -509,12 +524,21 @@ Rectangle {
                                 fillMode: Image.PreserveAspectFit 
                                 asynchronous: true
                                 
-                                onStatusChanged: {
-                                    if (status === Image.Ready) {
-                                        var ratio = sourceSize.height / sourceSize.width;
-                                        imageContainer.calculatedHeight = Math.min(300, Math.max(100, imageContainer.width * ratio));
+                                function reload() {
+                                    var oldSource = source
+                                    source = ""
+                                    Qt.callLater(function() { source = oldSource })
+                                }
+
+                                Connections {
+                                    target: MediaCacheLayer
+                                    function onImageLoaded(downloadedPath) {
+                                        if (fileUrl === downloadedPath) {
+                                            attachedImage.reload()
+                                        }
                                     }
                                 }
+
                             }
                             MouseArea {
                                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor
@@ -1170,6 +1194,7 @@ Rectangle {
             source: fullScreenImagePreview.imageUrl
             fillMode: Image.PreserveAspectFit
             asynchronous: true
+            cache: false
             
             MouseArea {
                 anchors.centerIn: parent
