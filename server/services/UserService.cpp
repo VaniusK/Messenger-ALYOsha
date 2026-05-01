@@ -2,61 +2,64 @@
 #include <drogon/HttpController.h>
 #include <json/value.h>
 #include <jwt-cpp/jwt.h>
+#include <trantor/utils/Logger.h>
 #include <chrono>
 #include <optional>
+#include "dto/UserServiceDtos.hpp"
 #include "models/Users.h"
 #include "repositories/UserRepository.hpp"
+#include "utils/server_exceptions.hpp"
 #include "utils/server_response_macro.hpp"
 
 using namespace drogon;
 using namespace api::v1;
+using namespace messenger::dto;
 
 using UserRepo = messenger::repositories::UserRepository;
 using User = drogon_model::messenger_db::Users;
 
-Task<HttpResponsePtr> UserService::registerUser(
-    const std::shared_ptr<Json::Value> request_json
+Task<RegisterUserResponseDto> UserService::registerUser(
+    RegisterUserRequestDto request_dto
 ) {
-    Json::Value response_json;
-
     std::string password_hash =
-        password_hasher->generateHash((*request_json)["password"].asString());
+        password_hasher->generateHash(request_dto.password);
     bool success = co_await user_repo->create(
-        (*request_json)["handle"].asCString(),
-        (*request_json)["display_name"].asCString(), password_hash
+        request_dto.handle, request_dto.display_name, password_hash
     );
     if (success) {
-        auto user =
-            co_await user_repo->getByHandle((*request_json)["handle"].asString()
-            );
+        auto user = co_await user_repo->getByHandle(request_dto.handle);
         auto saved_chat = co_await chat_repo->createSaved(user->getValueOfId());
-        response_json["message"] = "New user was successfully created";
-        RETURN_RESPONSE_CODE_201(response_json)
+        co_return RegisterUserResponseDto();
     } else {
-        response_json["message"] = "User already exists";
-        RETURN_RESPONSE_CODE_409(response_json)
+        throw messenger::exceptions::ConflictException("User already exists");
     }
 }
 
-Task<HttpResponsePtr> UserService::loginUser(
-    const std::shared_ptr<Json::Value> request_json
+Task<LoginUserResponseDto> UserService::loginUser(
+    LoginUserRequestDto request_dto
 ) {
-    Json::Value response_json;
     std::optional<User> user =
-        co_await user_repo->getByHandle((*request_json)["handle"].asString());
+        co_await user_repo->getByHandle(request_dto.handle);
     if (user == std::nullopt) {
-        response_json["message"] = "Login error: Invalid handle or password";
-        RETURN_RESPONSE_CODE_401(response_json)
+        throw messenger::exceptions::UnauthorizedException(
+            "Invalid handle or password"
+        );
     } else {
         if (!password_hasher->verifyPassword(
-                std::string((*request_json)["password"].asString()),
-                user->getValueOfPasswordHash()
+                request_dto.password, user->getValueOfPasswordHash()
             )) {
-            response_json["message"] =
-                "Login error: Invalid handle or password";
-            RETURN_RESPONSE_CODE_401(response_json)
+            throw messenger::exceptions::UnauthorizedException(
+                "Invalid handle or password"
+            );
         }
-        const std::string JWT_KEY = std::getenv("JWT_KEY");
+        const char *env_key = std::getenv("JWT_KEY");
+        if (!env_key) {
+            throw messenger::exceptions::InternalServerErrorException(
+                "JWT_KEY is not set"
+            );
+        }
+        const std::string JWT_KEY = env_key;
+
         std::string token =
             jwt::create()
                 .set_issuer("alesha_messenger")
@@ -72,53 +75,39 @@ Task<HttpResponsePtr> UserService::loginUser(
                     "handle", jwt::claim(user->getValueOfHandle())
                 )
                 .sign(jwt::algorithm::hs256(JWT_KEY));
-        response_json["message"] = "Login successful";
-        response_json["token"] = token;
-        RETURN_RESPONSE_CODE_200(response_json)
+        LoginUserResponseDto response_dto(std::move(token));
+        co_return response_dto;
     }
 }
 
-Task<HttpResponsePtr> UserService::getUserById(int64_t user_id) {
-    Json::Value response_json;
+Task<GetUserResponseDto> UserService::getUserById(int64_t user_id) {
     std::optional<User> user = co_await user_repo->getById(user_id);
     if (!user.has_value()) {
-        response_json["message"] =
-            "User with id " + std::to_string(user_id) + " doesn't exist";
-        RETURN_RESPONSE_CODE_404(response_json)
-    } else {
-        response_json = user->toJson();
-        response_json.removeMember("password_hash");
-        RETURN_RESPONSE_CODE_200(response_json)
+        throw messenger::exceptions::NotFoundException(
+            "User with id " + std::to_string(user_id) + " doesn't exist"
+        );
     }
+    GetUserResponseDto response_dto(std::move(user.value()));
+    co_return response_dto;
 }
 
-Task<HttpResponsePtr> UserService::getUserByHandle(std::string &&user_handle) {
-    Json::Value response_json;
-    std::optional<User> user = co_await user_repo->getByHandle(user_handle);
+Task<GetUserResponseDto> UserService::getUserByHandle(std::string user_handle) {
+    std::optional<User> user =
+        co_await user_repo->getByHandle(std::move(user_handle));
     if (!user.has_value()) {
-        response_json["message"] =
-            "User with handle " + std::string(user_handle) + " doesn't exist";
-        RETURN_RESPONSE_CODE_404(response_json)
-    } else {
-        response_json = user->toJson();
-        response_json.removeMember("password_hash");
-        RETURN_RESPONSE_CODE_200(response_json)
+        throw messenger::exceptions::NotFoundException(
+            "User with handle " + user_handle + " doesn't exist"
+        );
     }
+    GetUserResponseDto response_dto(std::move(user.value()));
+    co_return response_dto;
 }
 
-Task<HttpResponsePtr> UserService::searchUser(
-    const std::shared_ptr<Json::Value> request_json
+Task<SearchUserResponseDto> UserService::searchUser(
+    SearchUserRequestDto request_dto
 ) {
-    Json::Value response_json;
-    std::vector<User> users = co_await user_repo->search(
-        (*request_json)["query"].asString(), (*request_json)["limit"].asInt64()
-    );
-    Json::Value jsonArray(Json::arrayValue);
-    for (const auto &user : users) {
-        Json::Value user_json = user.toJson();
-        user_json.removeMember("password_hash");
-        jsonArray.append(user_json);
-    }
-    response_json["results"] = jsonArray;
-    RETURN_RESPONSE_CODE_200(response_json)
+    std::vector<User> users =
+        co_await user_repo->search(request_dto.query, request_dto.limit);
+    SearchUserResponseDto response_dto(std::move(users));
+    co_return response_dto;
 }

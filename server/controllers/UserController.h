@@ -24,17 +24,16 @@ public:
     ADD_METHOD_TO(
         UserController::searchUser,
         "/v1/users/search",
-        Get,
-        "api::v1::JsonValidatorFilter"
+        Get
     );
     ADD_METHOD_TO(UserController::registerUser, "/v1/auth/register", Post, "api::v1::JsonValidatorFilter");
     ADD_METHOD_TO(UserController::loginUser, "/v1/auth/login", Post, "api::v1::JsonValidatorFilter");
 
     METHOD_LIST_END
     Task<HttpResponsePtr>
-    getUserById(const HttpRequestPtr req, int64_t &&user_id);
+    getUserById(const HttpRequestPtr req, int64_t user_id);
     Task<HttpResponsePtr>
-    getUserByHandle(const HttpRequestPtr req, std::string &&user_handle);
+    getUserByHandle(const HttpRequestPtr req, std::string user_handle);
     Task<HttpResponsePtr> searchUser(const HttpRequestPtr req);
     Task<HttpResponsePtr> registerUser(const HttpRequestPtr req);
     Task<HttpResponsePtr> loginUser(const HttpRequestPtr req);
