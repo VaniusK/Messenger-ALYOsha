@@ -26,6 +26,14 @@ struct GetUserChatsRequestDto : RequestDto {
     int64_t from_request_user_id;
 
     GetUserChatsRequestDto(
+        int64_t from_token_user_id_,
+        int64_t from_request_user_id_
+    )
+        : from_token_user_id(from_token_user_id_),
+          from_request_user_id(from_request_user_id_) {
+    }
+
+    GetUserChatsRequestDto(
         drogon::HttpRequestPtr req,
         int64_t from_request_user_id_
     ) {
@@ -38,6 +46,8 @@ struct GetUserChatsResponseDto : ResponseDto {
     std::vector<ChatPreview> chats_previews;
 
     std::vector<std::vector<Attachment>> last_message_attachments;
+
+    GetUserChatsResponseDto() = default;
 
     GetUserChatsResponseDto(
         std::vector<ChatPreview> chats_previews_,
@@ -84,6 +94,10 @@ struct CreateOrGetDirectRequestDto : RequestDto {
     int64_t user_id;
     int64_t target_user_id;
 
+    CreateOrGetDirectRequestDto(int64_t user_id_, int64_t target_user_id_)
+        : user_id(user_id_), target_user_id(target_user_id_) {
+    }
+
     CreateOrGetDirectRequestDto(
         drogon::HttpRequestPtr req,
         std::shared_ptr<Json::Value> request_json
@@ -96,6 +110,8 @@ struct CreateOrGetDirectRequestDto : RequestDto {
 struct CreateOrGetDirectResponseDto : ResponseDto {
     Chat chat;
     bool was_created;
+
+    CreateOrGetDirectResponseDto() = default;
 
     CreateOrGetDirectResponseDto(Chat chat_, bool was_created_)
         : chat(std::move(chat_)), was_created(was_created_) {
@@ -289,6 +305,10 @@ struct GetMessageByIdRequestDto : RequestDto {
     int64_t message_id;
     int64_t user_id;
 
+    GetMessageByIdRequestDto(int64_t message_id_, int64_t user_id_)
+        : message_id(message_id_), user_id(user_id_) {
+    }
+
     GetMessageByIdRequestDto(drogon::HttpRequestPtr req, int64_t message_id_) {
         user_id = req->getAttributes()->get<int64_t>("user_id");
         message_id = message_id_;
@@ -299,6 +319,8 @@ struct GetMessageByIdResponseDto : ResponseDto {
     Message message;
     std::vector<Attachment> attachments;
     std::vector<std::optional<std::string>> attachments_download_urls;
+
+    GetMessageByIdResponseDto() = default;
 
     GetMessageByIdResponseDto(
         Message message_,

@@ -69,7 +69,7 @@ Task<GetMessageByIdResponseDto> ChatService::getMessageById(
     );
     for (std::size_t i = 0; i < attachments.size(); i++) {
         std::optional<std::string> download_url =
-            s3_service_.generateDownloadUrl(
+            s3_service_->generateDownloadUrl(
                 attachments[i].getValueOfS3ObjectKey(),
                 attachments[i].getValueOfFileName()
             );
@@ -132,13 +132,16 @@ Task<CreateOrGetDirectResponseDto> ChatService::createOrGetDirectChat(
     std::optional<Chat> chat;
     bool was_created = true;
     if (user_id == other_user_id) {
+        was_created = false;
         chat = co_await chat_repo->getSaved(user_id);
     } else {
         chat = co_await chat_repo->getDirect(user_id, other_user_id);
         if (chat.has_value()) {
             was_created = false;
+        } else {
+            chat =
+                co_await chat_repo->getOrCreateDirect(user_id, other_user_id);
         }
-        chat = co_await chat_repo->getOrCreateDirect(user_id, other_user_id);
     }
     CreateOrGetDirectResponseDto response_dto(
         std::move(chat.value()), was_created
@@ -171,7 +174,7 @@ Task<GetChatMessagesResponseDto> ChatService::getChatMessages(
     for (std::size_t i = 0; i < attachments.size(); i++) {
         for (const auto &attachment : attachments[i]) {
             attachments_download_urls[i].push_back(
-                s3_service_.generateDownloadUrl(
+                s3_service_->generateDownloadUrl(
                     attachment.getValueOfS3ObjectKey(),
                     attachment.getValueOfFileName()
                 )
@@ -255,7 +258,7 @@ Task<SendMessageResponseDto> ChatService::sendMessage(
     );
     for (std::size_t i = 0; i < created_attachments.size(); i++) {
         std::optional<std::string> download_url =
-            s3_service_.generateDownloadUrl(
+            s3_service_->generateDownloadUrl(
                 created_attachments[i].getValueOfS3ObjectKey(),
                 created_attachments[i].getValueOfFileName()
             );
@@ -333,8 +336,8 @@ Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLink(
     std::vector<AttachmentFileInfo> files_info;
     for (const auto &file : request_dto.files) {
         std::string file_name = file.original_filename;
-        std::string ext = s3_service_.getExtension(file_name);
-        std::string mime_type = s3_service_.getMimeType(ext);
+        std::string ext = s3_service_->getExtension(file_name);
+        std::string mime_type = s3_service_->getMimeType(ext);
         if (!validateFileType(message_type, mime_type)) {
             throw messenger::exceptions::BadRequestException(
                 "Mismatch message type and file types"
@@ -343,7 +346,7 @@ Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLink(
         files_info.push_back({file_name, ext, mime_type});
     }
     std::optional<std::vector<UploadPresignedResult>> upload_presigned_results =
-        s3_service_.generateUploadUrl(chat_id, message_type, files_info);
+        s3_service_->generateUploadUrl(chat_id, message_type, files_info);
     if (!upload_presigned_results.has_value()) {
         throw messenger::exceptions::InternalServerErrorException(
             "Failed to generate presigned URLs"
