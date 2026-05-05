@@ -55,9 +55,10 @@ Task<GetMessageByIdResponseDto> ChatService::getMessageById(
             " doesn't exist"
         );
     }
-    bool is_member = co_await checkChatAccess(
-        request_dto.user_id, message->getValueOfChatId()
-    );
+    bool is_member =
+        co_await checkChatAccess(  // in future: delegate this to db
+            request_dto.user_id, message->getValueOfChatId()
+        );
     if (!is_member) {
         throw messenger::exceptions::ForbiddenException("Access denied");
     }
@@ -194,7 +195,9 @@ Task<SendMessageResponseDto> ChatService::sendMessage(
     int64_t user_id = request_dto.user_id;
     int64_t chat_id = request_dto.chat_id;
 
-    bool is_member = co_await checkChatAccess(user_id, chat_id);
+    bool is_member = co_await checkChatAccess(
+        user_id, chat_id
+    );  // in future: delegate this to db
     if (!is_member) {
         throw messenger::exceptions::ForbiddenException("Access denied");
     }
@@ -321,7 +324,7 @@ bool ChatService::validateFileType(
     return true;
 }
 
-Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLink(
+Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLinks(
     GetAttachmentLinksRequestDto request_dto
 ) {
     int64_t user_id = request_dto.user_id;
@@ -343,7 +346,7 @@ Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLink(
                 "Mismatch message type and file types"
             );
         }
-        files_info.push_back({file_name, ext, mime_type});
+        files_info.push_back({file_name, ext, mime_type, file.file_size_bytes});
     }
     std::optional<std::vector<UploadPresignedResult>> upload_presigned_results =
         s3_service_->generateUploadUrl(chat_id, message_type, files_info);

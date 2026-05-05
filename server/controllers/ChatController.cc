@@ -244,7 +244,7 @@ Task<HttpResponsePtr> ChatController::getAttachmentLinks(
 
     try {
         auto response_dto =
-            co_await chat_service.getAttachmentLink(request_dto);
+            co_await chat_service.getAttachmentLinks(request_dto);
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     } catch (const messenger::exceptions::BadRequestException &e) {

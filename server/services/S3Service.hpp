@@ -13,14 +13,14 @@ struct UploadPresignedResult {
     std::string upload_url;
     std::string content_type;
     std::string file_name;
-    int64_t file_size_bytes;
+    int64_t file_size_bytes = 0;
 };
 
 struct AttachmentFileInfo {
     std::string file_name;
     std::string ext;
     std::string mime_type;
-    int64_t file_size_bytes;
+    int64_t file_size_bytes = 0;
 };
 
 class S3ServiceInterface {

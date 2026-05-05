@@ -31,7 +31,7 @@ public:
     Task<ReadMessagesResponseDto> readMessages(
         ReadMessagesRequestDto request_dto
     );
-    Task<GetAttachmentLinksResponseDto> getAttachmentLink(
+    Task<GetAttachmentLinksResponseDto> getAttachmentLinks(
         GetAttachmentLinksRequestDto request_dto
     );
 

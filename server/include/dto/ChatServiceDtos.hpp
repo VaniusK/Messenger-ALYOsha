@@ -130,6 +130,18 @@ struct GetChatMessagesRequestDto : RequestDto {
     std::optional<int64_t> before_message_id;
     int64_t limit;
 
+    GetChatMessagesRequestDto(
+        int64_t chat_id_,
+        int64_t user_id_,
+        std::optional<int64_t> before_message_id_,
+        int64_t limit_
+    )
+        : chat_id(chat_id_),
+          user_id(user_id_),
+          before_message_id(before_message_id_),
+          limit(limit_) {
+    }
+
     GetChatMessagesRequestDto(drogon::HttpRequestPtr req, int64_t chat_id_) {
         user_id = req->getAttributes()->get<int64_t>("user_id");
         chat_id = chat_id_;
@@ -163,6 +175,8 @@ struct GetChatMessagesResponseDto : ResponseDto {
     std::vector<std::vector<Attachment>> attachments;
     std::vector<std::vector<std::optional<std::string>>>
         attachments_download_urls;
+
+    GetChatMessagesResponseDto() = default;
 
     GetChatMessagesResponseDto(
         std::vector<Message> messages_,
@@ -207,6 +221,24 @@ struct SendMessageRequestDto : RequestDto {
     std::vector<std::string> attachment_tokens;
 
     SendMessageRequestDto(
+        int64_t user_id_,
+        int64_t chat_id_,
+        std::string text_,
+        std::string message_type_,
+        std::optional<int64_t> reply_to_id_,
+        std::optional<int64_t> forward_from_id_,
+        std::vector<std::string> attachment_tokens_
+    )
+        : user_id(user_id_),
+          chat_id(chat_id_),
+          text(std::move(text_)),
+          message_type(std::move(message_type_)),
+          reply_to_id(reply_to_id_),
+          forward_from_id(forward_from_id_),
+          attachment_tokens(std::move(attachment_tokens_)) {
+    }
+
+    SendMessageRequestDto(
         drogon::HttpRequestPtr req,
         std::shared_ptr<Json::Value> request_json,
         int64_t chat_id_
@@ -238,6 +270,8 @@ struct SendMessageResponseDto : ResponseDto {
     Message message;
     std::vector<Attachment> attachments;
     std::vector<std::optional<std::string>> attachments_download_urls;
+
+    SendMessageResponseDto() = default;
 
     SendMessageResponseDto(
         Message message_,
@@ -273,6 +307,16 @@ struct ReadMessagesRequestDto : RequestDto {
     int64_t last_read_message_id;
 
     ReadMessagesRequestDto(
+        int64_t user_id_,
+        int64_t chat_id_,
+        int64_t last_read_message_id_
+    )
+        : user_id(user_id_),
+          chat_id(chat_id_),
+          last_read_message_id(last_read_message_id_) {
+    }
+
+    ReadMessagesRequestDto(
         drogon::HttpRequestPtr req,
         std::shared_ptr<Json::Value> request_json,
         int64_t chat_id_
@@ -286,6 +330,8 @@ struct ReadMessagesRequestDto : RequestDto {
 
 struct ReadMessagesResponseDto : ResponseDto {
     bool success;
+
+    ReadMessagesResponseDto() = default;
 
     ReadMessagesResponseDto(bool success_) : success(success_) {
     }
@@ -370,6 +416,18 @@ struct GetAttachmentLinksRequestDto : RequestDto {
     std::vector<AttachmentRequestDto> files;
 
     GetAttachmentLinksRequestDto(
+        int64_t user_id_,
+        int64_t chat_id_,
+        std::string message_type_,
+        std::vector<AttachmentRequestDto> files_
+    )
+        : user_id(user_id_),
+          chat_id(chat_id_),
+          message_type(std::move(message_type_)),
+          files(std::move(files_)) {
+    }
+
+    GetAttachmentLinksRequestDto(
         drogon::HttpRequestPtr req,
         std::shared_ptr<Json::Value> request_json
     ) {
@@ -388,6 +446,8 @@ struct GetAttachmentLinksRequestDto : RequestDto {
 struct GetAttachmentLinksResponseDto : ResponseDto {
     std::vector<api::v1::UploadPresignedResult> attachments;
     std::vector<std::string> tokens;
+
+    GetAttachmentLinksResponseDto() = default;
 
     GetAttachmentLinksResponseDto(
         std::vector<api::v1::UploadPresignedResult> attachments_,
