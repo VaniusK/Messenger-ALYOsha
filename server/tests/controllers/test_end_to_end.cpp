@@ -334,7 +334,7 @@ TEST_F(ControllerTestFixture, E2ETest) {
     Json::Value files_arr(Json::arrayValue);
     files_arr.append(file_obj);
     auto result22 = sync_wait(sendReqTask(form_request(
-        Get, "/v1/chats/attachments/presigned-links",
+        Post, "/v1/chats/attachments/presigned-links",
         makeJson(
             {{"message_type", "text"},
              {"chat_id", direct_chat_dima_petr_id},
