@@ -110,7 +110,7 @@ Rectangle {
                     messageList.positionViewAtIndex(0, ListView.Beginning)
 
                     if (messageList.contentHeight < messageList.height && chatModel.count > 0) {
-                        var topmostMsgId = chatModel.get(0)._id || chatModel.get(0).id;
+                        var topmostMsgId = chatModel.get(chatModel.count - 1)._id || chatModel.get(chatModel.count - 1).id;
                         topmostMsgId = parseInt(topmostMsgId);
 
                         if (!isNaN(topmostMsgId) && topmostMsgId > 0 && hasMoreHistory) {
