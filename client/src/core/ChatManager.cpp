@@ -334,7 +334,8 @@ void ChatManager::sendMessageWithAttachment(
                 QJsonDocument::fromJson(reply->readAll()).object();
             QJsonObject msg = obj["message"].toObject();
             msg["is_me"] = true;
-            m_chats[chat_id].push_back(msg) emit clearMessageInput();
+            m_chats[chat_id].push_back(msg);
+            emit clearMessageInput();
 
             QJsonValue idVal = msg["id"];
             qint64 messageId = idVal.isString()
