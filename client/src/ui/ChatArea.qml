@@ -134,7 +134,7 @@ Rectangle {
                 return
             }
 
-            for (var i = messages.length - 1; i >= 0; i--) {
+            for (var i = 0; i < messages.length; i++) {
                 chatModel.append(messages[i])
             }
 
