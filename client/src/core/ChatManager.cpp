@@ -173,7 +173,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                     m_chats[chat_id].insert(0, msg);
                 }
 
-                if (false) {
+                if (beforeId > 0) {
                     emit chatsHistoryPrepended(messages);
                 } else {
                     emit chatsHistoryLoaded(m_chats[chat_id]);
