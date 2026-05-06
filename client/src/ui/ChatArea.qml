@@ -150,9 +150,6 @@ Rectangle {
 
             chatModel.append(msg)
             
-            Qt.callLater(function() {
-                messageList.positionViewAtEnd()
-            })
         }
 
         function onIncomingWebSocketMessage(data) {
@@ -163,9 +160,6 @@ Rectangle {
                     
                     chatModel.append(msg)
                     
-                    Qt.callLater(function() {
-                        messageList.positionViewAtEnd()
-                    })
                 }
             }
         }
