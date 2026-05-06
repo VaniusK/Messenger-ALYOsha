@@ -387,7 +387,7 @@ Rectangle {
                 if (contentY <= 0 && chatModel.count > 0) {
                     if (isLoadingHistory || !hasMoreHistory || activeChatId === "") return;
                     
-                    var topmostMsgId = chatModel.get(0)._id || chatModel.get(0).id;
+                    var topmostMsgId = chatModel.get(chatModel.count - 1)._id || chatModel.get(chatModel.count - 1).id;
                     var parsedId = parseInt(topmostMsgId);
 
                     if (!isNaN(parsedId) && parsedId > 0) {
