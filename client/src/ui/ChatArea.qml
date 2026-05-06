@@ -135,7 +135,7 @@ Rectangle {
             }
 
             for (var i = messages.length - 1; i >= 0; i--) {
-                chatModel.insert(0, messages[i])
+                chatModel.append(messages[i])
             }
 
             Qt.callLater(function() {
@@ -147,7 +147,7 @@ Rectangle {
             messageInput.text = ""
             if (!msg) return
 
-            chatModel.append(msg)
+            chatModel.insert(0, msg)
             
             Qt.callLater(function() {
                 messageList.positionViewAtIndex(messages.length, ListView.Beginning)
@@ -161,7 +161,7 @@ Rectangle {
                     msg.is_me = (msg.sender_id === AppState.userId)
 
                     Qt.callLater(function() {
-                        messageList.positionViewAtEnd()
+                        messageList.positionViewAtIndex(messages.length, ListView.Beginning)
                     })
                     
                 }
