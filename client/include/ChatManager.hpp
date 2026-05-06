@@ -43,7 +43,7 @@ signals:
     void chatsUpdated(const QJsonArray &chats);
     void chatsHistoryLoaded(const QJsonArray &messages);
     void chatsHistoryPrepended(const QJsonArray &messages);
-    void messageSentSuccess(const QJsonObject &message);
+    void messageSentSuccess(const QJsonObject &msg);
     void directChatOpened(const QString &chatId, const QString &chatTitle);
     void chatError(const QString &errorMsg);
     void webSocketConnected();
@@ -61,4 +61,5 @@ private:
     StateManager *m_stateManager;
     MediaCacheManager *m_media_cache;
     QWebSocket *m_webSocket;
+    std::map<int, QJsonArray> m_chats;
 };
