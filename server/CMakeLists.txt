@@ -54,6 +54,7 @@ endif()
 aux_source_directory(src SRC_SRC) # get all files from src
 aux_source_directory(src/repositories REPO_SRC) # get all files from src/repositories
 aux_source_directory(src/utils UTILS_SRC) # get all files from src/utils
+aux_source_directory(src/dto DTO_SRC)
 aux_source_directory(services SERVICES_SRC) # get all files from services
 
 aux_source_directory(controllers CTL_SRC) # get all files from controllers
