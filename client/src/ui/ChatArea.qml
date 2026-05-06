@@ -139,7 +139,7 @@ Rectangle {
             }
 
             Qt.callLater(function() {
-                messageList.positionViewAtIndex(messages.length, ListView.Beginning)
+                messageList.positionViewAtIndex(messageList.count - messages.length - 1, ListView.Beginning)
                 isLoadingHistory = false
             })
         }
@@ -150,7 +150,7 @@ Rectangle {
             chatModel.insert(0, msg)
             
             Qt.callLater(function() {
-                messageList.positionViewAtIndex(messages.length, ListView.Beginning)
+                messageList.positionViewAtIndex(0, ListView.Beginning)
             })
         }
 
