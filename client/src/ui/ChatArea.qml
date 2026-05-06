@@ -143,9 +143,15 @@ Rectangle {
                 isLoadingHistory = false
             })
         }
-        function onClearMessageInput(msg) {
+        function onMessageSentSuccess(msg) {
             messageInput.text = ""
+            if (!msg) return
 
+            chatModel.append(msg)
+            
+            Qt.callLater(function() {
+                messageList.positionViewAtIndex(messages.length, ListView.Beginning)
+            })
         }
 
         function onIncomingWebSocketMessage(data) {
