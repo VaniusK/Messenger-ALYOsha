@@ -141,7 +141,7 @@ Rectangle {
             }
 
             Qt.callLater(function() {
-                messageList.contentY = oldContentY - (messageList.contentHeight - oldContentHeight)
+                messageList.contentY = oldContentY + (messageList.contentHeight - oldContentHeight)
                 isLoadingHistory = false
             })
         }
