@@ -160,12 +160,6 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                 QJsonArray messages;
                 for (int i = raw.size() - 1; i >= 0; i--) {
                     QJsonObject msg = raw[i].toObject();
-                    if (m_chats[chat_id].size() > 0 and
-                        m_chats[chat_id].at(0)["id"].toInt() <=
-                            msg["id"].toInt()) {
-                        break;
-                    }
-
                     cacheMessageMedia(msg);
 
                     QJsonValue senderValue = msg["sender_id"];
