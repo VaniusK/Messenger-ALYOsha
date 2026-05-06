@@ -7,6 +7,7 @@
 #include "repositories/MessageRepository.hpp"
 #include "repositories/UserRepository.hpp"
 #include "services/ChatService.hpp"
+#include "services/S3Service.hpp"
 
 using namespace drogon;
 
@@ -87,6 +88,14 @@ public:
         );
         chat_service.setAttachmentRepo(
             std::make_shared<messenger::repositories::AttachmentRepository>()
+        );
+        chat_service.setS3Service(
+            std::make_shared<S3Service>(
+                std::getenv("S3_ACCESS_KEY"), std::getenv("S3_SECRET_KEY"),
+                std::getenv("S3_BASE_URL"),
+                std::getenv("S3_PRIVATE_BUCKETNAME"),
+                std::getenv("S3_SHOULD_USE_HTTPS") == std::string("true")
+            )
         );
     }
 

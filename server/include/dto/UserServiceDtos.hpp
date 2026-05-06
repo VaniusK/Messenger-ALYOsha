@@ -1,7 +1,6 @@
 #pragma once
 #include <drogon/HttpRequest.h>
 #include <json/value.h>
-#include <memory>
 #include <string>
 #include <vector>
 #include "dto/ServicesDtoBase.hpp"
