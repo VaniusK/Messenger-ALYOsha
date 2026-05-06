@@ -129,6 +129,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
         reqJson["before_id"] = beforeId;
     }
     int64_t chat_id = chatId.toLongLong();
+    qDebug() << "[ChatManager] fetchChatHistory() called \n";
 
     // Если не подгружаем новые сообщения и уже считали чат, просто выводит уже
     // имеющиеся
@@ -174,8 +175,10 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                 }
 
                 if (beforeId > 0) {
+                    qDebug() << "[ChatManager] prepended history called \n";
                     emit chatsHistoryPrepended(messages);
                 } else {
+                    qDebug() << "[ChatManager] loaded history called \n";
                     emit chatsHistoryLoaded(m_chats[chat_id]);
                 }
             } else {
@@ -260,8 +263,6 @@ void ChatManager::cacheMessageMedia(QJsonObject &message) {
         attachment.insert("img_width", reader.size().width());
         attachment.insert("img_height", reader.size().height());
         attachments.replace(i, attachment);
-        qDebug() << "[ChatManager] saved file " << cachedFileLocation
-                 << "to cache";
     }
     message["attachments"] = attachments;
 }
