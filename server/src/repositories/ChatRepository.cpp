@@ -373,6 +373,17 @@ Task<std::vector<ChatMember>> ChatRepository::getMembers(int64_t chat_id) {
     }
 }
 
+Task<ChatMember> ChatRepository::getMember(int64_t chat_id, int64_t user_id) {
+    auto chat_member_mapper = getChatMemberMapper();
+    try {
+        ChatMember chat_member =
+            co_await chat_member_mapper.findByPrimaryKey({chat_id, user_id});
+        co_return chat_member;
+    } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
 Task<ChatMember> ChatRepository::addMember(
     int64_t chat_id,
     int64_t user_id,

@@ -109,6 +109,12 @@ public:
     );
     MOCK_METHOD(
         drogon::Task<ChatMember>,
+        getMember,
+        (int64_t, int64_t),
+        (override)
+    );
+    MOCK_METHOD(
+        drogon::Task<ChatMember>,
         addMember,
         (int64_t,
          int64_t,
