@@ -1,6 +1,8 @@
 #pragma once
 #include <drogon/HttpRequest.h>
 #include <json/value.h>
+#include <jsoncpp/json/value.h>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -18,6 +20,7 @@ using User = drogon_model::messenger_db::Users;
 using Chat = drogon_model::messenger_db::Chats;
 using ChatPreview = messenger::dto::ChatPreview;
 using Attachment = drogon_model::messenger_db::Attachments;
+using ChatMember = drogon_model::messenger_db::ChatMembers;
 
 namespace messenger::dto {
 
@@ -472,5 +475,82 @@ struct GetAttachmentLinksResponseDto : ResponseDto {
         return response_json;
     }
 };
+
+struct CreateGroupRequestDto : RequestDto {
+    int64_t creator_id;
+    std::string name;
+    std::vector<int64_t> members_ids;
+
+    CreateGroupRequestDto(std::string name_, std::vector<int64_t> members_ids_)
+        : name(std::move(name_)), members_ids(std::move(members_ids_)) {
+    }
+
+    CreateGroupRequestDto(drogon::HttpRequestPtr req) {
+        auto request_json = req->getJsonObject();
+        creator_id = req->getAttributes()->get<int64_t>("user_id");
+        name = (*request_json)["chat_name"].asString();
+        for (const auto &id : (*request_json)["members"]) {
+            members_ids.push_back(id.asInt64());
+        }
+    }
+};
+
+struct CreateGroupResponseDto : ResponseDto {
+    Chat chat;
+
+    CreateGroupResponseDto() = default;
+
+    CreateGroupResponseDto(Chat chat_) : chat(std::move(chat_)) {
+    }
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["chat"] = chat.toJson();
+        return response_json;
+    }
+};
+
+struct AddGroupChatMemberRequestDto : RequestDto {
+    int64_t user_id;
+    int64_t chat_id;
+    int64_t new_member_id;
+    std::string role;
+
+    AddGroupChatMemberRequestDto(
+        int64_t user_id_,
+        int64_t chat_id_,
+        int64_t new_member_id_,
+        std::string role_
+    )
+        : user_id(user_id_),
+          chat_id(chat_id_),
+          new_member_id(new_member_id_),
+          role(std::move(role_)) {
+    }
+
+    AddGroupChatMemberRequestDto(drogon::HttpRequestPtr req, int64_t chat_id_) {
+        user_id = req->getAttributes()->get<int64_t>("user_id");
+        auto response_json = req->getJsonObject();
+        chat_id = chat_id_;
+        new_member_id = (*response_json)["user_id"].asInt64();
+        role = (*response_json)["role"].asString();
+    }
+};
+
+struct AddGroupChatMemberResponseDto : ResponseDto {
+    ChatMember chat_member;
+
+    AddGroupChatMemberResponseDto() = default;
+
+    AddGroupChatMemberResponseDto(ChatMember chat_member_)
+        : chat_member(std::move(chat_member_)) {
+    }
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["chat_member"] = chat_member.toJson();
+        return response_json;
+    }
+}
 
 }  // namespace messenger::dto
