@@ -426,3 +426,35 @@ TEST_F(ChatTestFixture, TestCreateSaved) {
     auto member = members[0];
     EXPECT_EQ(member.getValueOfChatType(), messenger::models::ChatType::Saved);
 }
+
+TEST_F(ChatTestFixture, TestGetMember) {
+    /* When valid data is provided,
+    getMember should return member of the chat*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId(),
+         dummy_user3_.getValueOfId()}
+    ));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Group);
+    auto chat_member = sync_wait(
+        repo_.getMember(chat.getValueOfId(), dummy_user1_.getValueOfId())
+    );
+    EXPECT_EQ(chat_member.getValueOfChatId(), chat.getValueOfId());
+    EXPECT_EQ(chat_member.getValueOfUserId(), dummy_user1_.getValueOfId());
+}
+
+TEST_F(ChatTestFixture, TestGetMemberFail) {
+    /* When user isn't a member of a chat,
+    getMember should throw*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Group);
+    EXPECT_THROW(
+        sync_wait(
+            repo_.getMember(chat.getValueOfId(), dummy_user3_.getValueOfId())
+        ),
+        std::runtime_error
+    );
+}
