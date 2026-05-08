@@ -2,6 +2,7 @@
 #include "../fixtures/ChatTestFixture.hpp"
 #include "dto/ChatPreview.hpp"
 #include "utils/Enum.hpp"
+#include "utils/server_exceptions.hpp"
 
 using ChatRepository = messenger::repositories::ChatRepository;
 using Chat = drogon_model::messenger_db::Chats;
@@ -330,7 +331,7 @@ TEST_F(ChatTestFixture, TestAddMemberFail) {
             chat.getValueOfId(), dummy_user3_.getValueOfId(),
             messenger::models::ChatRole::Moderator
         )),
-        std::logic_error
+        messenger::exceptions::ForbiddenException
     );
 }
 
