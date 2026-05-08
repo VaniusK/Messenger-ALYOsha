@@ -343,9 +343,6 @@ Task<Chat> ChatRepository::createGroup(
             chat_member.setUserId(id);
             chat_member.setRole(messenger::models::ChatRole::Member);
             chat_member.setChatType(messenger::models::ChatType::Group);
-            if (own_transaction) {
-                co_await transaction_ptr->execSqlCoro("COMMIT;");
-            }
             co_await chat_member_mapper.insert(chat_member);
         }
         ChatMember creator = co_await chat_member_mapper.findOne(Criteria(
@@ -353,6 +350,9 @@ Task<Chat> ChatRepository::createGroup(
         ));
         creator.setRole(messenger::models::ChatRole::Owner);
         co_await chat_member_mapper.update(creator);
+        if (own_transaction) {
+            co_await transaction_ptr->execSqlCoro("COMMIT;");
+        }
         co_return chat;
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
