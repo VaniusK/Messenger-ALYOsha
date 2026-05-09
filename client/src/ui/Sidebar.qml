@@ -320,7 +320,7 @@ Rectangle {
                         
                         Image {
                             property bool isMyLastMsg: itemData.last_message && String(itemData.last_message.sender_id) === String(AppState.userId)
-                            visible: isMyLastMsg && !isSearching
+                            visible: isMyLastMsg && !isSearching && itemData.type !== "saved"
                             width: 14; height: 14
                             sourceSize: Qt.size(14, 14)
                             anchors.right: timeText.left

@@ -4,6 +4,7 @@
 #include <QJsonDocument>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QUrlQuery>
 
 ChatManager::ChatManager(
     ConnectionManager *connection,
@@ -67,13 +68,12 @@ void ChatManager::connectWebSocket() {
 }
 
 void ChatManager::searchUsers(const QString &query) {
-    QJsonObject json;
-    json["query"] = query;
-    json["limit"] = 50;
+    QUrlQuery urlQuery;
+    urlQuery.addQueryItem("query", query);
+    urlQuery.addQueryItem("limit", "50");
 
-    QNetworkReply *reply = m_connection->getWithBody(
-        "/users/search", QJsonDocument(json).toJson()
-    );
+    QNetworkReply *reply =
+        m_connection->get("/users/search?" + urlQuery.toString());
 
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         reply->deleteLater();
@@ -131,10 +131,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
     int64_t chat_id = chatId.toLongLong();
     qDebug() << "[ChatManager] fetchChatHistory() called \n";
 
-    // Если не подгружаем новые сообщения и уже считали чат, просто выводит уже
-    // имеющиеся
-    // Инвариант: beforeId либо ноль, либо айди самого раннего загруженного
-    if (m_chats[chat_id].size() > 0 and
+    if (beforeId > 0 && m_chats[chat_id].size() > 0 &&
         beforeId != m_chats[chat_id].at(0)["id"].toInt()) {
         emit chatsHistoryLoaded(m_chats[chat_id]);
         return;
@@ -158,6 +155,11 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
 
                 int currentUserId = m_stateManager->getUserId();
                 QJsonArray messages;
+
+                if (beforeId == 0) {
+                    m_chats[chat_id] = QJsonArray();
+                }
+
                 for (int i = 0; i < raw.size(); i++) {
                     QJsonObject msg = raw[i].toObject();
                     cacheMessageMedia(msg);
@@ -282,13 +284,37 @@ void ChatManager::onWebSocketTextMessageReceived(const QString &message) {
     qDebug() << "[ChatManager] WS message:" << message;
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
     if (doc["event_type"] == "NEW_MESSAGE") {
-        QJsonObject message = doc["data"]["message"].toObject();
-        message.insert(
-            "is_me", (message["sender_id"] == m_stateManager->getUserId())
-        );
-        m_chats[message["chat_id"].toInt()].push_back(message);
+        QJsonObject msg = doc["data"]["message"].toObject();
+
+        QJsonValue senderValue = msg["sender_id"];
+        QString senderIdStr =
+            senderValue.isString()
+                ? senderValue.toString()
+                : QString::number(senderValue.toVariant().toLongLong());
+        QString currentUserIdStr = QString::number(m_stateManager->getUserId());
+
+        msg.insert("is_me", (senderIdStr == currentUserIdStr));
+        m_chats[msg["chat_id"].toVariant().toLongLong()].push_back(msg);
     }
     emit incomingWebSocketMessage(doc.object());
+}
+
+void ChatManager::clearCache() {
+    qDebug() << "[ChatManager] Clearing chat cache (logout)";
+    m_chats.clear();
+    if (m_webSocket->state() != QAbstractSocket::UnconnectedState) {
+        m_webSocket->close();
+    }
+}
+
+void ChatManager::addMessageToCache(const QJsonObject &msg) {
+    int64_t chatId = msg["chat_id"].toVariant().toLongLong();
+    for (const auto &m : m_chats[chatId]) {
+        if (m.toObject()["id"] == msg["id"]) {
+            return;
+        }
+    }
+    m_chats[chatId].push_back(msg);
 }
 
 void ChatManager::onWebSocketError(QAbstractSocket::SocketError error) {
@@ -330,7 +356,6 @@ void ChatManager::sendMessageWithAttachment(
             QJsonObject msg = obj["message"].toObject();
             msg["is_me"] = true;
             m_chats[chat_id].push_back(msg);
-            emit chatsHistoryPrepended({msg});
             emit messageSentSuccess(msg);
 
             QJsonValue idVal = msg["id"];

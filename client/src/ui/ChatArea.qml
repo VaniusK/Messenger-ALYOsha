@@ -158,12 +158,13 @@ Rectangle {
             if (data.event_type === "NEW_MESSAGE" && data.data && data.data.message) {
                 var msg = data.data.message
                 if (String(msg.chat_id) === String(activeChatId)) {
-                    msg.is_me = (msg.sender_id === AppState.userId)
+                    msg.is_me = (String(msg.sender_id) === String(AppState.userId))
+                    
+                    chatModel.insert(0, msg)
 
                     Qt.callLater(function() {
                         messageList.positionViewAtIndex(0, ListView.Beginning)
                     })
-                    
                 }
             }
         }
@@ -811,7 +812,7 @@ Rectangle {
                         }
 
                         Image {
-                            visible: isMe
+                            visible: isMe && chatAreaRoot.activeChatName !== "Избранное"
                             Layout.alignment: Qt.AlignVCenter
                             width: 14; height: 14
                             sourceSize: Qt.size(14, 14)
