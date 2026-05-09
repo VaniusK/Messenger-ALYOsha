@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaObject>
@@ -43,141 +44,117 @@ void MediaManager::uploadFile(
 
     emit uploadProgress(5);
 
-    QJsonObject msgJson;
-    msgJson["text"] = caption.trimmed();
-    msgJson["type"] = messageType;
+    QJsonObject fileJson;
+    fileJson["original_filename"] = fileName;
+    fileJson["file_size_bytes"] = fileSize;
 
-    QNetworkReply *msgReply = m_connection->post(
-        "/chats/" + chatId + "/messages", QJsonDocument(msgJson).toJson()
+    QJsonArray filesArray;
+    filesArray.append(fileJson);
+
+    QJsonObject preReqJson;
+    preReqJson["chat_id"] = chatId.toLongLong();
+    preReqJson["message_type"] = messageType;
+    preReqJson["files"] = filesArray;
+
+    // POST
+    QNetworkReply *preReply = m_connection->post(
+        "/chats/attachments/presigned-links", QJsonDocument(preReqJson).toJson()
     );
 
     connect(
-        msgReply, &QNetworkReply::finished, this,
-        [this, msgReply, chatId, fileName, fileSize, fileData, uploadAsFile]() {
-            msgReply->deleteLater();
-            if (msgReply->error() != QNetworkReply::NoError) {
+        preReply, &QNetworkReply::finished, this,
+        [this, preReply, chatId, caption, messageType, fileData]() {
+            preReply->deleteLater();
+            if (preReply->error() != QNetworkReply::NoError) {
                 emit uploadFailed(
-                    "Ошибка создания сообщения: " +
-                    QString::fromUtf8(msgReply->readAll())
+                    "Ошибка получения presigned-link: " +
+                    QString::fromUtf8(preReply->readAll())
                 );
                 return;
             }
 
-            QJsonObject respObj =
-                QJsonDocument::fromJson(msgReply->readAll()).object();
-            QJsonObject msg = respObj["message"].toObject();
+            QJsonObject preResp =
+                QJsonDocument::fromJson(preReply->readAll()).object();
+            QJsonArray attachmentsArray = preResp["attachments"].toArray();
+            if (attachmentsArray.isEmpty()) {
+                emit uploadFailed(
+                    "Сервер не вернул данные для загрузки вложения"
+                );
+                return;
+            }
 
-            QJsonValue idVal = msg["id"];
-            qint64 messageId = idVal.isString()
-                                   ? idVal.toString().toLongLong()
-                                   : static_cast<qint64>(idVal.toDouble());
+            QJsonObject attachInfo = attachmentsArray[0].toObject();
+            QString uploadUrl = attachInfo["upload_url"].toString();
+            QString contentType = attachInfo["content_type"].toString();
+            QString token = attachInfo["token"].toString();
 
-            QJsonObject preJson;
-            preJson["chat_id"] = chatId.toLongLong();
-            preJson["message_id"] = messageId;
-            preJson["original_filename"] = fileName;
-            preJson["upload_as_file"] = uploadAsFile ? "true" : "false";
+            emit uploadProgress(15);
 
-            QNetworkReply *preReply = m_connection->getWithBody(
-                "/chats/attachments/presigned-link",
-                QJsonDocument(preJson).toJson()
+            QNetworkRequest s3Request((QUrl(uploadUrl)));
+            s3Request.setHeader(
+                QNetworkRequest::ContentTypeHeader, contentType
+            );
+
+            QNetworkReply *putReply =
+                m_connection->networkManager()->put(s3Request, fileData);
+            connect(
+                putReply, &QNetworkReply::uploadProgress, this,
+                [this](qint64 sent, qint64 total) {
+                    if (total > 0) {
+                        emit uploadProgress(
+                            15 + static_cast<int>(70.0 * sent / total)
+                        );
+                    }
+                }
             );
 
             connect(
-                preReply, &QNetworkReply::finished, this,
-                [this, preReply, chatId, messageId, fileName, fileSize,
-                 fileData, uploadAsFile]() {
-                    preReply->deleteLater();
-                    if (preReply->error() != QNetworkReply::NoError) {
+                putReply, &QNetworkReply::finished, this,
+                [this, putReply, chatId, caption, messageType, token]() {
+                    putReply->deleteLater();
+                    if (putReply->error() != QNetworkReply::NoError) {
                         emit uploadFailed(
-                            "Ошибка presigned-link: " +
-                            QString::fromUtf8(preReply->readAll())
+                            "Ошибка загрузки файла в s3: " +
+                            putReply->errorString()
                         );
                         return;
                     }
 
-                    QJsonObject preResp =
-                        QJsonDocument::fromJson(preReply->readAll()).object();
-                    QString contentType = preResp["content_type"].toString();
-                    QString uploadUrl = preResp["upload_url"].toString();
-                    QString attachmentKey =
-                        preResp["attachment_key"].toString();
+                    emit uploadProgress(90);
 
-                    emit uploadProgress(15);
+                    QJsonObject msgJson;
+                    msgJson["text"] = caption.trimmed();
+                    msgJson["type"] = messageType;
 
-                    QNetworkRequest s3Request((QUrl(uploadUrl)));
-                    s3Request.setHeader(
-                        QNetworkRequest::ContentTypeHeader, contentType
-                    );
-                    QNetworkReply *putReply =
-                        m_connection->networkManager()->put(
-                            s3Request, fileData
-                        );
+                    QJsonArray attachmentTokens;
+                    attachmentTokens.append(token);
+                    msgJson["attachment_tokens"] = attachmentTokens;
 
-                    connect(
-                        putReply, &QNetworkReply::uploadProgress, this,
-                        [this](qint64 sent, qint64 total) {
-                            if (total > 0) {
-                                emit uploadProgress(
-                                    15 + static_cast<int>(70.0 * sent / total)
-                                );
-                            }
-                        }
+                    QNetworkReply *msgReply = m_connection->post(
+                        "/chats/" + chatId + "/messages",
+                        QJsonDocument(msgJson).toJson()
                     );
 
                     connect(
-                        putReply, &QNetworkReply::finished, this,
-                        [this, putReply, chatId, messageId, fileName,
-                         contentType, fileSize, attachmentKey, uploadAsFile]() {
-                            putReply->deleteLater();
-                            if (putReply->error() != QNetworkReply::NoError) {
+                        msgReply, &QNetworkReply::finished, this,
+                        [this, msgReply]() {
+                            msgReply->deleteLater();
+                            if (msgReply->error() != QNetworkReply::NoError) {
                                 emit uploadFailed(
-                                    "Ошибка S3: " + putReply->errorString()
+                                    "Ошибка отправки сообщения: " +
+                                    QString::fromUtf8(msgReply->readAll())
                                 );
-                                return;
+                            } else {
+                                emit uploadProgress(100);
+                                emit uploadFinished();
                             }
-
-                            emit uploadProgress(90);
-
-                            QJsonObject attachJson;
-                            attachJson["chat_id"] = chatId.toLongLong();
-                            attachJson["message_id"] = messageId;
-                            attachJson["file_name"] = fileName;
-                            attachJson["file_type"] =
-                                uploadAsFile ? "application/octet-stream"
-                                             : contentType;
-                            attachJson["file_size_bytes"] = fileSize;
-                            attachJson["s3_object_key"] = attachmentKey;
-
-                            QNetworkReply *finReply = m_connection->post(
-                                "/chats/attachments",
-                                QJsonDocument(attachJson).toJson()
-                            );
-
-                            connect(
-                                finReply, &QNetworkReply::finished, this,
-                                [this, finReply]() {
-                                    finReply->deleteLater();
-                                    if (finReply->error() !=
-                                        QNetworkReply::NoError) {
-                                        emit uploadFailed(
-                                            "Ошибка привязки (attachments): " +
-                                            QString::fromUtf8(finReply->readAll(
-                                            ))
-                                        );
-                                    } else {
-                                        emit uploadProgress(100);
-                                        emit uploadFinished();
-                                    }
-                                }
-                            );
                         }
                     );
                 }
             );
         }
     );
-}
+};
 
 void MediaManager::openFileDialog(const QString &type) {
     QMetaObject::invokeMethod(

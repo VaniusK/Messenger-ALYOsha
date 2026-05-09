@@ -417,8 +417,8 @@ Rectangle {
                                        (fileTypeStr.indexOf("audio/") === 0) ||
                                        (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0)
 
-                property bool isImage: !isVoice && fileTypeStr.indexOf("image/") === 0
-                property bool isVideo: !isVoice && fileTypeStr.indexOf("video/") === 0
+                property bool isImage: !isVoice && fileTypeStr.indexOf("image/") === 0 && model.type !== "text"
+                property bool isVideo: !isVoice && fileTypeStr.indexOf("video/") === 0 && model.type !== "text"
 
                 property bool hasFileAttachment: firstAttachment !== null && !isVoice && !isImage && !isVideo
 
@@ -604,38 +604,42 @@ Rectangle {
                         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
                         anchors.margins: 12; spacing: 6
 
-                        RowLayout {
-                            width: parent.width; height: 48; spacing: 12
+                        Item {
+                            width: parent.width; height: 48
 
-                            Rectangle {
-                                width: 44; height: 44; radius: 22
-                                color: isMe ? "#1e3d5e" : "#0d1825"
-                                Layout.alignment: Qt.AlignVCenter
-                                Image {
-                                    anchors.centerIn: parent; width: 22; height: 22
-                                    source: "qrc:/messenger_client_uri/assets/icons/document.svg"
-                                    sourceSize: Qt.size(22, 22)
-                                }
-                            }
+                            RowLayout {
+                                anchors.fill: parent; spacing: 12
 
-                            Column {
-                                Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; spacing: 2
-                                Text {
-                                    text: firstAttachment ? (firstAttachment.original_filename || firstAttachment.file_name || "Файл") : "Файл"
-                                    color: "white"; font.pixelSize: 14; font.family: "Segoe UI"
-                                    elide: Text.ElideMiddle; width: parent.width
-                                }
-                                Text {
-                                    text: {
-                                        if (!firstAttachment || !firstAttachment.file_size_bytes) return "0 Б"
-                                        var b = firstAttachment.file_size_bytes
-                                        if (b < 1024) return b + " Б"
-                                        if (b < 1048576) return (b / 1024).toFixed(1) + " КБ"
-                                        if (b < 1073741824) return (b / 1048576).toFixed(1) + " МБ"
-                                        return (b / 1073741824).toFixed(1) + " ГБ"
+                                Rectangle {
+                                    width: 44; height: 44; radius: 22
+                                    color: isMe ? "#1e3d5e" : "#0d1825"
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Image {
+                                        anchors.centerIn: parent; width: 22; height: 22
+                                        source: "qrc:/messenger_client_uri/assets/icons/document.svg"
+                                        sourceSize: Qt.size(22, 22)
                                     }
-                                    color: isMe ? "#78aee3" : "#728392"
-                                    font.pixelSize: 12; font.family: "Segoe UI"
+                                }
+
+                                Column {
+                                    Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; spacing: 2
+                                    Text {
+                                        text: firstAttachment ? (firstAttachment.original_filename || firstAttachment.file_name || "Файл") : "Файл"
+                                        color: "white"; font.pixelSize: 14; font.family: "Segoe UI"
+                                        elide: Text.ElideMiddle; width: parent.width
+                                    }
+                                    Text {
+                                        text: {
+                                            if (!firstAttachment || !firstAttachment.file_size_bytes) return "0 Б"
+                                            var b = firstAttachment.file_size_bytes
+                                            if (b < 1024) return b + " Б"
+                                            if (b < 1048576) return (b / 1024).toFixed(1) + " КБ"
+                                            if (b < 1073741824) return (b / 1048576).toFixed(1) + " МБ"
+                                            return (b / 1073741824).toFixed(1) + " ГБ"
+                                        }
+                                        color: isMe ? "#78aee3" : "#728392"
+                                        font.pixelSize: 12; font.family: "Segoe UI"
+                                    }
                                 }
                             }
 
@@ -775,32 +779,46 @@ Rectangle {
                         }
                     }
 
-                    Text {
-                        id: timeText
-                        text: {
-                            var t = model.created_at || model.timestamp || model.time || model.sent_at;
-                            if (!t) return "00:00"; 
-                            
-                            var d;
-                            if (typeof t === "number") {
-                                if (t < 10000000000) t *= 1000; 
-                                d = new Date(t);
-                            } else {
-                                if (typeof t === "string" && t.indexOf("Z") === -1 && t.indexOf("+") === -1) {
-                                    t += "Z";
+                    RowLayout {
+                        anchors.bottom: parent.bottom
+                        anchors.right: parent.right
+                        anchors.bottomMargin: 4
+                        anchors.rightMargin: 12
+                        spacing: 4
+
+                        Text {
+                            id: timeText
+                            text: {
+                                var t = model.created_at || model.timestamp || model.time || model.sent_at;
+                                if (!t) return "00:00"; 
+                                var d;
+                                if (typeof t === "number") {
+                                    if (t < 10000000000) t *= 1000; 
+                                    d = new Date(t);
+                                } else {
+                                    if (typeof t === "string" && t.indexOf("Z") === -1 && t.indexOf("+") === -1) {
+                                        t += "Z";
+                                    }
+                                    d = new Date(t);
                                 }
-                                d = new Date(t);
+                                if (isNaN(d.getTime())) return "00:00";
+                                var h = d.getHours(); var m = d.getMinutes();
+                                return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
                             }
-
-                            if (isNaN(d.getTime())) return "00:00";
-
-                            var h = d.getHours(); var m = d.getMinutes();
-                            return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
+                            color: isMe ? "#78aee3" : "#728392"
+                            font.pixelSize: 11; font.family: "Segoe UI"
+                            Layout.alignment: Qt.AlignVCenter
                         }
-                        color: isMe ? "#78aee3" : "#728392"
-                        font.pixelSize: 11; font.family: "Segoe UI"
-                        anchors.right: parent.right; anchors.bottom: parent.bottom
-                        anchors.rightMargin: 12; anchors.bottomMargin: 4
+
+                        Image {
+                            visible: isMe
+                            Layout.alignment: Qt.AlignVCenter
+                            width: 14; height: 14
+                            sourceSize: Qt.size(14, 14)
+                            source: (model.is_read) 
+                                    ? "qrc:/messenger_client_uri/assets/icons/check_double.svg" 
+                                    : "qrc:/messenger_client_uri/assets/icons/check_single.svg"
+                        }
                     }
                 }
             }
@@ -1157,7 +1175,9 @@ Rectangle {
         onSendRequested: function(filePath, fileType, asFile, caption) {
             messageInput.text = ""
             isUploading = true
-            MediaLayer.uploadFile(activeChatId, filePath, asFile, caption, "text")
+
+            var msgType = (asFile || fileType === "document") ? "text" : "media"
+            MediaLayer.uploadFile(activeChatId, filePath, asFile, caption, msgType)
         }
         onCancelRequested: {}
     }
@@ -1316,17 +1336,9 @@ Rectangle {
             z: 200
             opacity: fullScreenVideoPreview.showControls ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 300 } }
-            
-            Image {
-                id: videoCloseIcon
-                anchors.centerIn: parent
-                source: "qrc:/messenger_client_uri/assets/icons/close.svg"
-                width: 24; height: 24; sourceSize: Qt.size(24, 24)
-                visible: status === Image.Ready
-            }
+
             Text { 
                 anchors.centerIn: parent; text: "✕"; color: "white"; font.pixelSize: 20
-                visible: videoCloseIcon.status !== Image.Ready 
             }
             MouseArea {
                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor
@@ -1345,7 +1357,7 @@ Rectangle {
             color: "#EE1c2733"
             z: 200
             
-            opacity: (showControls || fullVideoPlayer.playbackState !== MediaPlayer.PlayingState) ? 1 : 0
+            opacity: (fullScreenVideoPreview.showControls || fullVideoPlayer.playbackState !== MediaPlayer.PlayingState) ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 300 } }
             

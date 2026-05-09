@@ -191,6 +191,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
 void ChatManager::sendMessage(const QString &chatId, const QString &text) {
     QJsonObject json;
     json["text"] = text;
+    json["type"] = "text";
     int64_t chat_id = chatId.toLongLong();
 
     QNetworkReply *reply = m_connection->post(

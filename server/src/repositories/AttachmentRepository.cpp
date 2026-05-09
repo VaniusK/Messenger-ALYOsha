@@ -51,6 +51,9 @@ Task<vector<Attachment>> AttachmentRepository::getByMessage(int64_t message_id
 Task<vector<vector<Attachment>>> AttachmentRepository::getByMessages(
     std::vector<int64_t> message_ids
 ) {
+    if (message_ids.empty()) {
+        co_return vector<vector<Attachment>>();
+    }
     auto mapper = getMapper();
     if (message_ids.empty()) {
         co_return {};

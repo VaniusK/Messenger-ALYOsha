@@ -31,7 +31,7 @@ QString MediaCacheManager::getOrPut(
         QDir(cache_location).path() + QDir::separator() + "media"
     ));
     if (!cache_dir.exists()) {
-        cache_dir.mkdir(".");
+        cache_dir.mkpath(".");
     }
 
     QString extension = QFileInfo(s3_object_key).suffix();
