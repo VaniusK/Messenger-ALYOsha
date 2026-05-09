@@ -2,6 +2,7 @@
 #include "../fixtures/ChatTestFixture.hpp"
 #include "dto/ChatPreview.hpp"
 #include "utils/Enum.hpp"
+#include "utils/server_exceptions.hpp"
 
 using ChatRepository = messenger::repositories::ChatRepository;
 using Chat = drogon_model::messenger_db::Chats;
@@ -330,7 +331,7 @@ TEST_F(ChatTestFixture, TestAddMemberFail) {
             chat.getValueOfId(), dummy_user3_.getValueOfId(),
             messenger::models::ChatRole::Moderator
         )),
-        std::logic_error
+        messenger::exceptions::ForbiddenException
     );
 }
 
@@ -425,4 +426,36 @@ TEST_F(ChatTestFixture, TestCreateSaved) {
     EXPECT_EQ(members.size(), 1);
     auto member = members[0];
     EXPECT_EQ(member.getValueOfChatType(), messenger::models::ChatType::Saved);
+}
+
+TEST_F(ChatTestFixture, TestGetMember) {
+    /* When valid data is provided,
+    getMember should return member of the chat*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId(),
+         dummy_user3_.getValueOfId()}
+    ));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Group);
+    auto chat_member = sync_wait(
+        repo_.getMember(chat.getValueOfId(), dummy_user1_.getValueOfId())
+    );
+    EXPECT_EQ(chat_member.getValueOfChatId(), chat.getValueOfId());
+    EXPECT_EQ(chat_member.getValueOfUserId(), dummy_user1_.getValueOfId());
+}
+
+TEST_F(ChatTestFixture, TestGetMemberFail) {
+    /* When user isn't a member of a chat,
+    getMember should throw*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Group);
+    EXPECT_THROW(
+        sync_wait(
+            repo_.getMember(chat.getValueOfId(), dummy_user3_.getValueOfId())
+        ),
+        std::runtime_error
+    );
 }

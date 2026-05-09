@@ -37,6 +37,8 @@ public:
         const QString &s3ObjectKey
     );
     Q_INVOKABLE void cacheMessageMedia(QJsonObject &message);
+    Q_INVOKABLE void clearCache();
+    Q_INVOKABLE void addMessageToCache(const QJsonObject &msg);
 
 signals:
     void usersFound(const QJsonArray &users);

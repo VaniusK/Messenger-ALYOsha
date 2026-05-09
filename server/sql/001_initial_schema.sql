@@ -2,7 +2,7 @@
 
 CREATE TYPE chat_role AS ENUM ('member', 'moderator', 'admin', 'owner');
 CREATE TYPE chat_type AS ENUM ('direct', 'group', 'discussion', 'saved', 'channel');
-CREATE TYPE message_type AS ENUM ('text', 'voice', 'round', 'sticker');
+CREATE TYPE message_type AS ENUM ('text', 'media', 'voice', 'round', 'sticker');
 
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
