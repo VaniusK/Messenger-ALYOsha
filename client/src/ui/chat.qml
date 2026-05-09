@@ -141,6 +141,7 @@ Rectangle {
                         onClicked: {
                             logoutDialog.close()
                             console.log("[Chat] exit to LogIn window")
+                            ChatLayer.clearCache()
                             AppState.clearState()
 
                             var loader = root.parent

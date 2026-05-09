@@ -145,8 +145,13 @@ void MediaManager::uploadFile(
                                     QString::fromUtf8(msgReply->readAll())
                                 );
                             } else {
+                                QJsonObject obj =
+                                    QJsonDocument::fromJson(msgReply->readAll())
+                                        .object();
+                                QJsonObject msg = obj["message"].toObject();
                                 emit uploadProgress(100);
                                 emit uploadFinished();
+                                emit messageSent(msg);
                             }
                         }
                     );
