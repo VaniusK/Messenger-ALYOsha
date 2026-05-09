@@ -317,24 +317,73 @@ Rectangle {
                             anchors.top: parent.top
                             anchors.topMargin: 2
                         }
+                        
+                        Image {
+                            property bool isMyLastMsg: itemData.last_message && String(itemData.last_message.sender_id) === String(AppState.userId)
+                            visible: isMyLastMsg && !isSearching
+                            width: 14; height: 14
+                            sourceSize: Qt.size(14, 14)
+                            anchors.right: timeText.left
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: timeText.verticalCenter
+                            source: (itemData.last_message && itemData.last_message.is_read)
+                                    ? "qrc:/messenger_client_uri/assets/icons/check_double.svg"
+                                    : "qrc:/messenger_client_uri/assets/icons/check_single.svg"
+                        }
+                    }
+
+                    RowLayout {
+                        width: parent.width
+                        visible: !isSearching
+                        spacing: 4
+
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignVCenter
+                            color: "#8a96a3"
+                            font.pixelSize: 14
+                            font.family: "Segoe UI"
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            textFormat: Text.RichText
+
+                            text: {
+                                if (!itemData.last_message && itemData.unread_count === 0) return "Нет сообщений";
+                                if (!itemData.last_message && itemData.unread_count > 0) return "Новое сообщение";
+
+                                var msg = itemData.last_message;
+
+                                var safeText = msg.text ? msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim() : "";
+
+                                var isImage = msg.type === "media" || msg.type === "image";
+                                var isVideo = msg.type === "video" || msg.type === "round";
+                                var isVoice = msg.type === "voice";
+                                var isDoc = msg.type === "file" || msg.type === "document";
+
+                                if (msg.attachments && msg.attachments.length > 0) {
+                                    var fType = msg.attachments[0].file_type || "";
+                                    if (fType.startsWith("image/")) { isImage = true; isVideo = false; isVoice = false; isDoc = false; }
+                                    else if (fType.startsWith("video/")) { isVideo = true; isImage = false; isVoice = false; isDoc = false; }
+                                    else if (fType.startsWith("audio/")) { isVoice = true; isImage = false; isVideo = false; isDoc = false; }
+                                    else { isDoc = true; isImage = false; isVideo = false; isVoice = false; }
+                                }
+
+                                var prefix = "";
+                                var colorStr = "#5eb5f7";
+
+                                if (isImage) prefix = "<font color='" + colorStr + "'>Фотография</font> ";
+                                else if (isVideo) prefix = "<font color='" + colorStr + "'>Видео</font> ";
+                                else if (isVoice) prefix = "<font color='" + colorStr + "'>Голосовое сообщение</font> ";
+                                else if (isDoc) prefix = "<font color='" + colorStr + "'>Файл</font> ";
+
+                                return prefix + safeText;
+                            }
+                        }
                     }
 
                     Text {
-                        text: isSearching ? "" 
-                                          : (itemData.last_message
-                                                ? itemData.last_message.text 
-                                                : (itemData.unread_count > 0 
-                                                    ? "Новое сообщение\n" 
-                                                    : "Нет сообщений"))
-                        visible: !isSearching
-                        color: "#8a96a3"
-                        font.pixelSize: 14
-                        font.family: "Segoe UI"
-                        elide: Text.ElideRight
-                        width: parent.width
-
-                        maximumLineCount: 1
-                        textFormat: Text.PlainText
+                        visible: isSearching
+                        text: ""
                     }
                 }
             }
