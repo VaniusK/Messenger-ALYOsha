@@ -107,10 +107,10 @@ Rectangle {
 
             if (chatModel.count > 0) {
                 Qt.callLater(function() {
-                    // messageList.positionViewAtEnd()
+                    messageList.positionViewAtIndex(0, ListView.Beginning)
 
                     if (messageList.contentHeight < messageList.height && chatModel.count > 0) {
-                        var topmostMsgId = chatModel.get(0)._id || chatModel.get(0).id;
+                        var topmostMsgId = chatModel.get(chatModel.count - 1)._id || chatModel.get(chatModel.count - 1).id;
                         topmostMsgId = parseInt(topmostMsgId);
 
                         if (!isNaN(topmostMsgId) && topmostMsgId > 0 && hasMoreHistory) {
@@ -134,12 +134,11 @@ Rectangle {
                 return
             }
 
-            for (var i = messages.length - 1; i >= 0; i--) {
-                chatModel.insert(0, messages[i])
+            for (var i = 0; i < messages.length; i++) {
+                chatModel.append(messages[i])
             }
 
             Qt.callLater(function() {
-                messageList.positionViewAtIndex(messages.length, ListView.Beginning)
                 isLoadingHistory = false
             })
         }
@@ -151,7 +150,7 @@ Rectangle {
             chatModel.insert(0, msg)
             
             Qt.callLater(function() {
-                messageList.positionViewAtEnd()
+                messageList.positionViewAtIndex(0, ListView.Beginning)
             })
         }
 
@@ -160,12 +159,11 @@ Rectangle {
                 var msg = data.data.message
                 if (String(msg.chat_id) === String(activeChatId)) {
                     msg.is_me = (msg.sender_id === AppState.userId)
-                    
-                    chatModel.insert(0, msg)
-                    
+
                     Qt.callLater(function() {
-                        messageList.positionViewAtEnd()
+                        messageList.positionViewAtIndex(0, ListView.Beginning)
                     })
+                    
                 }
             }
         }
@@ -386,10 +384,10 @@ Rectangle {
             verticalLayoutDirection: ListView.BottomToTop
 
             onContentYChanged: {
-                if (contentY <= 0 && chatModel.count > 0) {
+                if (contentY <= -messageList.contentHeight && chatModel.count > 0) {
                     if (isLoadingHistory || !hasMoreHistory || activeChatId === "") return;
                     
-                    var topmostMsgId = chatModel.get(0)._id || chatModel.get(0).id;
+                    var topmostMsgId = chatModel.get(chatModel.count - 1)._id || chatModel.get(chatModel.count - 1).id;
                     var parsedId = parseInt(topmostMsgId);
 
                     if (!isNaN(parsedId) && parsedId > 0) {

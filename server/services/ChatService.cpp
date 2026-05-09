@@ -6,15 +6,19 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
+#include <unordered_map>
 #include <vector>
 #include "controllers/ServerWebSocketController.h"
 #include "dto/AttachmentData.hpp"
+#include "dto/ChatServiceDtos.hpp"
 #include "include/repositories/ChatRepository.hpp"
 #include "jwt-cpp/jwt.h"
 #include "jwt-cpp/traits/kazuho-picojson/defaults.h"
 #include "models/Messages.h"
 #include "services/S3Service.hpp"
 #include "utils/Enum.hpp"
+#include "utils/server_exceptions.hpp"
 #include "utils/server_response_macro.hpp"
 
 using namespace drogon;
@@ -40,257 +44,228 @@ Task<bool> ChatService::checkChatAccess(int64_t user_id, int64_t chat_id) {
     co_return is_member;
 }
 
-Task<HttpResponsePtr> ChatService::getMessageById(
-    const std::shared_ptr<Json::Value> request_json,
-    int64_t message_id
+Task<GetMessageByIdResponseDto> ChatService::getMessageById(
+    GetMessageByIdRequestDto request_dto
 ) {
-    Json::Value response_json;
     std::optional<Message> message =
-        co_await chat_repo->getMessageById(message_id);
+        co_await chat_repo->getMessageById(request_dto.message_id);
     if (!message.has_value()) {
-        LOG_WARN << "Message with id " << message_id << " doesn't exist";
-        response_json["message"] =
-            "Message with id " + std::to_string(message_id) + " doesn't exist";
-        RETURN_RESPONSE_CODE_404(response_json)
-    }
-    bool is_member = co_await checkChatAccess(
-        (*request_json)["user_id"].asInt64(), message->getValueOfChatId()
-    );
-    if (!is_member) {
-        response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json);
-    }
-    response_json["message"] = message->getValueOfText();
-    std::vector<Attachment> attachments =
-        co_await attachment_repo->getByMessage(message->getValueOfId());
-    Json::Value json_attachments(Json::arrayValue);
-    for (const auto &attachment : attachments) {
-        Json::Value attachment_json = attachment.toJson();
-        std::optional<std::string> download_url =
-            s3_service_.generateDownloadUrl(
-                attachment.getValueOfS3ObjectKey(),
-                attachment.getValueOfFileName()
-            );
-        attachment_json["download_url"] =
-            download_url.has_value() ? download_url.value() : "";
-        json_attachments.append(attachment_json);
-    }
-    response_json["message"]["attachments"] = json_attachments;
-    RETURN_RESPONSE_CODE_200(response_json)
-}
-
-Task<HttpResponsePtr> ChatService::getUserChats(
-    const std::shared_ptr<Json::Value> request_json,
-    int64_t user_id
-) {
-    Json::Value response_json;
-    if ((*request_json)["user_id"].asInt64() != user_id) {
-        response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json)
-    }
-    std::vector<ChatPreview> chats_previews =
-        co_await chat_repo->getByUser(user_id);
-    Json::Value jsonArray(Json::arrayValue);
-    for (const auto &chat_preview : chats_previews) {
-        Json::Value chat_json;
-        chat_json["chat_id"] = chat_preview.chat_id;
-        chat_json["title"] = chat_preview.title;
-        chat_json["avatar_path"] = chat_preview.avatar_path.has_value()
-                                       ? chat_preview.avatar_path.value()
-                                       : "";
-        chat_json["last_message"] =
-            chat_preview.last_message.has_value()
-                ? chat_preview.last_message.value().toJson()
-                : Json::Value();
-        if (chat_json["last_message"].isMember("chat_id")) {
-            chat_json["last_message"]["attachments"] =
-                Json::Value(Json::arrayValue);
-            std::vector<Attachment> attachments =
-                co_await attachment_repo->getByMessage(
-                    chat_preview.last_message.value().getValueOfId()
-                );
-            for (const auto &attachment : attachments) {
-                chat_json["last_message"]["attachments"].append(
-                    attachment.toJson()
-                );
-            }
-        }
-        chat_json["unread_count"] = chat_preview.unread_count;
-        chat_json["type"] = chat_preview.type;
-        jsonArray.append(chat_json);
-    }
-    response_json["chats"] = jsonArray;
-    RETURN_RESPONSE_CODE_200(response_json)
-}
-
-Task<HttpResponsePtr> ChatService::createOrGetDirectChat(
-    const std::shared_ptr<Json::Value> request_json
-) {
-    Json::Value response_json;
-    int64_t user_id = (*request_json)["user_id"].asInt64();
-    int64_t other_user_id = (*request_json)["target_user_id"].asInt64();
-    std::optional<Chat> chat;
-    if (user_id == other_user_id) {
-        chat = co_await chat_repo->getSaved(user_id);
-        response_json["chat"] = chat->toJson();
-        RETURN_RESPONSE_CODE_200(response_json)
-    }
-    chat = co_await chat_repo->getDirect(user_id, other_user_id);
-    if (chat.has_value()) {
-        response_json["chat"] = chat->toJson();
-        RETURN_RESPONSE_CODE_200(response_json)
-    }
-    chat = co_await chat_repo->getOrCreateDirect(user_id, other_user_id);
-    response_json["chat"] = chat->toJson();
-    RETURN_RESPONSE_CODE_201(response_json)
-}
-
-Task<HttpResponsePtr> ChatService::getChatMessages(
-    const std::shared_ptr<Json::Value> request_json,
-    int64_t chat_id
-) {
-    Json::Value response_json;
-    int64_t user_id = (*request_json)["user_id"].asInt64();
-    std::optional<int64_t> before_message_id =
-        request_json->isMember("before_id")
-            ? std::optional<int64_t>((*request_json)["before_id"].asInt64())
-            : std::nullopt;
-    int64_t limit = request_json->isMember("limit")
-                        ? (*request_json)["limit"].asInt64()
-                        : 50;
-    if (limit > 100) {
-        limit = 100;
-    }
-    if (limit < 1) {
-        limit = 1;
+        throw messenger::exceptions::NotFoundException(
+            "Message with id " + std::to_string(request_dto.message_id) +
+            " doesn't exist"
+        );
     }
     bool is_member =
-        co_await checkChatAccess((*request_json)["user_id"].asInt64(), chat_id);
+        co_await checkChatAccess(  // in future: delegate this to db
+            request_dto.user_id, message->getValueOfChatId()
+        );
     if (!is_member) {
-        response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json);
+        throw messenger::exceptions::ForbiddenException("Access denied");
+    }
+
+    std::vector<Attachment> attachments =
+        co_await attachment_repo->getByMessage(message->getValueOfId());
+    std::vector<std::optional<std::string>> attachments_download_urls(
+        attachments.size()
+    );
+    for (std::size_t i = 0; i < attachments.size(); i++) {
+        std::optional<std::string> download_url =
+            s3_service_->generateDownloadUrl(
+                attachments[i].getValueOfS3ObjectKey(),
+                attachments[i].getValueOfFileName()
+            );
+        attachments_download_urls[i] = std::move(download_url);
+    }
+
+    co_return GetMessageByIdResponseDto(
+        std::move(message.value()), std::move(attachments),
+        std::move(attachments_download_urls)
+    );
+}
+
+Task<GetUserChatsResponseDto> ChatService::getUserChats(
+    GetUserChatsRequestDto request_dto
+) {
+    if (request_dto.from_request_user_id != request_dto.from_token_user_id) {
+        throw messenger::exceptions::ForbiddenException("Access denied");
+    }
+    std::vector<ChatPreview> chats_previews =
+        co_await chat_repo->getByUser(request_dto.from_request_user_id);
+
+    std::vector<int64_t> message_ids;
+    for (const auto &chat_preview : chats_previews) {
+        if (chat_preview.last_message.has_value()) {
+            message_ids.push_back(chat_preview.last_message->getValueOfId());
+        }
+    }
+
+    std::vector<std::vector<Attachment>> fetched_attachments =
+        co_await attachment_repo->getByMessages(message_ids);
+
+    std::unordered_map<int64_t, std::vector<Attachment>> attachment_map;
+    attachment_map.reserve(message_ids.size());
+    for (std::size_t i = 0; i < message_ids.size(); i++) {
+        attachment_map[message_ids[i]] = std::move(fetched_attachments[i]);
+    }
+    std::vector<std::vector<Attachment>> last_messages_attachments;
+    last_messages_attachments.reserve(chats_previews.size());
+
+    for (const auto &chat_preview : chats_previews) {
+        if (chat_preview.last_message.has_value()) {
+            int64_t msg_id = chat_preview.last_message->getValueOfId();
+            last_messages_attachments.push_back(std::move(attachment_map[msg_id]
+            ));
+        } else {
+            last_messages_attachments.push_back({});
+        }
+    }
+    GetUserChatsResponseDto response_dto(
+        std::move(chats_previews), std::move(last_messages_attachments)
+    );
+    co_return response_dto;
+}
+
+Task<CreateOrGetDirectResponseDto> ChatService::createOrGetDirectChat(
+    CreateOrGetDirectRequestDto request_dto
+) {
+    int64_t user_id = request_dto.user_id;
+    int64_t other_user_id = request_dto.target_user_id;
+    std::optional<Chat> chat;
+    bool was_created = true;
+    if (user_id == other_user_id) {
+        was_created = false;
+        chat = co_await chat_repo->getSaved(user_id);
+    } else {
+        chat = co_await chat_repo->getDirect(user_id, other_user_id);
+        if (chat.has_value()) {
+            was_created = false;
+        } else {
+            chat =
+                co_await chat_repo->getOrCreateDirect(user_id, other_user_id);
+        }
+    }
+    CreateOrGetDirectResponseDto response_dto(
+        std::move(chat.value()), was_created
+    );
+    co_return response_dto;
+}
+
+Task<GetChatMessagesResponseDto> ChatService::getChatMessages(
+    GetChatMessagesRequestDto request_dto
+) {
+    int64_t user_id = request_dto.user_id;
+    int64_t chat_id = request_dto.chat_id;
+    bool is_member = co_await checkChatAccess(user_id, chat_id);
+    if (!is_member) {
+        throw messenger::exceptions::ForbiddenException("Access denied");
     }
 
     std::vector<Message> chat_messages = co_await chat_repo->getMessagesByChat(
-        chat_id, before_message_id, limit
+        chat_id, request_dto.before_message_id, request_dto.limit
     );
     std::vector<int64_t> message_ids;
+    message_ids.reserve(chat_messages.size());
     for (const auto &message : chat_messages) {
         message_ids.push_back(message.getValueOfId());
     }
     std::vector<std::vector<Attachment>> attachments =
         co_await attachment_repo->getByMessages(message_ids);
-    Json::Value jsonArray(Json::arrayValue);
-    for (std::size_t i = 0; i < chat_messages.size(); i++) {
-        Json::Value message_json = chat_messages[i].toJson();
-        message_json["attachments"] = Json::Value(Json::arrayValue);
+    std::vector<std::vector<std::optional<std::string>>>
+        attachments_download_urls(attachments.size());
+    for (std::size_t i = 0; i < attachments.size(); i++) {
         for (const auto &attachment : attachments[i]) {
-            Json::Value attachment_json = attachment.toJson();
-            std::optional<std::string> download_url =
-                s3_service_.generateDownloadUrl(
+            attachments_download_urls[i].push_back(
+                s3_service_->generateDownloadUrl(
                     attachment.getValueOfS3ObjectKey(),
                     attachment.getValueOfFileName()
-                );
-            attachment_json["download_url"] =
-                download_url.has_value() ? download_url.value() : "";
-            attachment_json["s3_object_key"] =
-                attachment.getValueOfS3ObjectKey();
-            message_json["attachments"].append(attachment_json);
+                )
+            );
         }
-        jsonArray.append(message_json);
     }
-    response_json["messages"] = jsonArray;
-    RETURN_RESPONSE_CODE_200(response_json)
+    GetChatMessagesResponseDto response_dto(
+        std::move(chat_messages), std::move(attachments),
+        std::move(attachments_download_urls)
+    );
+    co_return response_dto;
 }
 
-Task<HttpResponsePtr> ChatService::sendMessage(
-    const std::shared_ptr<Json::Value> request_json,
-    int64_t chat_id
+Task<SendMessageResponseDto> ChatService::sendMessage(
+    SendMessageRequestDto request_dto
 ) {
-    Json::Value response_json;
-    int64_t user_id = (*request_json)["user_id"].asInt64();
+    int64_t user_id = request_dto.user_id;
+    int64_t chat_id = request_dto.chat_id;
 
-    bool is_member = co_await checkChatAccess(user_id, chat_id);
+    bool is_member = co_await checkChatAccess(
+        user_id, chat_id
+    );  // in future: delegate this to db
     if (!is_member) {
-        response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json);
+        throw messenger::exceptions::ForbiddenException("Access denied");
     }
-
-    std::string text = (*request_json)["text"].asString();
-    std::optional<int64_t> reply_to_id =
-        request_json->isMember("reply_to_id")
-            ? std::optional<int64_t>((*request_json)["reply_to_id"].asInt64())
-            : std::nullopt;
-    std::optional<int64_t> forward_from_id =
-        request_json->isMember("forward_from_id")
-            ? std::optional<int64_t>((*request_json)["forward_from_id"].asInt64(
-              ))
-            : std::nullopt;
-    std::string message_type = (*request_json)["type"].asString();
-    if (!validateMessageType(message_type)) {
-        response_json["message"] = "Invalid message type";
-        RETURN_RESPONSE_CODE_400(response_json);
-    }
+    std::string text = request_dto.text;
+    std::optional<int64_t> reply_to_id = request_dto.reply_to_id;
+    std::optional<int64_t> forward_from_id = request_dto.forward_from_id;
+    std::string message_type = request_dto.message_type;
 
     std::vector<messenger::dto::AttachmentData> attachments_info;
-    if (request_json->isMember("attachment_tokens")) {
-        if ((*request_json)["attachment_tokens"].isArray()) {
-            std::string key = std::getenv("JWT_KEY");
-            auto verifier = jwt::verify()
-                                .allow_algorithm(jwt::algorithm::hs256{key})
-                                .with_issuer("alesha_messenger");
+    if (!request_dto.attachment_tokens.empty()) {
+        const char *env_key = std::getenv("JWT_KEY");
+        if (!env_key) {
+            throw messenger::exceptions::InternalServerErrorException(
+                "JWT_KEY is not set"
+            );
+        }
+        const std::string key = env_key;
+        auto verifier = jwt::verify()
+                            .allow_algorithm(jwt::algorithm::hs256{key})
+                            .with_issuer("alesha_messenger");
 
-            for (const auto &token : (*request_json)["attachment_tokens"]) {
-                try {
-                    auto decoded = jwt::decode(token.asString());
-                    verifier.verify(decoded);
+        for (const auto &token : request_dto.attachment_tokens) {
+            try {
+                auto decoded = jwt::decode(token);
+                verifier.verify(decoded);
 
-                    std::string token_message_type =
-                        decoded.get_payload_claim("message_type").as_string();
-                    if (token_message_type != message_type) {
-                        response_json["message"] =
-                            "Attachment token file type mismatch";
-                        RETURN_RESPONSE_CODE_400(response_json)
-                    }
-                    messenger::dto::AttachmentData info;
-                    info.file_name =
-                        decoded.get_payload_claim("file_name").as_string();
-                    info.file_size_bytes = std::stoll(
-                        decoded.get_payload_claim("file_size_bytes").as_string()
+                std::string token_message_type =
+                    decoded.get_payload_claim("message_type").as_string();
+                if (token_message_type != message_type) {
+                    throw messenger::exceptions::BadRequestException(
+                        "Attachment token file type mismatch"
                     );
-                    info.s3_object_key =
-                        decoded.get_payload_claim("object_key").as_string();
-                    info.file_type =
-                        decoded.get_payload_claim("file_type").as_string();
-
-                    attachments_info.push_back(info);
-                } catch (const std::exception &e) {
-                    LOG_ERROR << "Invalid JWT token " << e.what();
-                    response_json["message"] =
-                        "Invalid or expired attachment token";
-                    RETURN_RESPONSE_CODE_400(response_json)
                 }
-            }
+                messenger::dto::AttachmentData info;
+                info.file_name =
+                    decoded.get_payload_claim("file_name").as_string();
+                info.file_size_bytes = std::stoll(
+                    decoded.get_payload_claim("file_size_bytes").as_string()
+                );
+                info.s3_object_key =
+                    decoded.get_payload_claim("object_key").as_string();
+                info.file_type =
+                    decoded.get_payload_claim("file_type").as_string();
 
-        } else {
-            response_json["message"] = "attachment_tokens is not array";
-            RETURN_RESPONSE_CODE_400(response_json)
+                attachments_info.push_back(info);
+            } catch (const std::exception &e) {
+                LOG_ERROR << "Invalid JWT token " << e.what();
+                throw messenger::exceptions::BadRequestException(
+                    "Invalid or expired attachment token"
+                );
+            }
         }
     }
-    Json::Value json_attachments_array(Json::arrayValue);
+
     auto [message, created_attachments] = co_await chat_repo->sendMessage(
         chat_id, user_id, text, reply_to_id, forward_from_id, message_type,
         attachments_info
     );
-    for (const auto &att : created_attachments) {
-        Json::Value attachment_json = att.toJson();
+    std::vector<std::optional<std::string>> attachments_download_urls(
+        created_attachments.size()
+    );
+    for (std::size_t i = 0; i < created_attachments.size(); i++) {
         std::optional<std::string> download_url =
-            s3_service_.generateDownloadUrl(
-                att.getValueOfS3ObjectKey(), att.getValueOfFileName()
+            s3_service_->generateDownloadUrl(
+                created_attachments[i].getValueOfS3ObjectKey(),
+                created_attachments[i].getValueOfFileName()
             );
-        attachment_json["download_url"] =
-            download_url.has_value() ? download_url.value() : "";
-        json_attachments_array.append(attachment_json);
+        attachments_download_urls[i] = std::move(download_url);
     }
 
     bool successfully_read_sended_message = co_await chat_repo->markAsRead(
@@ -300,14 +275,17 @@ Task<HttpResponsePtr> ChatService::sendMessage(
         LOG_WARN << "Couldnt't mark message as read";
     }
 
+    SendMessageResponseDto response_dto(
+        std::move(message), std::move(created_attachments),
+        std::move(attachments_download_urls)
+    );
+
     Json::Value websocket_message_json;
     websocket_message_json["event_type"] = "NEW_MESSAGE";
-    websocket_message_json["data"]["message"] = message.toJson();
-    websocket_message_json["data"]["message"]["attachments"] =
-        json_attachments_array;
+    websocket_message_json["data"] = response_dto.toJson();
     std::vector<messenger::repositories::ChatMember> chat_members =
         co_await chat_repo->getMembers(chat_id);
-    for (auto &chat_member : chat_members) {
+    for (const auto &chat_member : chat_members) {
         if (chat_member.getValueOfUserId() != user_id) {
             ServerWebSocketController::notifyUser(
                 chat_member.getValueOfUserId(),
@@ -315,30 +293,18 @@ Task<HttpResponsePtr> ChatService::sendMessage(
             );
         }
     }
-    response_json["message"] = message.toJson();
-    response_json["message"]["attachments"] = json_attachments_array;
 
-    RETURN_RESPONSE_CODE_201(response_json)
+    co_return response_dto;
 }
 
-Task<HttpResponsePtr> ChatService::readMessages(
-    const std::shared_ptr<Json::Value> request_json,
-    int64_t chat_id
+Task<ReadMessagesResponseDto> ChatService::readMessages(
+    ReadMessagesRequestDto request_dto
 ) {
-    Json::Value response_json;
-    int64_t user_id = (*request_json)["user_id"].asInt64();
-
     bool success = co_await chat_repo->markAsRead(
-        chat_id, (*request_json)["user_id"].asInt64(),
-        (*request_json)["last_read_message_id"].asInt64()
+        request_dto.chat_id, request_dto.user_id,
+        request_dto.last_read_message_id
     );
-    if (success) {
-        response_json["message"] = "Succussfully read last messages";
-        RETURN_RESPONSE_CODE_200(response_json)
-    } else {
-        response_json["message"] = "Something went wrong";
-        RETURN_RESPONSE_CODE_500(response_json)
-    }
+    co_return ReadMessagesResponseDto(success);
 }
 
 bool ChatService::validateFileType(
@@ -358,69 +324,48 @@ bool ChatService::validateFileType(
     return true;
 }
 
-bool ChatService::validateMessageType(const std::string &message_type) {
-    if (message_type == messenger::models::MessageType::Text) {
-        return true;
-    }
-    if (message_type == messenger::models::MessageType::Voice) {
-        return true;
-    }
-    if (message_type == messenger::models::MessageType::Round) {
-        return true;
-    }
-    if (message_type == messenger::models::MessageType::Sticker) {
-        return true;
-    }
-    if (message_type == messenger::models::MessageType::Media) {
-        return true;
-    }
-    return false;
-}
-
-Task<HttpResponsePtr> ChatService::getAttachmentLink(
-    const std::shared_ptr<Json::Value> request_json
+Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLinks(
+    GetAttachmentLinksRequestDto request_dto
 ) {
-    Json::Value response_json;
-    int64_t user_id = (*request_json)["user_id"].asInt64();
-    int64_t chat_id = (*request_json)["chat_id"].asInt64();
+    int64_t user_id = request_dto.user_id;
+    int64_t chat_id = request_dto.chat_id;
     bool is_member = co_await checkChatAccess(user_id, chat_id);
     if (!is_member) {
-        response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json);
+        throw messenger::exceptions::ForbiddenException("Access denied");
     }
 
-    std::string message_type = (*request_json)["message_type"].asString();
-    if (!validateMessageType(message_type)) {
-        response_json["message"] = "Invalid message type";
-        RETURN_RESPONSE_CODE_400(response_json)
-    }
+    std::string message_type = request_dto.message_type;
+
     std::vector<AttachmentFileInfo> files_info;
-    Json::Value files_list = (*request_json)["files"];
-    for (Json::ArrayIndex i = 0; i < files_list.size(); i++) {
-        std::string file_name = files_list[i]["original_filename"].asString();
-        std::string ext = s3_service_.getExtension(file_name);
-        std::string mime_type = s3_service_.getMimeType(ext);
+    for (const auto &file : request_dto.files) {
+        std::string file_name = file.original_filename;
+        std::string ext = s3_service_->getExtension(file_name);
+        std::string mime_type = s3_service_->getMimeType(ext);
         if (!validateFileType(message_type, mime_type)) {
-            response_json["message"] = "Mismatch message type and file types";
-            RETURN_RESPONSE_CODE_400(response_json)
+            throw messenger::exceptions::BadRequestException(
+                "Mismatch message type and file types"
+            );
         }
-        files_info.push_back({file_name, ext, mime_type});
+        files_info.push_back({file_name, ext, mime_type, file.file_size_bytes});
     }
     std::optional<std::vector<UploadPresignedResult>> upload_presigned_results =
-        s3_service_.generateUploadUrl(chat_id, message_type, files_info);
+        s3_service_->generateUploadUrl(chat_id, message_type, files_info);
     if (!upload_presigned_results.has_value()) {
-        response_json["message"] = "Failed to generate presigned URLs";
-        RETURN_RESPONSE_CODE_500(response_json);
+        throw messenger::exceptions::InternalServerErrorException(
+            "Failed to generate presigned URLs"
+        );
     }
 
-    Json::Value attachments_array(Json::arrayValue);
-    const std::string jwt_key = std::getenv("JWT_KEY");
-    for (const auto &file : upload_presigned_results.value()) {
-        Json::Value file_json;
-        file_json["upload_url"] = file.upload_url;
-        file_json["attachment_key"] = file.attachment_key;
-        file_json["content_type"] = file.content_type;
-
+    const char *env_key = std::getenv("JWT_KEY");
+    if (!env_key) {
+        throw messenger::exceptions::InternalServerErrorException(
+            "JWT_KEY is not set"
+        );
+    }
+    const std::string jwt_key = env_key;
+    std::vector<std::string> tokens(upload_presigned_results.value().size());
+    for (std::size_t i = 0; i < upload_presigned_results.value().size(); i++) {
+        const auto &file = upload_presigned_results.value()[i];
         auto token =
             jwt::create()
                 .set_issuer("alesha_messenger")
@@ -440,32 +385,10 @@ Task<HttpResponsePtr> ChatService::getAttachmentLink(
                 )
                 .set_payload_claim("message_type", jwt::claim(message_type))
                 .sign(jwt::algorithm::hs256{jwt_key});
-        file_json["token"] = token;
-        attachments_array.append(file_json);
+        tokens[i] = std::move(token);
     }
 
-    response_json["attachments"] = attachments_array;
-    RETURN_RESPONSE_CODE_200(response_json)
-}
-
-Task<HttpResponsePtr> ChatService::createAttachment(
-    const std::shared_ptr<Json::Value> request_json
-) {
-    Json::Value response_json;
-    int64_t user_id = (*request_json)["user_id"].asInt64();
-    int64_t chat_id = (*request_json)["chat_id"].asInt64();
-    bool is_member = co_await checkChatAccess(user_id, chat_id);
-    if (!is_member) {
-        response_json["message"] = "Access denied";
-        RETURN_RESPONSE_CODE_403(response_json);
-    }
-    Attachment attachment = co_await attachment_repo->create(
-        (*request_json)["message_id"].asInt64(),
-        (*request_json)["file_name"].asString(),
-        (*request_json)["file_type"].asString(),
-        (*request_json)["file_size_bytes"].asInt64(),
-        (*request_json)["s3_object_key"].asString()
+    co_return GetAttachmentLinksResponseDto(
+        std::move(upload_presigned_results.value()), std::move(tokens)
     );
-    response_json["attachment"] = attachment.toJson();
-    RETURN_RESPONSE_CODE_201(response_json);
 }

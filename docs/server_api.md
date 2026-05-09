@@ -83,7 +83,7 @@
   - `200`: Успешно
   - `404`: Пользователь не найден
 
-### POST /users/batch
+<!-- ### POST /users/batch
 Получение информации о нескольких пользователях (batch-загрузка).
 
 - **Аргументы (JSON)**:
@@ -91,7 +91,7 @@
 - **Возвращает**:
   - `users`: vector<User>
 - **Коды возврата**:
-  - `200`: Успешно
+  - `200`: Успешно -->
 
 ### GET /users/search
 Поиск пользователей по префиксу имени или handle.
@@ -170,7 +170,7 @@
 
 - **Аргументы (Query Params)**:
   - `before_id`: int64? (ID сообщения, до которого загружать историю)
-  - `limit`: int (по умолчанию 20)
+  - `limit`: int? (по умолчанию 50)
 - **Возвращает**:
   - `messages`: vector<Message>
 - **Коды возврата**:
@@ -183,7 +183,7 @@
 - **Аргументы (JSON)**:
   - `text`: string
   - `reply_to_id`: int64?
-  - `forward_info`: object?
+  - `forward_from_id`: int64?
   - `type`: string (text, voice, media, etc (watch db docs))
   - `attachment_tokens`: list[string] - токены выданные при получении ссылок
 - **Возвращает**:

@@ -54,6 +54,7 @@ endif()
 aux_source_directory(src SRC_SRC) # get all files from src
 aux_source_directory(src/repositories REPO_SRC) # get all files from src/repositories
 aux_source_directory(src/utils UTILS_SRC) # get all files from src/utils
+aux_source_directory(src/dto DTO_SRC)
 aux_source_directory(services SERVICES_SRC) # get all files from services
 
 aux_source_directory(controllers CTL_SRC) # get all files from controllers
@@ -107,6 +108,7 @@ if(BUILD_TESTS)
     
     add_executable(server_tests 
         ${TEST_FILES}
+        ${SERVICE_UNIT_TEST_FILES}
     )
     target_link_libraries(server_tests GTest::gtest GTest::gmock)
     target_link_libraries(server_tests Drogon::Drogon jwt-cpp::jwt-cpp bcrypt miniocpp::miniocpp)
@@ -120,7 +122,7 @@ if(BUILD_TESTS)
     aux_source_directory(models MODEL_SRC) # get all files from models
 
     target_include_directories(server_tests PRIVATE ${bcrypt_SOURCE_DIR}/include) # include bcrypt headers
-    target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include) # include project headers
+    target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/tests) # include project headers
     target_sources(server_tests PRIVATE ${REPO_SRC} ${UTILS_SRC} ${SERVICES_SRC} ${CTL_SRC} ${FILTER_SRC} ${MODEL_SRC})
     
     include(GoogleTest)

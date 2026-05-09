@@ -55,6 +55,9 @@ Task<vector<vector<Attachment>>> AttachmentRepository::getByMessages(
         co_return vector<vector<Attachment>>();
     }
     auto mapper = getMapper();
+    if (message_ids.empty()) {
+        co_return {};
+    }
 
     try {
         auto attachments = co_await mapper.findBy(Criteria(
