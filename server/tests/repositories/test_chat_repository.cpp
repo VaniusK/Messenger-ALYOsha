@@ -1,4 +1,5 @@
 #include <drogon/orm/Result.h>
+#include <gtest/gtest.h>
 #include "../fixtures/ChatTestFixture.hpp"
 #include "dto/ChatPreview.hpp"
 #include "utils/Enum.hpp"
@@ -342,7 +343,7 @@ TEST_F(ChatTestFixture, TestRemoveMember) {
     Chat chat = sync_wait(repo_.getOrCreateDirect(
         dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
     ));
-    EXPECT_TRUE(sync_wait(
+    EXPECT_NO_THROW(sync_wait(
         repo_.removeMember(chat.getValueOfId(), dummy_user2_.getValueOfId())
     ));
 }
@@ -355,11 +356,10 @@ TEST_F(ChatTestFixture, TestUpdateMemberRole) {
         "Чат жабоманов", dummy_user1_.getValueOfId(),
         {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
     ));
-    auto result = sync_wait(repo_.updateMemberRole(
+    EXPECT_NO_THROW(sync_wait(repo_.updateMemberRole(
         chat.getValueOfId(), dummy_user2_.getValueOfId(),
         messenger::models::ChatRole::Moderator
-    ));
-    EXPECT_TRUE(result);
+    )));
     auto members = sync_wait(repo_.getMembers(chat.getValueOfId()));
     auto chat_member2 = *std::find_if(
         members.begin(), members.end(),
@@ -379,11 +379,10 @@ TEST_F(ChatTestFixture, TestUpdateMemberRoleFail) {
         "Чат жабоманов", dummy_user1_.getValueOfId(),
         {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
     ));
-    auto result = sync_wait(repo_.updateMemberRole(
+    EXPECT_ANY_THROW(sync_wait(repo_.updateMemberRole(
         chat.getValueOfId(), dummy_user3_.getValueOfId(),
         messenger::models::ChatRole::Moderator
-    ));
-    EXPECT_FALSE(result);
+    )));
 }
 
 TEST_F(ChatTestFixture, TestUpdateInfo) {
@@ -394,10 +393,9 @@ TEST_F(ChatTestFixture, TestUpdateInfo) {
         "Чат жабоманов", dummy_user1_.getValueOfId(),
         {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
     ));
-    auto result = sync_wait(repo_.updateInfo(
+    EXPECT_NO_THROW(sync_wait(repo_.updateInfo(
         chat.getValueOfId(), std::nullopt, "new_avatar", "new_description"
-    ));
-    EXPECT_TRUE(result);
+    )));
     Chat new_chat = sync_wait(repo_.getById(chat.getValueOfId())).value();
     EXPECT_EQ(new_chat.getValueOfAvatarPath(), "new_avatar");
     EXPECT_EQ(new_chat.getValueOfDescription(), "new_description");
@@ -410,10 +408,9 @@ TEST_F(ChatTestFixture, TestUpdateInfoFail) {
         "Чат жабоманов", dummy_user1_.getValueOfId(),
         {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
     ));
-    auto result = sync_wait(repo_.updateInfo(
+    EXPECT_ANY_THROW(sync_wait(repo_.updateInfo(
         chat.getValueOfId() - 1, std::nullopt, "new_avatar", "new_description"
-    ));
-    EXPECT_FALSE(result);
+    )));
 }
 
 TEST_F(ChatTestFixture, TestCreateSaved) {
