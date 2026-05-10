@@ -459,3 +459,14 @@ TEST_F(ChatTestFixture, TestGetMemberFail) {
         std::runtime_error
     );
 }
+
+TEST_F(ChatTestFixture, TestLockChat) {
+    /* When LockChat is called,
+    it shouldn't throw any errors*/
+    auto transaction_ptr = sync_wait(createTransaction());
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    sync_wait(repo_.lockChat(chat.getValueOfId(), transaction_ptr));
+}
