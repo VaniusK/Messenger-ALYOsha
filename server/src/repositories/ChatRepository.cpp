@@ -566,11 +566,15 @@ Task<Chat> ChatRepository::getSaved(int64_t user_id) {
     }
 }
 
-Task<void> lockChat(
+Task<void> ChatRepository::lockChat(
     int64_t chat_id,
     std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    co_await transaction_ptr->execSqlCoro(
-        "SELECT * FROM chats WHERE id = $1 FOR UPDATE;"
-    );
+    try {
+        co_await transaction_ptr->execSqlCoro(
+            "SELECT * FROM chats WHERE id = $1 FOR UPDATE;", chat_id
+        );
+    } catch (DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
 }
