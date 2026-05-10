@@ -154,4 +154,10 @@ public:
         (override)
     );
     MOCK_METHOD(drogon::Task<Chat>, getSaved, (int64_t), (override));
+    MOCK_METHOD(
+        drogon::Task<void>,
+        lockChat,
+        (int64_t, std::shared_ptr<drogon::orm::Transaction>),
+        (override)
+    );
 };
