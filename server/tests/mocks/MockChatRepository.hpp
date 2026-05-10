@@ -123,13 +123,13 @@ public:
         (override)
     );
     MOCK_METHOD(
-        drogon::Task<bool>,
+        drogon::Task<void>,
         removeMember,
         (int64_t, int64_t, std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(
-        drogon::Task<bool>,
+        drogon::Task<void>,
         updateMemberRole,
         (int64_t,
          int64_t,
@@ -138,7 +138,7 @@ public:
         (override)
     );
     MOCK_METHOD(
-        drogon::Task<bool>,
+        drogon::Task<void>,
         updateInfo,
         (int64_t chat_id,
          std::optional<std::string>,
@@ -154,4 +154,10 @@ public:
         (override)
     );
     MOCK_METHOD(drogon::Task<Chat>, getSaved, (int64_t), (override));
+    MOCK_METHOD(
+        drogon::Task<void>,
+        lockChat,
+        (int64_t, std::shared_ptr<drogon::orm::Transaction>),
+        (override)
+    );
 };

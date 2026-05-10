@@ -90,18 +90,18 @@ public:
         std::string role,
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
-    drogon::Task<bool> virtual removeMember(
+    drogon::Task<void> virtual removeMember(
         int64_t chat_id,
         int64_t user_id,
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
-    drogon::Task<bool> virtual updateMemberRole(
+    drogon::Task<void> virtual updateMemberRole(
         int64_t chat_id,
         int64_t user_id,
         std::string new_role,
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
-    drogon::Task<bool> virtual updateInfo(
+    drogon::Task<void> virtual updateInfo(
         int64_t chat_id,
         std::optional<std::string> name,
         std::optional<std::string> avatar,
@@ -113,6 +113,10 @@ public:
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     drogon::Task<Chat> virtual getSaved(int64_t user_id) = 0;
+    drogon::Task<void> virtual lockChat(
+        int64_t chat_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+    ) = 0;
 
 protected:
     std::unique_ptr<MessageRepositoryInterface> message_repo_;
@@ -180,18 +184,18 @@ public:
         std::string role,
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
-    drogon::Task<bool> removeMember(
+    drogon::Task<void> removeMember(
         int64_t chat_id,
         int64_t user_id,
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
-    drogon::Task<bool> updateMemberRole(
+    drogon::Task<void> updateMemberRole(
         int64_t chat_id,
         int64_t user_id,
         std::string new_role,
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
-    drogon::Task<bool> updateInfo(
+    drogon::Task<void> updateInfo(
         int64_t chat_id,
         std::optional<std::string> name,
         std::optional<std::string> avatar,
@@ -203,6 +207,10 @@ public:
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
     drogon::Task<Chat> virtual getSaved(int64_t user_id) override;
+    drogon::Task<void> lockChat(
+        int64_t chat_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+    ) override;
 
 private:
     drogon::orm::CoroMapper<Chat> getMapper(
