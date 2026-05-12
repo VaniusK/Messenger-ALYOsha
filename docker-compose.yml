@@ -72,6 +72,7 @@ services:
       target: coverage
       args:
         ENABLE_COVERAGE: "ON"
+        CMAKE_BUILD_TYPE: "Debug"
     env_file: .env
     depends_on:
       db:
