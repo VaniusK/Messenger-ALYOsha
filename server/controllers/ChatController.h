@@ -1,6 +1,9 @@
 #pragma once
 
 #include <drogon/HttpController.h>
+#include <drogon/HttpRequest.h>
+#include <drogon/HttpResponse.h>
+#include <cstdint>
 #include <memory>
 #include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
@@ -62,6 +65,52 @@ public:
         "api::v1::JsonValidatorFilter",
         "api::v1::AuthFilter"
     );
+    ADD_METHOD_TO(
+        ChatController::createGroup,
+        "/v1/chats/group",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::addGroupChatMember,
+        "/v1/chats/{1:chat_id}/members",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getChatMember,
+        "/v1/chats/{1:chat_id}/members/{2:member_id}",
+        Get,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getChatMembers,
+        "/v1/chats/{1:chat_id}/members",
+        Get,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::removeMember,
+        "/v1/chats/{1:chat_id}/members/{2:member_id}",
+        Delete,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::updateMemberRole,
+        "/v1/chats/{1:chat_id}/members/{2:member_id}",
+        Patch,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::updateChatInfo,
+        "/v1/chats/{1:chat_id}",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
     METHOD_LIST_END
     Task<HttpResponsePtr>
     getUserChats(const HttpRequestPtr req, int64_t user_id);
@@ -75,6 +124,22 @@ public:
     Task<HttpResponsePtr>
     getMessageById(const HttpRequestPtr req, int64_t message_id);
     Task<HttpResponsePtr> getAttachmentLinks(const HttpRequestPtr req);
+    Task<HttpResponsePtr> createGroup(const HttpRequestPtr req);
+    Task<HttpResponsePtr>
+    addGroupChatMember(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    getChatMember(const HttpRequestPtr req, int64_t chat_id, int64_t member_id);
+    Task<HttpResponsePtr>
+    getChatMembers(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    removeMember(const HttpRequestPtr req, int64_t chat_id, int64_t member_id);
+    Task<HttpResponsePtr> updateMemberRole(
+        const HttpRequestPtr req,
+        int64_t chat_id,
+        int64_t member_id
+    );
+    Task<HttpResponsePtr>
+    updateChatInfo(const HttpRequestPtr req, int64_t chat_id);
 
     ChatController() {
         chat_service.setChatRepo(
@@ -109,6 +174,7 @@ public:
 private:
     ChatService chat_service;
     bool validateMessageType(const std::string &message_type);
+    static std::set<std::string> chat_roles;
 };
 }  // namespace v1
 }  // namespace api
