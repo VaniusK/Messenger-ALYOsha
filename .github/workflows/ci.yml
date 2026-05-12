@@ -316,27 +316,18 @@ jobs:
           ls -la artifacts/
           test -f artifacts/client || (echo "Client binary not found!" && exit 1)
       
-      - name: Debug MinIO connectivity
-        run: |
-          docker compose --profile test up -d db minio
-          echo "=== Waiting for minio healthcheck ==="
-          for i in $(seq 1 30); do
-            STATUS=$(docker inspect --format='{{.State.Health.Status}}' $(docker compose --profile test ps -q minio) 2>/dev/null || echo "unknown")
-            echo "Attempt $i: minio health=$STATUS"
-            [ "$STATUS" = "healthy" ] && break
-            sleep 2
-          done
-          echo "=== Docker network info ==="
-          docker network ls
-          docker compose --profile test ps
-          echo "=== Testing connectivity from inside the network ==="
-          docker run --rm --network $(docker network ls --filter name=default -q | head -1) curlimages/curl:latest \
-            -sf http://minio:9000/minio/health/live && echo "MinIO reachable!" || echo "MinIO NOT reachable!"
-          echo "=== MinIO logs ==="
-          docker compose --profile test logs minio
 
       - name: Run server tests
         run: docker compose --profile test run test-server
+      
+      - name: Generate server tests coverage report
+        run: docker compose --profile test run test-server-coverage
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: artifacts/coverage_report
         
       
       - name: Cleanup
