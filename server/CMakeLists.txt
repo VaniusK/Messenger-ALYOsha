@@ -33,6 +33,7 @@ configure_file(
     COPYONLY
 )
 
+
 add_executable(${PROJECT_NAME} src/main.cc) # create executable
 
 find_package(Drogon CONFIG REQUIRED) # find drogon
@@ -49,6 +50,13 @@ endif ()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror=return-type -Werror=maybe-uninitialized)
+endif()
+
+option(ENABLE_COVERAGE "Включить вычисления покрытия тестами" OFF)
+
+if(ENABLE_COVERAGE)
+    target_compile_options(${PROJECT_NAME} PRIVATE -O0 --coverage)
+    target_link_options(${PROJECT_NAME} PRIVATE --coverage)
 endif()
 
 aux_source_directory(src SRC_SRC) # get all files from src
@@ -125,6 +133,11 @@ if(BUILD_TESTS)
     target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/tests) # include project headers
     target_sources(server_tests PRIVATE ${REPO_SRC} ${UTILS_SRC} ${SERVICES_SRC} ${CTL_SRC} ${FILTER_SRC} ${MODEL_SRC})
     
+    if(ENABLE_COVERAGE)
+        target_compile_options(server_tests PRIVATE -O0 --coverage)
+        target_link_options(server_tests PRIVATE --coverage)
+    endif()
+
     include(GoogleTest)
     gtest_discover_tests(server_tests)
 endif()

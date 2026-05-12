@@ -6,6 +6,7 @@ FROM drogonframework/drogon AS builder
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl zip unzip tar \
+    lcov \
     pkg-config perl cpanminus && \
     cpanm IPC::Cmd
 
@@ -16,11 +17,20 @@ RUN /opt/vcpkg/vcpkg install minio-cpp
 WORKDIR /app
 COPY . .
 
+ARG ENABLE_COVERAGE=OFF
 
 
-RUN cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON \
-    -DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
+ARG CMAKE_RELEASE_TYPE=Release
+
+RUN cmake -B build -S . -DCMAKE_BUILD_TYPE=${CMAKE_RELEASE_TYPE} -DBUILD_TESTS=ON \
+    -DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake -DENABLE_COVERAGE=${ENABLE_COVERAGE}
 RUN cmake --build build --parallel
+
+# Coverage stage
+FROM builder AS coverage
+
+WORKDIR /app/build
+CMD ["bash", "-c", "./server_tests && lcov --capture --directory . -o coverage.info && lcov --remove coverage.info '/usr/*' '*/build/_deps/*' '*/tests/*' '*/models/*' '*/miniocpp/*' -o filtered.info && genhtml filtered.info -o /output/coverage_report --title 'Alesha Coverage'"]
 
 # Runtime stage
 FROM ubuntu:22.04
