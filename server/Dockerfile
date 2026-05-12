@@ -27,7 +27,7 @@ RUN cmake --build build --parallel
 FROM builder AS coverage
 
 WORKDIR /app/build
-CMD ["bash", "-c", "./server_tests && lcov --capture --directory . -o coverage.info && lcov --remove coverage.info '/usr/*' '*/build/_deps/*' '*/tests/*' -o filtered.info && genhtml filtered.info -o /output/coverage_report --title 'Alesha Coverage'"]
+CMD ["bash", "-c", "./server_tests && lcov --capture --directory . -o coverage.info && lcov --remove coverage.info '/usr/*' '*/build/_deps/*' '*/tests/*' '*/models/*' '*/miniocpp/*' -o filtered.info && genhtml filtered.info -o /output/coverage_report --title 'Alesha Coverage'"]
 
 # Runtime stage
 FROM ubuntu:22.04
