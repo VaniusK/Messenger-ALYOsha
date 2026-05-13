@@ -517,26 +517,15 @@ Task<UpdateMemberRoleResponseDto> ChatService::updateMemberRole(
     }
     auto transaction_ptr =
         co_await drogon::app().getDbClient()->newTransactionCoro();
-    bool success = co_await chat_repo->updateMemberRole(
+    co_await chat_repo->updateMemberRole(
         request_dto.chat_id, request_dto.member_id, request_dto.new_role,
         transaction_ptr
     );
-    if (!success) {
-        throw messenger::exceptions::InternalServerErrorException(
-            "Failed to change member's role"
-        );
-    }
     if (request_dto.new_role == messenger::models::ChatRole::Owner) {
-        bool owners_demotion = co_await chat_repo->updateMemberRole(
+        co_await chat_repo->updateMemberRole(
             request_dto.chat_id, request_dto.user_id,
             messenger::models::ChatRole::Admin, transaction_ptr
         );
-        if (!owners_demotion) {
-            throw messenger::exceptions::InternalServerErrorException(
-                "Failed to demote old owner. Now you has more than one owner "
-                "in the chat"
-            );
-        }
     }
     co_await transaction_ptr->execSqlCoro("COMMIT;");
     co_return UpdateMemberRoleResponseDto();
@@ -553,14 +542,9 @@ Task<UpdateChatInfoResponseDto> ChatService::updateChatInfo(
             "Not enough permissions to edit this chat"
         );
     }
-    bool success = co_await chat_repo->updateInfo(
+    co_await chat_repo->updateInfo(
         request_dto.chat_id, request_dto.name, request_dto.avatar,
         request_dto.description
     );
-    if (!success) {
-        throw messenger::exceptions::InternalServerErrorException(
-            "Failed to update chat info"
-        );
-    }
     co_return UpdateChatInfoResponseDto();
 }
