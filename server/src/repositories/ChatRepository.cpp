@@ -438,7 +438,7 @@ Task<ChatMember> ChatRepository::addMember(
     }
 }
 
-Task<bool> ChatRepository::removeMember(
+Task<void> ChatRepository::removeMember(
     int64_t chat_id,
     int64_t user_id,
     std::shared_ptr<drogon::orm::Transaction> transaction_ptr
@@ -446,14 +446,13 @@ Task<bool> ChatRepository::removeMember(
     auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
     try {
         co_await chat_member_mapper.deleteByPrimaryKey({chat_id, user_id});
-        co_return true;
     } catch (const DrogonDbException &e) {
         // deleteByPrimaryKey can't throw anything
         throw std::runtime_error("Database error");
     }
 }
 
-Task<bool> ChatRepository::updateMemberRole(
+Task<void> ChatRepository::updateMemberRole(
     int64_t chat_id,
     int64_t user_id,
     std::string new_role,
@@ -465,15 +464,14 @@ Task<bool> ChatRepository::updateMemberRole(
             co_await chat_member_mapper.findByPrimaryKey({chat_id, user_id});
         chat_member.setRole(new_role);
         co_await chat_member_mapper.update(chat_member);
-        co_return true;
     } catch (const UnexpectedRows &e) {
-        co_return false;
+        throw exceptions::NotFoundException("Member does not exist");
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }
 }
 
-Task<bool> ChatRepository::updateInfo(
+Task<void> ChatRepository::updateInfo(
     int64_t chat_id,
     std::optional<std::string> name,
     std::optional<std::string> avatar,
@@ -502,9 +500,8 @@ Task<bool> ChatRepository::updateInfo(
         if (own_transaction) {
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
-        co_return true;
     } catch (const UnexpectedRows &e) {
-        co_return false;
+        throw exceptions::NotFoundException("Chat does not exist");
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }
@@ -564,6 +561,19 @@ Task<Chat> ChatRepository::getSaved(int64_t user_id) {
     } catch (const UnexpectedRows &e) {
         throw exceptions::NotFoundException("User does not exist");
     } catch (const DrogonDbException &e) {
+        throw std::runtime_error("Database error");
+    }
+}
+
+Task<void> ChatRepository::lockChat(
+    int64_t chat_id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    try {
+        co_await transaction_ptr->execSqlCoro(
+            "SELECT * FROM chats WHERE id = $1 FOR UPDATE;", chat_id
+        );
+    } catch (DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }
 }
