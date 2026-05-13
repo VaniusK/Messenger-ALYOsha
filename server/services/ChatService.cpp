@@ -442,13 +442,16 @@ Task<AddGroupChatMemberResponseDto> ChatService::addGroupChatMember(
 Task<GetChatMemberResponseDto> ChatService::getChatMember(
     GetChatMemberRequestDto request_dto
 ) {
-    bool is_member = co_await checkChatAccess(request_dto.user_id, request_dto.chat_id;
-    if (!is_member){
+    bool is_member =
+        co_await checkChatAccess(request_dto.user_id, request_dto.chat_id);
+    if (!is_member) {
         throw messenger::exceptions::ForbiddenException(
             "Request sender is not in chat"
         );
     }
-    auto member = co_await chat_repo->getMember(request_dto.chat_id, request_dto.member_id);
+    auto member = co_await chat_repo->getMember(
+        request_dto.chat_id, request_dto.member_id
+    );
     GetChatMemberResponseDto response_dto(std::move(member));
     co_return response_dto;
 }
@@ -512,8 +515,11 @@ Task<UpdateMemberRoleResponseDto> ChatService::updateMemberRole(
             "Cannot demote yourself without transfer of rights"
         );
     }
+    auto transaction_ptr =
+        co_await drogon::app().getDbClient()->newTransactionCoro();
     bool success = co_await chat_repo->updateMemberRole(
-        request_dto.chat_id, request_dto.member_id, request_dto.new_role
+        request_dto.chat_id, request_dto.member_id, request_dto.new_role,
+        transaction_ptr
     );
     if (!success) {
         throw messenger::exceptions::InternalServerErrorException(
@@ -523,7 +529,7 @@ Task<UpdateMemberRoleResponseDto> ChatService::updateMemberRole(
     if (request_dto.new_role == messenger::models::ChatRole::Owner) {
         bool owners_demotion = co_await chat_repo->updateMemberRole(
             request_dto.chat_id, request_dto.user_id,
-            messenger::models::ChatRole::Admin
+            messenger::models::ChatRole::Admin, transaction_ptr
         );
         if (!owners_demotion) {
             throw messenger::exceptions::InternalServerErrorException(
@@ -532,6 +538,7 @@ Task<UpdateMemberRoleResponseDto> ChatService::updateMemberRole(
             );
         }
     }
+    co_await transaction_ptr->execSqlCoro("COMMIT;");
     co_return UpdateMemberRoleResponseDto();
 }
 
