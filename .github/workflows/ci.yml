@@ -111,7 +111,7 @@ jobs:
             --appdir AppDir \
             --executable "$CLIENT_BIN" \
             --desktop-file AppDir/messenger.desktop \
-            ---exclude-library=libqsqlmimer.so \
+            --exclude-library=libqsqlmimer.so \
             --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png \
             --plugin qt \
             --output appimage
