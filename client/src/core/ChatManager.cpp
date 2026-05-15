@@ -180,7 +180,8 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                 }
 
                 if (beforeId > 0) {
-                    qDebug() << "[ChatManager] prepended history \n";
+                    qDebug()
+                        << "[ChatManager] prepended history" << messages.size();
                     emit chatsHistoryPrepended(messages);
                 } else {
                     qDebug() << "[ChatManager] loaded history \n";
