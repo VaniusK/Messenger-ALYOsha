@@ -30,6 +30,8 @@ qt_add_executable(client #WIN32
     include/VoiceManager.hpp
     src/core/MediaCacheManager.cpp
     include/MediaCacheManager.hpp
+    src/core/LocalChatStorage.cpp
+    include/LocalChatStorage.hpp
 )
 
 qt_add_qml_module(client
