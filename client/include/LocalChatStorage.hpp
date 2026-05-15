@@ -18,4 +18,6 @@ public:
 
     void addMessage(QJsonObject message);
     QJsonArray getMessagesByChat(int64_t chat_id);
+    std::optional<QJsonObject> getOldestChatMessage(int64_t chat_id);
+    void clear();
 };

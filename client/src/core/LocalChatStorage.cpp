@@ -80,3 +80,36 @@ QJsonArray LocalChatStorage::getMessagesByChat(int64_t chat_id) {
         return messages;
     }
 }
+
+std::optional<QJsonObject> LocalChatStorage::getOldestChatMessage(
+    int64_t chat_id
+) {
+    QSqlQuery query;
+    query.prepare(
+        "SELECT json_data from messages WHERE messages.chat_id = :chat_id "
+        "ORDER BY messages.chat_id ASC LIMIT 1"
+    );
+    query.bindValue(":chat_id", QVariant::fromValue(chat_id));
+    if (!query.exec()) {
+        qDebug() << "Error: Could't read oldest message from DB:"
+                 << query.lastError().text();
+    } else {
+        qDebug() << "Reading oldest message from DB";
+        while (query.next()) {
+            QJsonDocument message =
+                QJsonDocument::fromJson(query.value(0).toString().toUtf8());
+            return message.object();
+        }
+        return std::nullopt;
+    }
+}
+
+void LocalChatStorage::clear() {
+    QSqlQuery query;
+    query.prepare("DELETE FROM messages");
+    if (!query.exec()) {
+        qDebug() << "Error: Could't clear DB:" << query.lastError().text();
+    } else {
+        qDebug() << "Clearing DB";
+    }
+}

@@ -66,5 +66,4 @@ private:
     MediaCacheManager *m_mediaCache;
     LocalChatStorage *m_chatStorage;
     QWebSocket *m_webSocket;
-    std::map<int, QJsonArray> m_chats;
 };
