@@ -6,6 +6,7 @@
 #include "AuthManager.hpp"
 #include "ChatManager.hpp"
 #include "ConnectionManager.hpp"
+#include "LocalChatStorage.hpp"
 #include "MediaCacheManager.hpp"
 #include "MediaManager.hpp"
 #include "StateManager.hpp"
@@ -31,8 +32,10 @@ int main(int argc, char *argv[]) {
     );
     auto *authManager = new AuthManager(connectionManager, stateManager, &app);
     auto *mediaCacheManager = new MediaCacheManager(connectionManager, &app);
+    auto *localChatStorage = new LocalChatStorage(&app);
     auto *chatManager = new ChatManager(
-        connectionManager, stateManager, mediaCacheManager, &app
+        connectionManager, stateManager, mediaCacheManager, localChatStorage,
+        &app
     );
     auto *mediaManager =
         new MediaManager(connectionManager, stateManager, &app);

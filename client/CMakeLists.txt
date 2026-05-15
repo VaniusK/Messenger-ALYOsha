@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network WebSockets Test Widgets Multimedia Svg)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Sql Network WebSockets Test Widgets Multimedia Svg)
 
 #if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 #    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
@@ -30,6 +30,8 @@ qt_add_executable(client #WIN32
     include/VoiceManager.hpp
     src/core/MediaCacheManager.cpp
     include/MediaCacheManager.hpp
+    src/core/LocalChatStorage.cpp
+    include/LocalChatStorage.hpp
 )
 
 qt_add_qml_module(client
@@ -62,7 +64,7 @@ qt_add_qml_module(client
         assets/icons/check_double.svg
 )
 target_include_directories(client PRIVATE include)
-target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)
+target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)
 
 # Tests (optional, Qt Test or GTest)
 option(BUILD_TESTS "Build tests" OFF)

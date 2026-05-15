@@ -23,8 +23,6 @@ public:
     virtual QNetworkReply *get(const QString &endpoint);
     virtual QNetworkReply *
     post(const QString &endpoint, const QByteArray &body);
-    virtual QNetworkReply *
-    getWithBody(const QString &endpoint, const QByteArray &body);
     QNetworkAccessManager *networkManager() const;
 
 private:
