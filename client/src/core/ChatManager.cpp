@@ -135,7 +135,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
     std::optional<QJsonObject> oldest_message =
         m_chatStorage->getOldestChatMessage(chat_id);
     if (oldest_message.has_value() &&
-        (beforeId == 0 || beforeId > oldest_message.value()["id"].toInt())) {
+        (beforeId == 0 || beforeId != oldest_message.value()["id"].toInt())) {
         emit chatsHistoryLoaded(m_chatStorage->getMessagesByChat(chat_id));
         return;
     }
@@ -175,7 +175,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                     m_chatStorage->addMessage(msg);
                 }
 
-                if (beforeId > 0) {
+                if (false) {
                     qDebug() << "[ChatManager] prepended history \n";
                     emit chatsHistoryPrepended(messages);
                 } else {
