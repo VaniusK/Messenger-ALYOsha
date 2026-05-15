@@ -124,12 +124,6 @@ void ChatManager::fetchChats() {
 }
 
 void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
-    QJsonObject reqJson;
-    reqJson["limit"] = 50;
-
-    if (beforeId > 0) {
-        reqJson["before_id"] = beforeId;
-    }
     int64_t chat_id = chatId.toLongLong();
     qDebug() << "[ChatManager] fetchChatHistory() called with " << beforeId;
     std::optional<QJsonObject> oldest_message =
@@ -140,10 +134,11 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
         return;
     }
 
-    QNetworkReply *reply = m_connection->get(
-        "/chats/" + chatId +
-        "/messages?limit=50&before_id=" + QString::number(beforeId)
-    );
+    QString endpoint = "/chats/" + chatId + "/messages?limit=50";
+    if (beforeId > 0) {
+        endpoint += "&before_id=" + QString::number(beforeId);
+    }
+    QNetworkReply *reply = m_connection->get(endpoint);
 
     connect(
         reply, &QNetworkReply::finished,
