@@ -39,14 +39,17 @@ void LocalChatStorage::addMessage(QJsonObject message_object) {
     QJsonDocument message(message_object);
     QSqlQuery query;
     query.prepare(
-        "INSERT INTO messages (id, chat_id, text, json_data) (:id, :chat_id, "
+        "INSERT INTO messages (id, chat_id, text, json_data) VALUES (:id, "
+        ":chat_id, "
         ":text,"
         ":json_data)"
     );
     query.bindValue(":id", message["id"].toInt());
     query.bindValue(":chat_id", message["chat_id"].toInt());
     query.bindValue(":text", message["text"].toString());
-    query.bindValue(":json_data", message.toJson());
+    query.bindValue(
+        ":json_data", QString::fromUtf8(message.toJson(QJsonDocument::Compact))
+    );
     if (!query.exec()) {
         qDebug() << "Error: Could not add message to DB:"
                  << query.lastError().text();
