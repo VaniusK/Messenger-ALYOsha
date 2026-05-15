@@ -19,7 +19,7 @@ LocalChatStorage::LocalChatStorage(QObject *parent) : QObject(parent) {
 
     if (!db.open()) {
         qDebug() << "Error: Could not open DB:" << db.lastError().text();
-        throw std::runtime_error("Couldn't open database for chats");
+        // throw std::runtime_error("Couldn't open database for chats");
     } else {
         qDebug() << "DB opened";
     }
@@ -50,7 +50,7 @@ void LocalChatStorage::addMessage(QJsonObject message_object) {
     if (!query.exec()) {
         qDebug() << "Error: Could not add message to DB:"
                  << query.lastError().text();
-        throw std::runtime_error("Couldn't add message to DB");
+        // throw std::runtime_error("Couldn't add message to DB");
     } else {
         qDebug() << "Message added to DB";
     }
