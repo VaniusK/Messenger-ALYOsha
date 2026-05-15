@@ -146,7 +146,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
 
     connect(
         reply, &QNetworkReply::finished,
-        [this, chat_id, reply, beforeId]() {
+        [this, chat_id, reply, beforeId, &oldest_message]() {
             reply->deleteLater();
             if (reply->error() == QNetworkReply::NoError) {
                 QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
@@ -171,8 +171,12 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                     QString currentUserIdStr = QString::number(currentUserId);
 
                     msg["is_me"] = (senderIdStr == currentUserIdStr);
-                    messages.append(msg);
-                    m_chatStorage->addMessage(msg);
+                    if (!oldest_message.has_value() ||
+                        oldest_message.value()["id"].toInt() >
+                            msg["id"].toInt()) {
+                        messages.append(msg);
+                        m_chatStorage->addMessage(msg);
+                    }
                 }
 
                 if (beforeId > 0) {

@@ -114,7 +114,7 @@ Rectangle {
                         topmostMsgId = parseInt(topmostMsgId);
 
                         if (!isNaN(topmostMsgId) && topmostMsgId > 0 && hasMoreHistory) {
-                            // ChatLayer.fetchChatHistory(activeChatId, topmostMsgId);
+                            ChatLayer.fetchChatHistory(activeChatId, topmostMsgId);
                         } else {
                             isLoadingHistory = false;
                         }
