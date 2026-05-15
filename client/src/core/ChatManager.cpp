@@ -146,7 +146,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
 
     connect(
         reply, &QNetworkReply::finished,
-        [this, chat_id, reply, beforeId, &oldest_message]() {
+        [this, chat_id, reply, beforeId, oldest_message]() {
             reply->deleteLater();
             if (reply->error() == QNetworkReply::NoError) {
                 QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
