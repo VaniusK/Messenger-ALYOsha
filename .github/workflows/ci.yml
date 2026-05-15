@@ -107,12 +107,12 @@ jobs:
           CLIENT_BIN=$(find build/client -type f -name "client" -executable | head -n 1)
           if [ -z "$CLIENT_BIN" ]; then echo "Client binary not found!"; exit 1; fi
 
+          export EXCLUDE_QT_PLUGINS="sqldrivers/libqsqlmimer.so"
+          
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             --executable "$CLIENT_BIN" \
             --desktop-file AppDir/messenger.desktop \
-            --exclude-library=libqsqlmimer.so \
-            --exclude-library=libmimerapi.so \
             --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/messenger.png \
             --plugin qt \
             --output appimage
