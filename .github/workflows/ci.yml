@@ -107,8 +107,8 @@ jobs:
           CLIENT_BIN=$(find build/client -type f -name "client" -executable | head -n 1)
           if [ -z "$CLIENT_BIN" ]; then echo "Client binary not found!"; exit 1; fi
 
-          export EXCLUDE_QT_PLUGINS="sqldrivers/libqsqlmimer.so"
-          
+          rm -f /home/runner/Qt/6.7.3/gcc_64/plugins/sqldrivers/libqsqlmimer.so
+
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             --executable "$CLIENT_BIN" \
