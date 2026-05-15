@@ -175,7 +175,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
 
                     msg["is_me"] = (senderIdStr == currentUserIdStr);
                     messages.append(msg);
-                    m_chats[chat_id].insert(0, msg);
+                    addMessageToCache(msg);
                 }
 
                 if (beforeId > 0) {
@@ -209,7 +209,7 @@ void ChatManager::sendMessage(const QString &chatId, const QString &text) {
                 QJsonDocument::fromJson(reply->readAll()).object();
             QJsonObject msg = obj["message"].toObject();
             msg["is_me"] = true;
-            m_chats[chat_id].push_back(msg);
+            addMessageToCache(msg);
             emit messageSentSuccess(msg);
         } else {
             emit chatError("Send message failed: " + reply->errorString());
@@ -296,7 +296,7 @@ void ChatManager::onWebSocketTextMessageReceived(const QString &message) {
         QString currentUserIdStr = QString::number(m_stateManager->getUserId());
 
         msg.insert("is_me", (senderIdStr == currentUserIdStr));
-        m_chats[msg["chat_id"].toVariant().toLongLong()].push_back(msg);
+        addMessageToCache(msg);
     }
     emit incomingWebSocketMessage(doc.object());
 }
@@ -317,6 +317,7 @@ void ChatManager::addMessageToCache(const QJsonObject &msg) {
         }
     }
     m_chats[chatId].push_back(msg);
+    m_chatStorage->addMessage(msg);
 }
 
 void ChatManager::onWebSocketError(QAbstractSocket::SocketError error) {
@@ -357,7 +358,7 @@ void ChatManager::sendMessageWithAttachment(
                 QJsonDocument::fromJson(reply->readAll()).object();
             QJsonObject msg = obj["message"].toObject();
             msg["is_me"] = true;
-            m_chats[chat_id].push_back(msg);
+            addMessageToCache(msg);
             emit messageSentSuccess(msg);
 
             QJsonValue idVal = msg["id"];

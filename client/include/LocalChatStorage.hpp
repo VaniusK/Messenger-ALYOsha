@@ -16,5 +16,5 @@ class LocalChatStorage : public QObject {
 public:
     explicit LocalChatStorage(QObject *parent = nullptr);
 
-    void addMessage(QJsonDocument message);
+    void addMessage(QJsonObject message);
 };
