@@ -171,6 +171,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                     QString currentUserIdStr = QString::number(currentUserId);
 
                     msg["is_me"] = (senderIdStr == currentUserIdStr);
+                    qDebug() << "Got raw id of " << msg["id"].toInt();
                     if (!oldest_message.has_value() ||
                         oldest_message.value()["id"].toInt() >
                             msg["id"].toInt()) {
@@ -180,8 +181,8 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                 }
 
                 if (beforeId > 0) {
-                    qDebug()
-                        << "[ChatManager] prepended history" << messages.size();
+                    qDebug() << "[ChatManager] prepended history of size "
+                             << messages.size();
                     emit chatsHistoryPrepended(messages);
                 } else {
                     qDebug() << "[ChatManager] loaded history \n";
