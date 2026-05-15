@@ -7,6 +7,7 @@
 #include <QString>
 #include <QWebSocket>
 #include "ConnectionManager.hpp"
+#include "LocalChatStorage.hpp"
 #include "MediaCacheManager.hpp"
 #include "StateManager.hpp"
 
@@ -18,6 +19,7 @@ public:
         ConnectionManager *connection,
         StateManager *stateManager,
         MediaCacheManager *media_cache,
+        LocalChatStorage *chatStorage,
         QObject *parent = nullptr
     );
 
@@ -61,7 +63,8 @@ private slots:
 private:
     ConnectionManager *m_connection;
     StateManager *m_stateManager;
-    MediaCacheManager *m_media_cache;
+    MediaCacheManager *m_mediaCache;
+    LocalChatStorage *m_chatStorage;
     QWebSocket *m_webSocket;
     std::map<int, QJsonArray> m_chats;
 };

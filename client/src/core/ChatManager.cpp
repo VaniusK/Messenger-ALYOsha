@@ -9,13 +9,15 @@
 ChatManager::ChatManager(
     ConnectionManager *connection,
     StateManager *stateManager,
-    MediaCacheManager *media_cache,
+    MediaCacheManager *mediaCache,
+    LocalChatStorage *chatStorage,
     QObject *parent
 )
     : QObject(parent),
       m_connection(connection),
       m_stateManager(stateManager),
-      m_media_cache(media_cache) {
+      m_mediaCache(mediaCache),
+      m_chatStorage(chatStorage) {
     m_webSocket =
         new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
 
@@ -256,7 +258,7 @@ void ChatManager::cacheMessageMedia(QJsonObject &message) {
     QJsonArray attachments = message["attachments"].toArray();
     for (int i = 0; i < attachments.size(); i++) {
         QJsonObject attachment = attachments.at(i).toObject();
-        QString cachedFileLocation = m_media_cache->getOrPut(
+        QString cachedFileLocation = m_mediaCache->getOrPut(
             attachment["s3_object_key"].toString(),
             attachment["download_url"].toString()
         );
