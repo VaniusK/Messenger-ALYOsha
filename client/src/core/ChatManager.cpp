@@ -133,8 +133,8 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
     int64_t chat_id = chatId.toLongLong();
     qDebug() << "[ChatManager] fetchChatHistory() called \n";
 
-    if (beforeId > 0 && m_chats[chat_id].size() > 0 &&
-        beforeId != m_chats[chat_id].at(0)["id"].toInt()) {
+    if (m_chats[chat_id].size() > 0 &&
+        (beforeId == 0 || beforeId != m_chats[chat_id].at(0)["id"].toInt())) {
         emit chatsHistoryLoaded(m_chats[chat_id]);
         return;
     }
