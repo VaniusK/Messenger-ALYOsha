@@ -140,8 +140,9 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
         return;
     }
 
-    QNetworkReply *reply = m_connection->getWithBody(
-        "/chats/" + chatId + "/messages", QJsonDocument(reqJson).toJson()
+    QNetworkReply *reply = m_connection->get(
+        "/chats/" + chatId +
+        "/messages?limit=50&before_id=" + QString::number(beforeId)
     );
 
     connect(
