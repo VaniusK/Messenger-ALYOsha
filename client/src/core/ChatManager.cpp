@@ -135,7 +135,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
 
     if (m_chats[chat_id].size() > 0 &&
         (beforeId == 0 || beforeId != m_chats[chat_id].at(0)["id"].toInt())) {
-        emit chatsHistoryLoaded(m_chats[chat_id]);
+        emit chatsHistoryLoaded(m_chatStorage->getMessagesByChat(chat_id));
         return;
     }
 
