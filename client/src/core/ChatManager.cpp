@@ -175,7 +175,7 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                     m_chatStorage->addMessage(msg);
                 }
 
-                if (false) {
+                if (beforeId > 0) {
                     qDebug() << "[ChatManager] prepended history \n";
                     emit chatsHistoryPrepended(messages);
                 } else {
