@@ -183,7 +183,9 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                     emit chatsHistoryPrepended(messages);
                 } else {
                     qDebug() << "[ChatManager] loaded history \n";
-                    emit chatsHistoryLoaded(m_chats[chat_id]);
+                    emit chatsHistoryLoaded(
+                        m_chatStorage->getMessagesByChat(chat_id)
+                    );
                 }
             } else {
                 emit chatError("Fetch history failed: " + reply->errorString());

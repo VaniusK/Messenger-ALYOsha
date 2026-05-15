@@ -17,4 +17,5 @@ public:
     explicit LocalChatStorage(QObject *parent = nullptr);
 
     void addMessage(QJsonObject message);
+    QJsonArray getMessagesByChat(int64_t chat_id);
 };

@@ -58,3 +58,25 @@ void LocalChatStorage::addMessage(QJsonObject message_object) {
         qDebug() << "Message added to DB";
     }
 }
+
+QJsonArray LocalChatStorage::getMessagesByChat(int64_t chat_id) {
+    QSqlQuery query;
+    query.prepare(
+        "SELECT json_data from messages WHERE messages.chat_id = :chat_id "
+        "ORDER BY messages.chat_id ASC"
+    );
+    query.bindValue(":chat_id", QVariant::fromValue(chat_id));
+    if (!query.exec()) {
+        qDebug() << "Error: Could't read messages from DB:"
+                 << query.lastError().text();
+    } else {
+        qDebug() << "Reading messages from DB";
+        QJsonArray messages;
+        while (query.next()) {
+            QJsonDocument message =
+                QJsonDocument::fromJson(query.value(0).toString().toUtf8());
+            messages.push_back(message.object());
+        }
+        return messages;
+    }
+}
