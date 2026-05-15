@@ -131,10 +131,10 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
         reqJson["before_id"] = beforeId;
     }
     int64_t chat_id = chatId.toLongLong();
-    qDebug() << "[ChatManager] fetchChatHistory() called \n";
+    qDebug() << "[ChatManager] fetchChatHistory() called with " << beforeId;
 
     if (m_chats[chat_id].size() > 0 &&
-        (beforeId == 0 || beforeId != m_chats[chat_id].at(0)["id"].toInt())) {
+        (beforeId == 0 || beforeId > m_chats[chat_id].at(0)["id"].toInt())) {
         emit chatsHistoryLoaded(m_chatStorage->getMessagesByChat(chat_id));
         return;
     }
