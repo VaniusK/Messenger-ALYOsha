@@ -34,6 +34,25 @@ public:
     Task<GetAttachmentLinksResponseDto> getAttachmentLinks(
         GetAttachmentLinksRequestDto request_dto
     );
+    Task<CreateGroupResponseDto> createGroup(CreateGroupRequestDto request_dto);
+    Task<AddGroupChatMemberResponseDto> addGroupChatMember(
+        AddGroupChatMemberRequestDto request_dto
+    );
+    Task<GetChatMemberResponseDto> getChatMember(
+        GetChatMemberRequestDto request_dto
+    );
+    Task<GetChatMembersResponseDto> getChatMembers(
+        GetChatMembersRequestDto request_dto
+    );
+    Task<RemoveMemberResponseDto> removeMember(
+        RemoveMemberRequestDto request_dto
+    );
+    Task<UpdateMemberRoleResponseDto> updateMemberRole(
+        UpdateMemberRoleRequestDto request_dto
+    );
+    Task<UpdateChatInfoResponseDto> updateChatInfo(
+        UpdateChatInfoRequestDto request_dto
+    );
 
     void setChatRepo(
         std::shared_ptr<messenger::repositories::ChatRepositoryInterface>

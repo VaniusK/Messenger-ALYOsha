@@ -356,7 +356,7 @@ Task<Chat> ChatRepository::createGroup(
         }
         co_return chat;
     } catch (const UnexpectedRows &e) {
-        throw exceptions::NotFoundException("One of more users do not exist");
+        throw exceptions::NotFoundException("One or more users do not exist");
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }
@@ -371,6 +371,8 @@ Task<std::vector<ChatMember>> ChatRepository::getMembers(int64_t chat_id) {
                 ChatMember::Cols::_chat_id, CompareOperator::EQ, chat_id
             ));
         co_return chat_members;
+    } catch (const UnexpectedRows &e) {
+        throw exceptions::NotFoundException("Chat doesn't exist");
     } catch (const DrogonDbException &e) {
         throw std::runtime_error("Database error");
     }

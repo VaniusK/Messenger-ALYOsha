@@ -1,15 +1,19 @@
 #pragma once
 #include <drogon/HttpRequest.h>
 #include <json/value.h>
+#include <jsoncpp/json/value.h>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
+#include "ServicesDtoBase.hpp"
 #include "dto/ChatPreview.hpp"
 #include "dto/ServicesDtoBase.hpp"
 #include "models/Attachments.h"
+#include "models/ChatMembers.h"
 #include "models/Chats.h"
 #include "models/Users.h"
 #include "services/S3Service.hpp"
@@ -18,6 +22,7 @@ using User = drogon_model::messenger_db::Users;
 using Chat = drogon_model::messenger_db::Chats;
 using ChatPreview = messenger::dto::ChatPreview;
 using Attachment = drogon_model::messenger_db::Attachments;
+using ChatMember = drogon_model::messenger_db::ChatMembers;
 
 namespace messenger::dto {
 
@@ -469,6 +474,287 @@ struct GetAttachmentLinksResponseDto : ResponseDto {
             attachments_array.append(file_json);
         }
         response_json["attachments"] = attachments_array;
+        return response_json;
+    }
+};
+
+struct CreateGroupRequestDto : RequestDto {
+    int64_t creator_id;
+    std::string name;
+    std::vector<int64_t> members_ids;
+
+    CreateGroupRequestDto(std::string name_, std::vector<int64_t> members_ids_)
+        : name(std::move(name_)), members_ids(std::move(members_ids_)) {
+    }
+
+    CreateGroupRequestDto(
+        drogon::HttpRequestPtr req,
+        std::shared_ptr<Json::Value> request_json
+    ) {
+        creator_id = req->getAttributes()->get<int64_t>("user_id");
+        name = (*request_json)["chat_name"].asString();
+        if (request_json->isMember("members") &&
+            (*request_json)["members"].isArray()) {
+            for (const auto &id : (*request_json)["members"]) {
+                members_ids.push_back(id.asInt64());
+            }
+        }
+    }
+};
+
+struct CreateGroupResponseDto : ResponseDto {
+    Chat chat;
+
+    CreateGroupResponseDto() = default;
+
+    CreateGroupResponseDto(Chat chat_) : chat(std::move(chat_)) {
+    }
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["chat"] = chat.toJson();
+        return response_json;
+    }
+};
+
+struct AddGroupChatMemberRequestDto : RequestDto {
+    int64_t user_id;
+    int64_t chat_id;
+    int64_t new_member_id;
+    std::string role;
+
+    AddGroupChatMemberRequestDto(
+        int64_t user_id_,
+        int64_t chat_id_,
+        int64_t new_member_id_,
+        std::string role_
+    )
+        : user_id(user_id_),
+          chat_id(chat_id_),
+          new_member_id(new_member_id_),
+          role(std::move(role_)) {
+    }
+
+    AddGroupChatMemberRequestDto(drogon::HttpRequestPtr req, int64_t chat_id_) {
+        user_id = req->getAttributes()->get<int64_t>("user_id");
+        auto request_json = req->getJsonObject();
+        chat_id = chat_id_;
+        new_member_id = (*request_json)["user_id"].asInt64();
+        role = (*request_json)["role"].asString();
+    }
+};
+
+struct AddGroupChatMemberResponseDto : ResponseDto {
+    ChatMember chat_member;
+
+    AddGroupChatMemberResponseDto() = default;
+
+    AddGroupChatMemberResponseDto(ChatMember chat_member_)
+        : chat_member(std::move(chat_member_)) {
+    }
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["chat_member"] = chat_member.toJson();
+        return response_json;
+    }
+};
+
+struct GetChatMemberRequestDto : RequestDto {
+    int64_t user_id;
+    int64_t chat_id;
+    int64_t member_id;
+
+    GetChatMemberRequestDto(
+        int64_t user_id_,
+        int64_t chat_id_,
+        int64_t member_id_
+    )
+        : user_id(user_id_), chat_id(chat_id_), member_id(member_id_) {
+    }
+
+    GetChatMemberRequestDto(
+        drogon::HttpRequestPtr req,
+        int64_t chat_id_,
+        int64_t member_id_
+    ) {
+        user_id = req->getAttributes()->get<int64_t>("user_id");
+        chat_id = chat_id_;
+        member_id = member_id_;
+    }
+};
+
+struct GetChatMemberResponseDto : ResponseDto {
+    ChatMember member;
+
+    GetChatMemberResponseDto() = default;
+
+    GetChatMemberResponseDto(ChatMember member_) : member(std::move(member_)) {
+    }
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["chat_member"] = member.toJson();
+        return response_json;
+    }
+};
+
+struct GetChatMembersRequestDto : RequestDto {
+    int64_t user_id;
+    int64_t chat_id;
+
+    GetChatMembersRequestDto(int64_t user_id_, int64_t chat_id_)
+        : user_id(user_id_), chat_id(chat_id_) {
+    }
+
+    GetChatMembersRequestDto(drogon::HttpRequestPtr req, int64_t chat_id_) {
+        user_id = req->getAttributes()->get<int64_t>("user_id");
+        chat_id = chat_id_;
+    }
+};
+
+struct GetChatMembersResponseDto : ResponseDto {
+    std::vector<ChatMember> members;
+
+    GetChatMembersResponseDto() = default;
+
+    GetChatMembersResponseDto(std::vector<ChatMember> members_)
+        : members(std::move(members_)) {
+    }
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        Json::Value json_array(Json::arrayValue);
+        for (const auto &member : members) {
+            json_array.append(member.toJson());
+        }
+        response_json["members"] = json_array;
+        return response_json;
+    }
+};
+
+struct RemoveMemberRequestDto : RequestDto {
+    int64_t user_id;
+    int64_t chat_id;
+    int64_t member_id;
+
+    RemoveMemberRequestDto(
+        int64_t user_id_,
+        int64_t chat_id_,
+        int64_t member_id_
+    )
+        : user_id(user_id_), chat_id(chat_id_), member_id(member_id_) {
+    }
+
+    RemoveMemberRequestDto(
+        drogon::HttpRequestPtr req,
+        int64_t chat_id_,
+        int64_t member_id_
+    ) {
+        user_id = req->getAttributes()->get<int64_t>("user_id");
+        chat_id = chat_id_;
+        member_id = member_id_;
+    }
+};
+
+struct RemoveMemberResponseDto : ResponseDto {
+    RemoveMemberResponseDto() = default;
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["message"] = "Successfully removed member";
+        return response_json;
+    }
+};
+
+struct UpdateMemberRoleRequestDto : RequestDto {
+    int64_t user_id;
+    int64_t chat_id;
+    int64_t member_id;
+    std::string new_role;
+
+    UpdateMemberRoleRequestDto(
+        int64_t user_id_,
+        int64_t chat_id_,
+        int64_t member_id_,
+        std::string new_role_
+    )
+        : user_id(user_id_),
+          chat_id(chat_id_),
+          member_id(member_id_),
+          new_role(std::move(new_role_)) {
+    }
+
+    UpdateMemberRoleRequestDto(
+        drogon::HttpRequestPtr req,
+        std::shared_ptr<Json::Value> request_json,
+        int64_t chat_id_,
+        int64_t member_id_
+    ) {
+        user_id = req->getAttributes()->get<int64_t>("user_id");
+        chat_id = chat_id_;
+        member_id = member_id_;
+        new_role = (*request_json)["role"].asString();
+    }
+};
+
+struct UpdateMemberRoleResponseDto : ResponseDto {
+    UpdateMemberRoleResponseDto() = default;
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["message"] = "Successfully changed role";
+        return response_json;
+    }
+};
+
+struct UpdateChatInfoRequestDto : RequestDto {
+    int64_t user_id;
+    int64_t chat_id;
+    std::optional<std::string> name;
+    std::optional<std::string> avatar;
+    std::optional<std::string> description;
+
+    UpdateChatInfoRequestDto(
+        int64_t chat_id_,
+        std::optional<std::string> name_,
+        std::optional<std::string> avatar_,
+        std::optional<std::string> description_
+    )
+        : chat_id(chat_id_),
+          name(std::move(name_)),
+          avatar(std::move(avatar_)),
+          description(std::move(description_)) {
+    }
+
+    UpdateChatInfoRequestDto(
+        drogon::HttpRequestPtr req,
+        std::shared_ptr<Json::Value> request_json,
+        int64_t chat_id_
+    ) {
+        chat_id = chat_id_;
+        user_id = req->getAttributes()->get<int64_t>("user_id");
+        name = request_json->isMember("name")
+                   ? std::make_optional((*request_json)["name"].asString())
+                   : std::nullopt;
+
+        avatar = request_json->isMember("avatar")
+                     ? std::make_optional((*request_json)["avatar"].asString())
+                     : std::nullopt;
+
+        description =
+            request_json->isMember("description")
+                ? std::make_optional((*request_json)["description"].asString())
+                : std::nullopt;
+    }
+};
+
+struct UpdateChatInfoResponseDto : ResponseDto {
+    UpdateChatInfoResponseDto() = default;
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["message"] = "Successfully changed chat info";
         return response_json;
     }
 };

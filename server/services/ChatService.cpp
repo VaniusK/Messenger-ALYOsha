@@ -392,3 +392,159 @@ Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLinks(
         std::move(upload_presigned_results.value()), std::move(tokens)
     );
 }
+
+Task<CreateGroupResponseDto> ChatService::createGroup(
+    CreateGroupRequestDto request_dto
+) {
+    for (auto member_id : request_dto.members_ids) {
+        if (member_id == request_dto.creator_id) {
+            throw messenger::exceptions::BadRequestException(
+                "There is creator id in members_ids list"
+            );
+        }
+    }
+    Chat chat = co_await chat_repo->createGroup(
+        request_dto.name, request_dto.creator_id,
+        std::move(request_dto.members_ids)
+    );
+    CreateGroupResponseDto response_dto(std::move(chat));
+    co_return response_dto;
+}
+
+Task<AddGroupChatMemberResponseDto> ChatService::addGroupChatMember(
+    AddGroupChatMemberRequestDto request_dto
+) {
+    auto request_source_member =
+        co_await chat_repo->getMember(request_dto.chat_id, request_dto.user_id);
+    if (request_source_member.getValueOfRole() ==
+        messenger::models::ChatRole::Member) {
+        throw messenger::exceptions::ForbiddenException(
+            "Not enough permissions to add members to this chat"
+        );
+    }
+    auto chat_members = co_await chat_repo->getMembers(request_dto.chat_id);
+    if (chat_members.size() >= 50) {
+        throw messenger::exceptions::ConflictException(
+            "There are already 50 members in this chat"
+        );
+    }
+    if (request_dto.role == messenger::models::ChatRole::Owner) {
+        throw messenger::exceptions::BadRequestException("Cannot add new owner"
+        );
+    }
+    auto new_member = co_await chat_repo->addMember(
+        request_dto.chat_id, request_dto.new_member_id, request_dto.role
+    );
+    AddGroupChatMemberResponseDto response_dto(std::move(new_member));
+    co_return response_dto;
+}
+
+Task<GetChatMemberResponseDto> ChatService::getChatMember(
+    GetChatMemberRequestDto request_dto
+) {
+    bool is_member =
+        co_await checkChatAccess(request_dto.user_id, request_dto.chat_id);
+    if (!is_member) {
+        throw messenger::exceptions::ForbiddenException(
+            "Request sender is not in chat"
+        );
+    }
+    auto member = co_await chat_repo->getMember(
+        request_dto.chat_id, request_dto.member_id
+    );
+    GetChatMemberResponseDto response_dto(std::move(member));
+    co_return response_dto;
+}
+
+Task<GetChatMembersResponseDto> ChatService::getChatMembers(
+    GetChatMembersRequestDto request_dto
+) {
+    bool is_member =
+        co_await checkChatAccess(request_dto.user_id, request_dto.chat_id);
+    if (!is_member) {
+        throw messenger::exceptions::ForbiddenException(
+            "Request sender is not in chat"
+        );
+    }
+    auto members = co_await chat_repo->getMembers(request_dto.chat_id);
+    GetChatMembersResponseDto response_dto(std::move(members));
+    co_return response_dto;
+}
+
+Task<RemoveMemberResponseDto> ChatService::removeMember(
+    RemoveMemberRequestDto request_dto
+) {
+    auto request_source_member =
+        co_await chat_repo->getMember(request_dto.chat_id, request_dto.user_id);
+    if (request_source_member.getValueOfRole() ==
+            messenger::models::ChatRole::Member &&
+        request_dto.user_id != request_dto.member_id) {
+        throw messenger::exceptions::ForbiddenException(
+            "Not enough permissions to remove someone from chat"
+        );
+    }
+    auto members = co_await chat_repo->getMembers(request_dto.chat_id);
+    if (request_source_member.getValueOfUserId() == request_dto.member_id &&
+        request_source_member.getValueOfRole() ==
+            messenger::models::ChatRole::Owner &&
+        members.size() > 1) {
+        throw messenger::exceptions::ConflictException(
+            "Owner cannot leave chat without transfer of rights"
+        );
+    }
+    co_await chat_repo->removeMember(
+        request_dto.chat_id, request_dto.member_id
+    );
+    co_return RemoveMemberResponseDto();
+}
+
+Task<UpdateMemberRoleResponseDto> ChatService::updateMemberRole(
+    UpdateMemberRoleRequestDto request_dto
+) {
+    auto request_source_member =
+        co_await chat_repo->getMember(request_dto.chat_id, request_dto.user_id);
+    if (request_source_member.getValueOfRole() !=
+        messenger::models::ChatRole::Owner) {
+        throw messenger::exceptions::ForbiddenException(
+            "Not enough permissions to change members' roles"
+        );
+    }
+    if (request_dto.user_id == request_dto.member_id &&
+        request_dto.new_role != messenger::models::ChatRole::Owner) {
+        throw messenger::exceptions::ConflictException(
+            "Cannot demote yourself without transfer of rights"
+        );
+    }
+    auto transaction_ptr =
+        co_await drogon::app().getDbClient()->newTransactionCoro();
+    co_await chat_repo->updateMemberRole(
+        request_dto.chat_id, request_dto.member_id, request_dto.new_role,
+        transaction_ptr
+    );
+    if (request_dto.new_role == messenger::models::ChatRole::Owner) {
+        co_await chat_repo->updateMemberRole(
+            request_dto.chat_id, request_dto.user_id,
+            messenger::models::ChatRole::Admin, transaction_ptr
+        );
+    }
+    co_await transaction_ptr->execSqlCoro("COMMIT;");
+    co_return UpdateMemberRoleResponseDto();
+}
+
+Task<UpdateChatInfoResponseDto> ChatService::updateChatInfo(
+    UpdateChatInfoRequestDto request_dto
+) {
+    auto request_source_member =
+        co_await chat_repo->getMember(request_dto.chat_id, request_dto.user_id);
+    if (request_source_member.getValueOfRole() ==
+        messenger::models::ChatRole::Member) {
+        throw messenger::exceptions::ForbiddenException(
+            "Not enough permissions to edit this chat"
+        );
+    }
+    co_await chat_repo->updateInfo(
+        request_dto.chat_id, request_dto.name, request_dto.avatar,
+        request_dto.description
+    );
+    co_return UpdateChatInfoResponseDto();
+}
