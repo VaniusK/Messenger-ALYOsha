@@ -39,6 +39,17 @@ public:
     Q_INVOKABLE void cacheMessageMedia(QJsonObject &message);
     Q_INVOKABLE void clearCache();
     Q_INVOKABLE void addMessageToCache(const QJsonObject &msg);
+    Q_INVOKABLE void
+    createGroupChat(const QString &name, const QList<qint64> &memberIds);
+    Q_INVOKABLE void fetchChatMembers(const QString &chatId);
+    Q_INVOKABLE void addChatMember(
+        const QString &chatId,
+        qint64 userId,
+        const QString &role = "member"
+    );
+    Q_INVOKABLE void removeChatMember(const QString &chatId, qint64 userId);
+    Q_INVOKABLE void
+    updateChatName(const QString &chatId, const QString &newName);
 
 signals:
     void usersFound(const QJsonArray &users);
@@ -51,6 +62,10 @@ signals:
     void webSocketConnected();
     void webSocketDisconnected();
     void incomingWebSocketMessage(const QJsonObject &data);
+    void groupChatCreated(const QJsonObject &chat);
+    void chatMemdersLoaded(const QJsonArray &members);
+    void chatMemberAdded(const QJsonObject &member);
+    void actionSuccess(const QString &message);
 
 private slots:
     void onWebSocketConnected();

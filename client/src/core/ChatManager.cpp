@@ -390,3 +390,129 @@ void ChatManager::sendMessageWithAttachment(
         }
     );
 }
+
+// group chats methods
+
+void ChatManager::createGroupChat(
+    const QString &name,
+    const QList<qint64> &memberIds
+) {
+    QJsonObject json;
+    json["chat_name"] = name;
+
+    QJsonArray membersArray;
+    for (qint64 id : memberIds) {
+        membersArray.append(id);
+    }
+    json["members"] = membersArray;
+
+    QNetworkReply *reply =
+        m_connection->post("/chats/group", QJsonDocument(json).toJson());
+
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            QJsonObject obj =
+                QJsonDocument::fromJson(reply->readAll()).object();
+            QJsonObject chat = obj["chat"].toObject();
+            emit groupChatCreated(chat);
+            fetchChats();
+        } else {
+            emit chatError("Ошибка создания группы: " + reply->errorString());
+        }
+    });
+}
+
+void ChatManager::fetchChatMembers(const QString &chatId) {
+    QNetworkReply *reply = m_connection->get("/chats/" + chatId + "/members");
+
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            QJsonObject obj =
+                QJsonDocument::fromJson(reply->readAll()).object();
+            QJsonArray members = obj["members"].toArray();
+            emit chatMemdersLoaded(members);
+        } else {
+            emit chatError(
+                "Ошибка загрузки участников: " + reply->errorString()
+            );
+        }
+    });
+}
+
+void ChatManager::addChatMember(
+    const QString &chatId,
+    qint64 userId,
+    const QString &role
+) {
+    QJsonObject json;
+    json["user_id"] = userId;
+    json["role"] = role;
+
+    QNetworkReply *reply = m_connection->post(
+        "/chats/" + chatId + "/members", QJsonDocument(json).toJson()
+    );
+
+    connect(reply, &QNetworkReply::finished, [this, reply, chatId]() {
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            QJsonObject obj =
+                QJsonDocument::fromJson(reply->readAll()).object();
+            QJsonObject member = obj["chat_member"].toObject();
+            emit chatMemberAdded(member);
+            fetchChatMembers(chatId);
+        } else {
+            emit chatError(
+                "Ошибка добавления участника: " + reply->errorString()
+            );
+        }
+    });
+}
+
+void ChatManager::removeChatMember(const QString &chatId, qint64 userId) {
+    QNetworkReply *reply = m_connection->networkManager()->sendCustomRequest(
+        m_connection->createAuthRequest(
+            "chats/" + chatId + "/members/" + QString::number(userId)
+        ),
+        "DELETE"
+    );
+
+    connect(reply, &QNetworkReply::finished, [this, reply, chatId]() {
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            emit actionSuccess("Участник удалён/Вы вышли из чата");
+            fetchChatMembers(chatId);
+            fetchChats();
+        } else {
+            emit chatError(
+                "Ошибка удаления участника: " + reply->errorString()
+            );
+        }
+    });
+}
+
+void ChatManager::updateChatName(
+    const QString &chatId,
+    const QString &newName
+) {
+    QJsonObject json;
+    json["new_name"] = newName;
+
+    QNetworkReply *reply = m_connection->networkManager()->sendCustomRequest(
+        m_connection->createAuthRequest("/chats/" + chatId), "PATCH",
+        QJsonDocument(json).toJson()
+    );
+
+    connect(reply, &QNetworkReply::finished, [this, reply, chatId]() {
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            emit actionSuccess("Название чата изменено");
+            fetchChats();
+        } else {
+            emit chatError(
+                "Ошибка изменения названия: " + reply->errorString()
+            );
+        }
+    });
+}
