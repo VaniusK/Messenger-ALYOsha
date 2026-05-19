@@ -279,7 +279,7 @@ Task<HttpResponsePtr> ChatController::createGroup(const HttpRequestPtr req) {
             response_json["message"] = "Members is not array";
             RETURN_RESPONSE_CODE_400(response_json)
         }
-        if ((*request_json)["members"].size() > 49) {
+        if ((*request_json)["members"].size() > 50) {
             response_json["message"] =
                 "Cannot create chat with more than 50 members";
             RETURN_RESPONSE_CODE_400(response_json)

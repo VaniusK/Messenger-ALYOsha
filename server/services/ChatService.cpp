@@ -396,13 +396,6 @@ Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLinks(
 Task<CreateGroupResponseDto> ChatService::createGroup(
     CreateGroupRequestDto request_dto
 ) {
-    for (auto member_id : request_dto.members_ids) {
-        if (member_id == request_dto.creator_id) {
-            throw messenger::exceptions::BadRequestException(
-                "There is creator id in members_ids list"
-            );
-        }
-    }
     Chat chat = co_await chat_repo->createGroup(
         request_dto.name, request_dto.creator_id,
         std::move(request_dto.members_ids)

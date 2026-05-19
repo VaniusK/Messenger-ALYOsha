@@ -60,6 +60,9 @@ qt_add_qml_module(client
         assets/icons/volume.svg
         assets/icons/check_single.svg
         assets/icons/check_double.svg
+        assets/icons/camera.svg
+        assets/icons/gear.svg
+        assets/icons/person_plus.svg
 )
 target_include_directories(client PRIVATE include)
 target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)
