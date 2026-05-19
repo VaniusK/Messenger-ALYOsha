@@ -96,9 +96,7 @@ Task<std::pair<Message, std::vector<Attachment>>> MessageRepository::send(
         eptr = std::current_exception();
     }
 
-    if (own_transaction) {
-        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
-    }
+    co_await transaction_ptr->execSqlCoro("ROLLBACK;");
     try {
         std::rethrow_exception(eptr);
     } catch (const DrogonDbException &) {
@@ -158,9 +156,7 @@ Task<bool> MessageRepository::edit(
         eptr = std::current_exception();
     }
 
-    if (own_transaction) {
-        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
-    }
+    co_await transaction_ptr->execSqlCoro("ROLLBACK;");
     try {
         std::rethrow_exception(eptr);
     } catch (const UnexpectedRows &) {
