@@ -104,7 +104,7 @@ public:
     MOCK_METHOD(
         drogon::Task<std::vector<ChatMember>>,
         getMembers,
-        (int64_t),
+        (int64_t, std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(

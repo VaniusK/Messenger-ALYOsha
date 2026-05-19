@@ -3,6 +3,7 @@
 #include <drogon/HttpResponse.h>
 #include <json/forwards.h>
 #include <json/value.h>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -396,6 +397,16 @@ Task<GetAttachmentLinksResponseDto> ChatService::getAttachmentLinks(
 Task<CreateGroupResponseDto> ChatService::createGroup(
     CreateGroupRequestDto request_dto
 ) {
+    auto it = std::find(
+        request_dto.members_ids.begin(), request_dto.members_ids.end(),
+        request_dto.creator_id
+    );
+
+    if (it == request_dto.members_ids.end()) {
+        throw messenger::exceptions::BadRequestException(
+            "Creator ID must be included in the members list"
+        );
+    }
     Chat chat = co_await chat_repo->createGroup(
         request_dto.name, request_dto.creator_id,
         std::move(request_dto.members_ids)
@@ -415,7 +426,10 @@ Task<AddGroupChatMemberResponseDto> ChatService::addGroupChatMember(
             "Not enough permissions to add members to this chat"
         );
     }
-    auto chat_members = co_await chat_repo->getMembers(request_dto.chat_id);
+    auto trans_ptr = co_await drogon::app().getDbClient()->newTransactionCoro();
+    co_await chat_repo->lockChat(request_dto.chat_id, trans_ptr);
+    auto chat_members =
+        co_await chat_repo->getMembers(request_dto.chat_id, trans_ptr);
     if (chat_members.size() >= 50) {
         throw messenger::exceptions::ConflictException(
             "There are already 50 members in this chat"
@@ -426,8 +440,10 @@ Task<AddGroupChatMemberResponseDto> ChatService::addGroupChatMember(
         );
     }
     auto new_member = co_await chat_repo->addMember(
-        request_dto.chat_id, request_dto.new_member_id, request_dto.role
+        request_dto.chat_id, request_dto.new_member_id, request_dto.role,
+        trans_ptr
     );
+    co_await trans_ptr->execSqlCoro("COMMIT;");
     AddGroupChatMemberResponseDto response_dto(std::move(new_member));
     co_return response_dto;
 }

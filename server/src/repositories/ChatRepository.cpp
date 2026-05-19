@@ -362,9 +362,12 @@ Task<Chat> ChatRepository::createGroup(
     }
 }
 
-Task<std::vector<ChatMember>> ChatRepository::getMembers(int64_t chat_id) {
-    auto mapper = getMapper();
-    auto chat_member_mapper = getChatMemberMapper();
+Task<std::vector<ChatMember>> ChatRepository::getMembers(
+    int64_t chat_id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    auto mapper = getMapper(transaction_ptr);
+    auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
     try {
         std::vector<ChatMember> chat_members =
             co_await chat_member_mapper.findBy(Criteria(

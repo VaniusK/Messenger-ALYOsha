@@ -99,9 +99,11 @@ TEST_P(ServiceGetMessageByIdTest, GetMessageByIdTest) {
             }
         ));
     if (param.message_found) {
-        EXPECT_CALL(*mock_chat_repo, getMembers(param.chat_id))
+        EXPECT_CALL(*mock_chat_repo, getMembers(param.chat_id, _))
             .WillRepeatedly(Invoke(
-                [param](int64_t chat_id
+                [param](
+                    int64_t chat_id,
+                    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
                 ) -> drogon::Task<std::vector<ChatMember>> {
                     std::vector<ChatMember> fake_members;
                     if (param.is_member) {
@@ -444,9 +446,12 @@ public:
 TEST_P(ServiceSendMessageTest, SendMessageTest) {
     auto param = GetParam();
 
-    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id))
+    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id, _))
         .WillRepeatedly(
-            [param](int64_t chat_id) -> drogon::Task<std::vector<ChatMember>> {
+            [param](
+                int64_t chat_id,
+                std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+            ) -> drogon::Task<std::vector<ChatMember>> {
                 std::vector<ChatMember> fake_members;
                 if (param.is_member) {
                     ChatMember fake_member;
@@ -737,9 +742,12 @@ class ServiceGetChatMessagesTest
 
 TEST_P(ServiceGetChatMessagesTest, GetChatMessagesTest) {
     auto param = GetParam();
-    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id))
+    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id, _))
         .WillRepeatedly(
-            [param](int64_t chat_id) -> drogon::Task<std::vector<ChatMember>> {
+            [param](
+                int64_t chat_id,
+                std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+            ) -> drogon::Task<std::vector<ChatMember>> {
                 std::vector<ChatMember> fake_members;
                 if (param.is_member) {
                     ChatMember fake_member;
@@ -846,9 +854,12 @@ class ServiceGetAttachmentLinksTest
 TEST_P(ServiceGetAttachmentLinksTest, GetAttachmentLinksTest) {
     auto param = GetParam();
 
-    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id))
+    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id, _))
         .WillRepeatedly(
-            [param](int64_t chat_id) -> drogon::Task<std::vector<ChatMember>> {
+            [param](
+                int64_t chat_id,
+                std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+            ) -> drogon::Task<std::vector<ChatMember>> {
                 std::vector<ChatMember> fake_members;
                 if (param.is_member) {
                     ChatMember fake_member;

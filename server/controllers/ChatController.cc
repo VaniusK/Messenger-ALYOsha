@@ -294,7 +294,8 @@ Task<HttpResponsePtr> ChatController::createGroup(const HttpRequestPtr req) {
     CreateGroupRequestDto request_dto(req, request_json);
 
     try {
-        CreateGroupResponseDto response_dto = co_await chat_service.createGroup(request_dto);
+        CreateGroupResponseDto response_dto =
+            co_await chat_service.createGroup(request_dto);
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_201(response_json)
     } catch (const messenger::exceptions::BadRequestException &e) {
@@ -340,7 +341,8 @@ ChatController::addGroupChatMember(const HttpRequestPtr req, int64_t chat_id) {
     AddGroupChatMemberRequestDto request_dto(req, chat_id);
 
     try {
-        AddGroupChatMemberResponseDto response_dto = co_await chat_service.addGroupChatMember(request_dto);
+        AddGroupChatMemberResponseDto response_dto =
+            co_await chat_service.addGroupChatMember(request_dto);
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_201(response_json)
     } catch (const messenger::exceptions::ForbiddenException &e) {
@@ -375,7 +377,8 @@ Task<HttpResponsePtr> ChatController::getChatMember(
 
     Json::Value response_json;
     try {
-        GetChatMemberResponseDto response_dto = co_await chat_service.getChatMember(request_dto);
+        GetChatMemberResponseDto response_dto =
+            co_await chat_service.getChatMember(request_dto);
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     } catch (const messenger::exceptions::ForbiddenException &e) {
@@ -401,7 +404,8 @@ ChatController::getChatMembers(const HttpRequestPtr req, int64_t chat_id) {
 
     Json::Value response_json;
     try {
-        GetChatMembersResponseDto response_dto = co_await chat_service.getChatMembers(request_dto);
+        GetChatMembersResponseDto response_dto =
+            co_await chat_service.getChatMembers(request_dto);
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     } catch (const messenger::exceptions::ForbiddenException &e) {
@@ -430,12 +434,16 @@ Task<HttpResponsePtr> ChatController::removeMember(
 
     Json::Value response_json;
     try {
-        RemoveMemberResponseDto response_dto = co_await chat_service.removeMember(request_dto);
+        RemoveMemberResponseDto response_dto =
+            co_await chat_service.removeMember(request_dto);
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     } catch (const messenger::exceptions::ForbiddenException &e) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_403(response_json)
+    } catch (const messenger::exceptions::NotFoundException &e) {
+        response_json["message"] = e.what();
+        RETURN_RESPONSE_CODE_404(response_json)
     } catch (const messenger::exceptions::ConflictException &e) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_409(response_json)
@@ -470,12 +478,16 @@ Task<HttpResponsePtr> ChatController::updateMemberRole(
     );
 
     try {
-        UpdateMemberRoleResponseDto response_dto = co_await chat_service.updateMemberRole(request_dto);
+        UpdateMemberRoleResponseDto response_dto =
+            co_await chat_service.updateMemberRole(request_dto);
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     } catch (const messenger::exceptions::ForbiddenException &e) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_403(response_json)
+    } catch (const messenger::exceptions::NotFoundException &e) {
+        response_json["message"] = e.what();
+        RETURN_RESPONSE_CODE_404(response_json)
     } catch (const messenger::exceptions::ConflictException &e) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_409(response_json)
@@ -504,12 +516,16 @@ ChatController::updateChatInfo(const HttpRequestPtr req, int64_t chat_id) {
     UpdateChatInfoRequestDto request_dto(req, request_json, chat_id);
 
     try {
-        UpdateChatInfoResponseDto response_dto = co_await chat_service.updateChatInfo(request_dto);
+        UpdateChatInfoResponseDto response_dto =
+            co_await chat_service.updateChatInfo(request_dto);
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     } catch (const messenger::exceptions::ForbiddenException &e) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_403(response_json)
+    } catch (const messenger::exceptions::NotFoundException &e) {
+        response_json["message"] = e.what();
+        RETURN_RESPONSE_CODE_404(response_json)
     } catch (const messenger::exceptions::InternalServerErrorException &e) {
         response_json["messsage"] = e.what();
         RETURN_RESPONSE_CODE_500(response_json)
