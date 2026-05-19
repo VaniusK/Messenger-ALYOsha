@@ -341,19 +341,25 @@ Task<Chat> ChatRepository::createGroup(
         chat.setType(messenger::models::ChatType::Group);
         chat.setName(name);
         chat = co_await mapper.insert(chat);
+        bool creator_found = false;
         for (auto id : member_ids) {
             ChatMember chat_member;
             chat_member.setChatId(chat.getValueOfId());
             chat_member.setUserId(id);
-            chat_member.setRole(messenger::models::ChatRole::Member);
+            if (chat_member.getValueOfUserId() == creator_id) {
+                chat_member.setRole(messenger::models::ChatRole::Owner);
+                creator_found = true;
+            } else {
+                chat_member.setRole(messenger::models::ChatRole::Member);
+            }
+            if (!creator_found) {
+                throw exceptions::NotFoundException(
+                    "Creator isn't a member of a chat"
+                );
+            }
             chat_member.setChatType(messenger::models::ChatType::Group);
             co_await chat_member_mapper.insert(chat_member);
         }
-        ChatMember creator = co_await chat_member_mapper.findOne(Criteria(
-            ChatMember::Cols::_user_id, CompareOperator::EQ, creator_id
-        ));
-        creator.setRole(messenger::models::ChatRole::Owner);
-        co_await chat_member_mapper.update(creator);
         if (own_transaction) {
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
@@ -362,9 +368,7 @@ Task<Chat> ChatRepository::createGroup(
         eptr = std::current_exception();
     }
 
-    if (own_transaction) {
-        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
-    }
+    co_await transaction_ptr->execSqlCoro("ROLLBACK;");
     try {
         std::rethrow_exception(eptr);
     } catch (const UnexpectedRows &) {
@@ -453,9 +457,7 @@ Task<ChatMember> ChatRepository::addMember(
         eptr = std::current_exception();
     }
 
-    if (own_transaction) {
-        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
-    }
+    co_await transaction_ptr->execSqlCoro("ROLLBACK;");
     try {
         std::rethrow_exception(eptr);
     } catch (const UnexpectedRows &) {
@@ -533,9 +535,7 @@ Task<void> ChatRepository::updateInfo(
         eptr = std::current_exception();
     }
 
-    if (own_transaction) {
-        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
-    }
+    co_await transaction_ptr->execSqlCoro("ROLLBACK;");
     try {
         std::rethrow_exception(eptr);
     } catch (const UnexpectedRows &) {
@@ -577,9 +577,7 @@ Task<Chat> ChatRepository::createSaved(
         eptr = std::current_exception();
     }
 
-    if (own_transaction) {
-        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
-    }
+    co_await transaction_ptr->execSqlCoro("ROLLBACK;");
     try {
         std::rethrow_exception(eptr);
     } catch (const UnexpectedRows &) {
