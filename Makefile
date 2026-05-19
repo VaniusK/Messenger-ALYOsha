@@ -9,7 +9,7 @@ build_client:
 	docker compose --profile build run --build client-build
 
 run_server_tests:
-	docker compose -f 'docker-compose.yml' up -d --build 'test-server' 
+	docker compose -f 'docker-compose.yml' up --build 'test-server' 
 
 run_server:
 	docker compose -f 'docker-compose.yml' up -d --build 'nginx' 

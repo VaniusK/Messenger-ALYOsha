@@ -26,6 +26,12 @@ protected:
     User dummy_user2_;
     User dummy_user3_;
 
+    Task<std::shared_ptr<drogon::orm::Transaction>> createTransaction() {
+        auto transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+        co_return transaction_ptr;
+    }
+
 public:
     void SetUp() override {
         auto dbClient = app().getDbClient();

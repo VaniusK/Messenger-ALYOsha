@@ -442,13 +442,16 @@ Task<AddGroupChatMemberResponseDto> ChatService::addGroupChatMember(
 Task<GetChatMemberResponseDto> ChatService::getChatMember(
     GetChatMemberRequestDto request_dto
 ) {
-    bool is_member = co_await checkChatAccess(request_dto.user_id, request_dto.chat_id;
-    if (!is_member){
+    bool is_member =
+        co_await checkChatAccess(request_dto.user_id, request_dto.chat_id);
+    if (!is_member) {
         throw messenger::exceptions::ForbiddenException(
             "Request sender is not in chat"
         );
     }
-    auto member = co_await chat_repo->getMember(request_dto.chat_id, request_dto.member_id);
+    auto member = co_await chat_repo->getMember(
+        request_dto.chat_id, request_dto.member_id
+    );
     GetChatMemberResponseDto response_dto(std::move(member));
     co_return response_dto;
 }
@@ -512,26 +515,19 @@ Task<UpdateMemberRoleResponseDto> ChatService::updateMemberRole(
             "Cannot demote yourself without transfer of rights"
         );
     }
-    bool success = co_await chat_repo->updateMemberRole(
-        request_dto.chat_id, request_dto.member_id, request_dto.new_role
+    auto transaction_ptr =
+        co_await drogon::app().getDbClient()->newTransactionCoro();
+    co_await chat_repo->updateMemberRole(
+        request_dto.chat_id, request_dto.member_id, request_dto.new_role,
+        transaction_ptr
     );
-    if (!success) {
-        throw messenger::exceptions::InternalServerErrorException(
-            "Failed to change member's role"
-        );
-    }
     if (request_dto.new_role == messenger::models::ChatRole::Owner) {
-        bool owners_demotion = co_await chat_repo->updateMemberRole(
+        co_await chat_repo->updateMemberRole(
             request_dto.chat_id, request_dto.user_id,
-            messenger::models::ChatRole::Admin
+            messenger::models::ChatRole::Admin, transaction_ptr
         );
-        if (!owners_demotion) {
-            throw messenger::exceptions::InternalServerErrorException(
-                "Failed to demote old owner. Now you has more than one owner "
-                "in the chat"
-            );
-        }
     }
+    co_await transaction_ptr->execSqlCoro("COMMIT;");
     co_return UpdateMemberRoleResponseDto();
 }
 
@@ -546,14 +542,9 @@ Task<UpdateChatInfoResponseDto> ChatService::updateChatInfo(
             "Not enough permissions to edit this chat"
         );
     }
-    bool success = co_await chat_repo->updateInfo(
+    co_await chat_repo->updateInfo(
         request_dto.chat_id, request_dto.name, request_dto.avatar,
         request_dto.description
     );
-    if (!success) {
-        throw messenger::exceptions::InternalServerErrorException(
-            "Failed to update chat info"
-        );
-    }
     co_return UpdateChatInfoResponseDto();
 }
