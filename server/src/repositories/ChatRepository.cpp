@@ -2,6 +2,7 @@
 #include <drogon/orm/Criteria.h>
 #include <drogon/orm/Exception.h>
 #include <algorithm>
+#include <exception>
 #include <iterator>
 #include <stdexcept>
 #include "models/Attachments.h"
@@ -333,6 +334,8 @@ Task<Chat> ChatRepository::createGroup(
     auto mapper = getMapper(transaction_ptr);
     auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
 
+    std::exception_ptr eptr;
+
     try {
         Chat chat;
         chat.setType(messenger::models::ChatType::Group);
@@ -355,9 +358,18 @@ Task<Chat> ChatRepository::createGroup(
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
         co_return chat;
-    } catch (const UnexpectedRows &e) {
+    } catch (...) {
+        eptr = std::current_exception();
+    }
+
+    if (own_transaction) {
+        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
+    }
+    try {
+        std::rethrow_exception(eptr);
+    } catch (const UnexpectedRows &) {
         throw exceptions::NotFoundException("One or more users do not exist");
-    } catch (const DrogonDbException &e) {
+    } catch (const DrogonDbException &) {
         throw std::runtime_error("Database error");
     }
 }
@@ -410,20 +422,23 @@ Task<ChatMember> ChatRepository::addMember(
 
     auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
     auto mapper = getMapper(transaction_ptr);
-    Chat chat;
+
+    std::exception_ptr eptr;
+
     try {
-        chat = co_await mapper.findByPrimaryKey(chat_id);
-    } catch (const DrogonDbException &e) {
-        throw exceptions::NotFoundException("Chat does not exist");
-    }
-    if (chat.getValueOfType() != messenger::models::ChatType::Group &&
-        chat.getValueOfType() != messenger::models::ChatType::Channel) {
-        throw exceptions::ForbiddenException(
-            "Can't add member to non-group chat of type " +
-            chat.getValueOfType()
-        );
-    }
-    try {
+        Chat chat;
+        try {
+            chat = co_await mapper.findByPrimaryKey(chat_id);
+        } catch (const DrogonDbException &) {
+            throw exceptions::NotFoundException("Chat does not exist");
+        }
+        if (chat.getValueOfType() != messenger::models::ChatType::Group &&
+            chat.getValueOfType() != messenger::models::ChatType::Channel) {
+            throw exceptions::ForbiddenException(
+                "Can't add member to non-group chat of type " +
+                chat.getValueOfType()
+            );
+        }
         ChatMember chat_member;
         chat_member.setChatId(chat_id);
         chat_member.setUserId(user_id);
@@ -434,9 +449,18 @@ Task<ChatMember> ChatRepository::addMember(
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
         co_return chat_member;
-    } catch (const UnexpectedRows &e) {
+    } catch (...) {
+        eptr = std::current_exception();
+    }
+
+    if (own_transaction) {
+        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
+    }
+    try {
+        std::rethrow_exception(eptr);
+    } catch (const UnexpectedRows &) {
         throw exceptions::NotFoundException("User does not exist");
-    } catch (const DrogonDbException &e) {
+    } catch (const DrogonDbException &) {
         throw std::runtime_error("Database error");
     }
 }
@@ -488,6 +512,7 @@ Task<void> ChatRepository::updateInfo(
         own_transaction = true;
     }
     auto mapper = getMapper(transaction_ptr);
+    std::exception_ptr eptr;
     try {
         Chat chat = co_await mapper.findByPrimaryKey(chat_id);
         if (name.has_value()) {
@@ -503,9 +528,19 @@ Task<void> ChatRepository::updateInfo(
         if (own_transaction) {
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
-    } catch (const UnexpectedRows &e) {
+        co_return;
+    } catch (...) {
+        eptr = std::current_exception();
+    }
+
+    if (own_transaction) {
+        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
+    }
+    try {
+        std::rethrow_exception(eptr);
+    } catch (const UnexpectedRows &) {
         throw exceptions::NotFoundException("Chat does not exist");
-    } catch (const DrogonDbException &e) {
+    } catch (const DrogonDbException &) {
         throw std::runtime_error("Database error");
     }
 }
@@ -522,6 +557,7 @@ Task<Chat> ChatRepository::createSaved(
     }
     auto mapper = getMapper(transaction_ptr);
     auto chat_member_mapper = getChatMemberMapper(transaction_ptr);
+    std::exception_ptr eptr;
     try {
         Chat chat;
         chat.setType(messenger::models::ChatType::Saved);
@@ -537,9 +573,18 @@ Task<Chat> ChatRepository::createSaved(
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
         co_return chat;
-    } catch (const UnexpectedRows &e) {
+    } catch (...) {
+        eptr = std::current_exception();
+    }
+
+    if (own_transaction) {
+        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
+    }
+    try {
+        std::rethrow_exception(eptr);
+    } catch (const UnexpectedRows &) {
         throw exceptions::NotFoundException("User does not exist");
-    } catch (const DrogonDbException &e) {
+    } catch (const DrogonDbException &) {
         throw std::runtime_error("Database error");
     }
 }

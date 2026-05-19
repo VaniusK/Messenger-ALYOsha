@@ -58,6 +58,8 @@ Task<std::pair<Message, std::vector<Attachment>>> MessageRepository::send(
 
     auto mapper = getMapper(transaction_ptr);
 
+    std::exception_ptr eptr;
+
     try {
         Message message;
         message.setChatId(chat_id);
@@ -90,7 +92,16 @@ Task<std::pair<Message, std::vector<Attachment>>> MessageRepository::send(
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
         co_return {message, created_attachments};
-    } catch (const DrogonDbException &e) {
+    } catch (...) {
+        eptr = std::current_exception();
+    }
+
+    if (own_transaction) {
+        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
+    }
+    try {
+        std::rethrow_exception(eptr);
+    } catch (const DrogonDbException &) {
         throw std::runtime_error("Database error");
     }
 }
@@ -132,6 +143,7 @@ Task<bool> MessageRepository::edit(
     }
 
     auto mapper = getMapper(transaction_ptr);
+    std::exception_ptr eptr;
     try {
         Message message = co_await mapper.findByPrimaryKey(id);
         message.setText(text);
@@ -142,9 +154,18 @@ Task<bool> MessageRepository::edit(
             co_await transaction_ptr->execSqlCoro("COMMIT;");
         }
         co_return true;
-    } catch (const UnexpectedRows &e) {
+    } catch (...) {
+        eptr = std::current_exception();
+    }
+
+    if (own_transaction) {
+        co_await transaction_ptr->execSqlCoro("ROLLBACK;");
+    }
+    try {
+        std::rethrow_exception(eptr);
+    } catch (const UnexpectedRows &) {
         co_return false;
-    } catch (const DrogonDbException &e) {
+    } catch (const DrogonDbException &) {
         throw std::runtime_error("Database error");
     }
 }
