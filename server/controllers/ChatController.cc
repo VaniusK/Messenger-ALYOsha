@@ -267,28 +267,28 @@ Task<HttpResponsePtr> ChatController::createGroup(const HttpRequestPtr req) {
     LOG_INFO << "Entered ChatController -> createGroup";
     auto request_json = req->getJsonObject();
     Json::Value response_json;
-    if (utils::find_missed_fields(response_json, request_json, {"chat_name"})) {
+    if (utils::find_missed_fields(
+            response_json, request_json, {"chat_name", "members"}
+        )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
     if ((*request_json)["chat_name"].asString() == "") {
         response_json["message"] = "Cannot create chat with empty name";
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    if (request_json->isMember("members")) {
-        if (!(*request_json)["members"].isArray()) {
-            response_json["message"] = "Members is not array";
+    if (!(*request_json)["members"].isArray()) {
+        response_json["message"] = "Members is not array";
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
+    if ((*request_json)["members"].size() > 50) {
+        response_json["message"] =
+            "Cannot create chat with more than 50 members";
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
+    for (const auto &el : (*request_json)["members"]) {
+        if (!el.isInt64()) {
+            response_json["message"] = el.asString() + " is not number";
             RETURN_RESPONSE_CODE_400(response_json)
-        }
-        if ((*request_json)["members"].size() > 50) {
-            response_json["message"] =
-                "Cannot create chat with more than 50 members";
-            RETURN_RESPONSE_CODE_400(response_json)
-        }
-        for (const auto &el : (*request_json)["members"]) {
-            if (!el.isInt64()) {
-                response_json["message"] = el.asString() + " is not number";
-                RETURN_RESPONSE_CODE_400(response_json)
-            }
         }
     }
     CreateGroupRequestDto request_dto(req, request_json);
