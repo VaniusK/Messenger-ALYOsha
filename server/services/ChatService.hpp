@@ -6,6 +6,7 @@
 #include "dto/ChatServiceDtos.hpp"
 #include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
+#include "repositories/UserRepository.hpp"
 #include "services/S3Service.hpp"
 
 using namespace drogon;
@@ -68,11 +69,19 @@ public:
         this->attachment_repo = attachment_repo;
     }
 
+    void setUserRepo(
+        std::shared_ptr<messenger::repositories::UserRepositoryInterface>
+            user_repo
+    ) {
+        this->user_repo = user_repo;
+    }
+
     void setS3Service(std::shared_ptr<S3ServiceInterface> s3_service) {
         s3_service_ = s3_service;
     }
 
 private:
+    std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo;
     std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
     std::shared_ptr<messenger::repositories::AttachmentRepositoryInterface>
         attachment_repo;

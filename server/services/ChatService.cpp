@@ -17,6 +17,7 @@
 #include "jwt-cpp/jwt.h"
 #include "jwt-cpp/traits/kazuho-picojson/defaults.h"
 #include "models/Messages.h"
+#include "models/Users.h"
 #include "services/S3Service.hpp"
 #include "utils/Enum.hpp"
 #include "utils/server_exceptions.hpp"
@@ -31,6 +32,7 @@ using Message = drogon_model::messenger_db::Messages;
 using Chat = drogon_model::messenger_db::Chats;
 using ChatPreview = messenger::dto::ChatPreview;
 using Attachment = drogon_model::messenger_db::Attachments;
+using User = drogon_model::messenger_db::Users;
 
 Task<bool> ChatService::checkChatAccess(int64_t user_id, int64_t chat_id) {
     std::vector<messenger::repositories::ChatMember> chat_members =
@@ -64,6 +66,8 @@ Task<GetMessageByIdResponseDto> ChatService::getMessageById(
         throw messenger::exceptions::ForbiddenException("Access denied");
     }
 
+    std::optional<User> sender_info =
+        co_await user_repo->getById(message->getValueOfSenderId());
     std::vector<Attachment> attachments =
         co_await attachment_repo->getByMessage(message->getValueOfId());
     std::vector<std::optional<std::string>> attachments_download_urls(
@@ -80,7 +84,7 @@ Task<GetMessageByIdResponseDto> ChatService::getMessageById(
 
     co_return GetMessageByIdResponseDto(
         std::move(message.value()), std::move(attachments),
-        std::move(attachments_download_urls)
+        std::move(attachments_download_urls), std::move(sender_info)
     );
 }
 
@@ -94,34 +98,69 @@ Task<GetUserChatsResponseDto> ChatService::getUserChats(
         co_await chat_repo->getByUser(request_dto.from_request_user_id);
 
     std::vector<int64_t> message_ids;
+    std::unordered_set<int64_t> unique_senders_ids;
+
     for (const auto &chat_preview : chats_previews) {
         if (chat_preview.last_message.has_value()) {
             message_ids.push_back(chat_preview.last_message->getValueOfId());
+            unique_senders_ids.insert(
+                chat_preview.last_message->getValueOfSenderId()
+            );
         }
     }
 
+    std::vector<int64_t> senders_ids(
+        unique_senders_ids.begin(), unique_senders_ids.end()
+    );
+
     std::vector<std::vector<Attachment>> fetched_attachments =
         co_await attachment_repo->getByMessages(message_ids);
+
+    std::vector<User> fetched_senders_info;
+    if (!senders_ids.empty()) {
+        fetched_senders_info = co_await user_repo->getByIds(senders_ids);
+    }
 
     std::unordered_map<int64_t, std::vector<Attachment>> attachment_map;
     attachment_map.reserve(message_ids.size());
     for (std::size_t i = 0; i < message_ids.size(); i++) {
         attachment_map[message_ids[i]] = std::move(fetched_attachments[i]);
     }
+
+    std::unordered_map<int64_t, User> senders_map;
+    senders_map.reserve(fetched_senders_info.size());
+    for (auto &user : fetched_senders_info) {
+        senders_map[user.getValueOfId()] = std::move(user);
+    }
+
     std::vector<std::vector<Attachment>> last_messages_attachments;
+    std::vector<std::optional<User>> last_messages_senders;
     last_messages_attachments.reserve(chats_previews.size());
+    last_messages_senders.reserve(chats_previews.size());
 
     for (const auto &chat_preview : chats_previews) {
         if (chat_preview.last_message.has_value()) {
             int64_t msg_id = chat_preview.last_message->getValueOfId();
+            int64_t sender_id = chat_preview.last_message->getValueOfSenderId();
+
             last_messages_attachments.push_back(std::move(attachment_map[msg_id]
             ));
+
+            auto it = senders_map.find(sender_id);
+            if (it != senders_map.end()) {
+                last_messages_senders.push_back(it->second);
+            } else {
+                last_messages_senders.push_back(std::nullopt);
+            }
         } else {
             last_messages_attachments.push_back({});
+            last_messages_senders.push_back(std::nullopt);
         }
     }
+
     GetUserChatsResponseDto response_dto(
-        std::move(chats_previews), std::move(last_messages_attachments)
+        std::move(chats_previews), std::move(last_messages_attachments),
+        std::move(last_messages_senders)
     );
     co_return response_dto;
 }
@@ -183,9 +222,32 @@ Task<GetChatMessagesResponseDto> ChatService::getChatMessages(
             );
         }
     }
+
+    std::unordered_set<int64_t> unique_sender_ids;
+    for (const auto &message : chat_messages) {
+        unique_sender_ids.insert(message.getValueOfSenderId());
+    }
+    std::vector<int64_t> senders_ids(
+        unique_sender_ids.begin(), unique_sender_ids.end()
+    );
+
+    std::vector<User> fetched_senders =
+        co_await user_repo->getByIds(senders_ids);
+
+    std::unordered_map<int64_t, User> senders_map;
+    for (auto &user : fetched_senders) {
+        senders_map[user.getValueOfId()] = std::move(user);
+    }
+
+    std::vector<User> senders_info;
+    senders_info.reserve(chat_messages.size());
+    for (const auto &message : chat_messages) {
+        senders_info.push_back(senders_map[message.getValueOfSenderId()]);
+    }
+
     GetChatMessagesResponseDto response_dto(
         std::move(chat_messages), std::move(attachments),
-        std::move(attachments_download_urls)
+        std::move(attachments_download_urls), std::move(senders_info)
     );
     co_return response_dto;
 }
@@ -407,6 +469,7 @@ Task<CreateGroupResponseDto> ChatService::createGroup(
             "Creator ID must be included in the members list"
         );
     }
+    LOG_INFO << request_dto.members_ids.size();
     Chat chat = co_await chat_repo->createGroup(
         request_dto.name, request_dto.creator_id,
         std::move(request_dto.members_ids)

@@ -154,6 +154,7 @@ public:
         chat_service.setAttachmentRepo(
             std::make_shared<messenger::repositories::AttachmentRepository>()
         );
+        chat_service.setUserRepo(std::make_shared<messenger::repositories::UserRepository>());
         chat_service.setS3Service(
             std::make_shared<S3Service>(
                 std::getenv("S3_ACCESS_KEY"), std::getenv("S3_SECRET_KEY"),

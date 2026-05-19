@@ -50,16 +50,19 @@ struct GetUserChatsRequestDto : RequestDto {
 struct GetUserChatsResponseDto : ResponseDto {
     std::vector<ChatPreview> chats_previews;
 
-    std::vector<std::vector<Attachment>> last_message_attachments;
+    std::vector<std::vector<Attachment>> last_messages_attachments;
+    std::vector<std::optional<User>> last_messages_senders;
 
     GetUserChatsResponseDto() = default;
 
     GetUserChatsResponseDto(
         std::vector<ChatPreview> chats_previews_,
-        std::vector<std::vector<Attachment>> last_message_attachments_
+        std::vector<std::vector<Attachment>> last_message_attachments_,
+        std::vector<std::optional<User>> last_messages_senders_
     )
         : chats_previews(std::move(chats_previews_)),
-          last_message_attachments(std::move(last_message_attachments_)) {
+          last_messages_attachments(std::move(last_message_attachments_)),
+          last_messages_senders(std::move(last_messages_senders_)) {
     }
 
     Json::Value toJson() override {
@@ -80,9 +83,18 @@ struct GetUserChatsResponseDto : ResponseDto {
             if (chat_json["last_message"].isMember("id")) {
                 chat_json["last_message"]["attachments"] =
                     Json::Value(Json::arrayValue);
-                for (const auto &attachment : last_message_attachments[i]) {
+                for (const auto &attachment : last_messages_attachments[i]) {
                     chat_json["last_message"]["attachments"].append(
                         attachment.toJson()
+                    );
+                }
+                chat_json["last_message"]["sender_info"] =
+                    last_messages_senders[i].has_value()
+                        ? last_messages_senders[i].value().toJson()
+                        : Json::Value(Json::nullValue);
+                if (last_messages_senders[i].has_value()) {
+                    chat_json["last_message"]["sender_info"].removeMember(
+                        "password_hash"
                     );
                 }
             }
@@ -180,6 +192,7 @@ struct GetChatMessagesResponseDto : ResponseDto {
     std::vector<std::vector<Attachment>> attachments;
     std::vector<std::vector<std::optional<std::string>>>
         attachments_download_urls;
+    std::vector<User> senders_info;
 
     GetChatMessagesResponseDto() = default;
 
@@ -187,11 +200,13 @@ struct GetChatMessagesResponseDto : ResponseDto {
         std::vector<Message> messages_,
         std::vector<std::vector<Attachment>> attachments_,
         std::vector<std::vector<std::optional<std::string>>>
-            attachments_download_urls_
+            attachments_download_urls_,
+        std::vector<User> senders_info_
     )
         : messages(messages_),
           attachments(attachments_),
-          attachments_download_urls(attachments_download_urls_) {
+          attachments_download_urls(attachments_download_urls_),
+          senders_info(std::move(senders_info_)) {
     }
 
     Json::Value toJson() override {
@@ -209,6 +224,8 @@ struct GetChatMessagesResponseDto : ResponseDto {
                     download_url.has_value() ? download_url.value() : "";
                 message_json["attachments"].append(attachment_json);
             }
+            message_json["sender_info"] = senders_info[i].toJson();
+            message_json["sender_info"].removeMember("password_hash");
             jsonArray.append(message_json);
         }
         response_json["messages"] = jsonArray;
@@ -370,17 +387,20 @@ struct GetMessageByIdResponseDto : ResponseDto {
     Message message;
     std::vector<Attachment> attachments;
     std::vector<std::optional<std::string>> attachments_download_urls;
+    std::optional<User> sender_info;
 
     GetMessageByIdResponseDto() = default;
 
     GetMessageByIdResponseDto(
         Message message_,
         std::vector<Attachment> attachments_,
-        std::vector<std::optional<std::string>> attachments_download_urls_
+        std::vector<std::optional<std::string>> attachments_download_urls_,
+        std::optional<User> sender_info_
     )
         : message(std::move(message_)),
           attachments(std::move(attachments_)),
-          attachments_download_urls(std::move(attachments_download_urls_)) {
+          attachments_download_urls(std::move(attachments_download_urls_)),
+          sender_info(std::move(sender_info_)) {
     }
 
     Json::Value toJson() override {
@@ -397,6 +417,13 @@ struct GetMessageByIdResponseDto : ResponseDto {
             json_attachments_array.append(attachment_json);
         }
         response_json["message"]["attachments"] = json_attachments_array;
+        response_json["message"]["sender_info"] =
+            sender_info.has_value() ? sender_info->toJson()
+                                    : Json::Value(Json::nullValue);
+        if (sender_info.has_value()) {
+            response_json["message"]["sender_info"].removeMember("password_hash"
+            );
+        }
         return response_json;
     }
 };

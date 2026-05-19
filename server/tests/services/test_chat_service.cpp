@@ -41,6 +41,7 @@ protected:
     std::shared_ptr<MockChatRepository> mock_chat_repo;
     std::shared_ptr<MockAttachmentRepository> mock_attachment_repo;
     std::shared_ptr<MockS3Service> mock_s3_service;
+    std::shared_ptr<MockUserRepository> mock_user_repo;
 
     std::shared_ptr<api::v1::ChatService> chat_service;
 
@@ -48,6 +49,7 @@ protected:
         setenv("JWT_KEY", "cool_key", 1);
         mock_attachment_repo = std::make_shared<MockAttachmentRepository>();
         mock_s3_service = std::make_shared<MockS3Service>();
+        mock_user_repo = std::make_shared<MockUserRepository>();
 
         auto chat_msg_repo = std::make_unique<MockMessageRepository>(
             std::make_unique<MockAttachmentRepository>()
@@ -61,6 +63,7 @@ protected:
         chat_service->setChatRepo(mock_chat_repo);
         chat_service->setAttachmentRepo(mock_attachment_repo);
         chat_service->setS3Service(mock_s3_service);
+        chat_service->setUserRepo(mock_user_repo);
     }
 
     void TearDown() override {
@@ -93,6 +96,7 @@ TEST_P(ServiceGetMessageByIdTest, GetMessageByIdTest) {
                     Message fake_msg;
                     fake_msg.setId(param.message_id);
                     fake_msg.setChatId(param.chat_id);
+                    fake_msg.setSenderId(777);
                     return createFakeTask<std::optional<Message>>(fake_msg);
                 }
                 return createFakeTask<std::optional<Message>>(std::nullopt);
@@ -131,6 +135,15 @@ TEST_P(ServiceGetMessageByIdTest, GetMessageByIdTest) {
                         return createFakeTask(attachments);
                     }
                 ));
+            EXPECT_CALL(*mock_user_repo, getById(777))
+                .WillRepeatedly(
+                    Invoke([](int64_t id) -> drogon::Task<std::optional<User>> {
+                        User fake_user;
+                        fake_user.setId(id);
+                        fake_user.setDisplayName("Test Sender");
+                        return createFakeTask<std::optional<User>>(fake_user);
+                    })
+                );
             EXPECT_CALL(*mock_s3_service, generateDownloadUrl(_, _))
                 .WillRepeatedly(Invoke(
                     [param](
@@ -211,6 +224,7 @@ struct GetUserChatsTestCase {
 
     std::size_t chats_count;
     std::set<int64_t> chats_with_last_messages;
+    bool has_duplicate_senders;
 };
 
 class ServiceGetUserChatsTest
@@ -231,6 +245,11 @@ TEST_P(ServiceGetUserChatsTest, GetUserChatsTest) {
                     for (int64_t el : param.chats_with_last_messages) {
                         Message fake_msg;
                         fake_msg.setId(el);
+                        if (param.has_duplicate_senders) {
+                            fake_msg.setSenderId(1);
+                        } else {
+                            fake_msg.setSenderId(el * 10);
+                        }
                         fake_previews[el - 1].last_message = fake_msg;
                     }
                     return createFakeTask(fake_previews);
@@ -244,6 +263,24 @@ TEST_P(ServiceGetUserChatsTest, GetUserChatsTest) {
                         message_ids.size(), std::vector<Attachment>(1)
                     );
                     return createFakeTask(fake_attachments);
+                }
+            ));
+        EXPECT_CALL(*mock_user_repo, getByIds(_))
+            .WillRepeatedly(Invoke(
+                [param](std::vector<int64_t> ids
+                ) -> drogon::Task<std::vector<User>> {
+                    if (param.has_duplicate_senders &&
+                        param.chats_with_last_messages.size() > 0) {
+                        EXPECT_EQ(ids.size(), 1);
+                    }
+                    std::vector<User> fake_users;
+                    for (auto id : ids) {
+                        User fake_user;
+                        fake_user.setId(id);
+                        fake_user.setDisplayName("User_" + std::to_string(id));
+                        fake_users.push_back(fake_user);
+                    }
+                    return createFakeTask(fake_users);
                 }
             ));
     }
@@ -264,15 +301,20 @@ TEST_P(ServiceGetUserChatsTest, GetUserChatsTest) {
           << param.test_name;
         EXPECT_EQ(
             response_dto.chats_previews.size(),
-            response_dto.last_message_attachments.size()
+            response_dto.last_messages_senders.size()
+        ) << "Failed test: "
+          << param.test_name;
+        EXPECT_EQ(
+            response_dto.chats_previews.size(),
+            response_dto.last_messages_attachments.size()
         ) << "Failed test: "
           << param.test_name;
         for (std::size_t i = 0; i < param.chats_count; i++) {
             if (param.chats_with_last_messages.contains(i + 1)) {
-                EXPECT_FALSE(response_dto.last_message_attachments[i].empty())
+                EXPECT_FALSE(response_dto.last_messages_attachments[i].empty())
                     << "Failed test: " << param.test_name;
             } else {
-                EXPECT_TRUE(response_dto.last_message_attachments[i].empty())
+                EXPECT_TRUE(response_dto.last_messages_attachments[i].empty())
                     << "Failed test: " << param.test_name;
             }
         }
@@ -287,15 +329,24 @@ INSTANTIATE_TEST_SUITE_P(
             "Success - user doesn't have chats",
             {67, 67},
             0,
-            {}
+            {},
+            false
         },
         GetUserChatsTestCase{
             "Success - user has chats. Some has last message with attachment",
             {67, 67},
             10,
-            {3, 4, 7, 10}
+            {3, 4, 7, 10},
+            false
         },
-        GetUserChatsTestCase{"Access denied", {67, 52}, 1, {}}
+        GetUserChatsTestCase{"Access denied", {67, 52}, 1, {}, false},
+        GetUserChatsTestCase{
+            "Success with duplicate sender_ids in last messages",
+            {67, 67},
+            5,
+            {1, 2, 3, 4, 5},
+            true
+        }
     )
 );
 
@@ -734,6 +785,7 @@ struct GetChatMessagesTestCase {
 
     GetChatMessagesRequestDto request_dto;
     bool is_member;
+    bool has_duplicate_senders;
 };
 
 class ServiceGetChatMessagesTest
@@ -776,6 +828,11 @@ TEST_P(ServiceGetChatMessagesTest, GetChatMessagesTest) {
                         Message fake_message;
                         fake_message.setId(i);
                         fake_message.setChatId(chat_id);
+                        if (param.has_duplicate_senders) {
+                            fake_message.setSenderId((i % 2 == 0) ? 2 : 1);
+                        } else {
+                            fake_message.setSenderId(i);
+                        }
                         fake_messages.push_back(fake_message);
                     }
                     return createFakeTask(fake_messages);
@@ -797,6 +854,26 @@ TEST_P(ServiceGetChatMessagesTest, GetChatMessagesTest) {
                     const std::string &s3_key, const std::string &filename
                 ) -> std::optional<std::string> {
                     return s3_key + '/' + filename;
+                }
+            ));
+        EXPECT_CALL(*mock_user_repo, getByIds(_))
+            .WillRepeatedly(Invoke(
+                [param](std::vector<int64_t> ids
+                ) -> drogon::Task<std::vector<User>> {
+                    if (param.has_duplicate_senders &&
+                        param.request_dto.limit > 2) {
+                        EXPECT_EQ(ids.size(), 2);
+                    } else {
+                        EXPECT_EQ(ids.size(), param.request_dto.limit);
+                    }
+                    std::vector<User> fake_users;
+                    for (auto id : ids) {
+                        User fake_user;
+                        fake_user.setId(id);
+                        fake_user.setDisplayName("User_" + std::to_string(id));
+                        fake_users.push_back(fake_user);
+                    }
+                    return createFakeTask(fake_users);
                 }
             ));
     }
@@ -821,6 +898,10 @@ TEST_P(ServiceGetChatMessagesTest, GetChatMessagesTest) {
             << "Failed test: " << param.test_name;
         EXPECT_EQ(response_dto.attachments_download_urls[0].size(), 1)
             << "Failed test: " << param.test_name;
+        EXPECT_EQ(
+            response_dto.messages.size(), response_dto.senders_info.size()
+        ) << "Failed test: "
+          << param.test_name;
     }
 }
 
@@ -831,9 +912,22 @@ INSTANTIATE_TEST_SUITE_P(
         GetChatMessagesTestCase{
             "User is not in chat",
             {67, 69, std::nullopt, 42},
+            false,
             false
         },
-        GetChatMessagesTestCase{"Success", {67, 69, std::nullopt, 42}, true}
+        GetChatMessagesTestCase{
+            "Success",
+            {67, 69, std::nullopt, 42},
+            true,
+            false
+        },
+        // НОВЫЙ ТЕСТ НА ДУБЛИКАТЫ:
+        GetChatMessagesTestCase{
+            "Success with duplicate sender_ids",
+            {67, 69, std::nullopt, 10},
+            true,
+            true
+        }
     )
 );
 
