@@ -54,6 +54,7 @@ public:
     Task<UpdateChatInfoResponseDto> updateChatInfo(
         UpdateChatInfoRequestDto request_dto
     );
+    Task<GetChatByIdResponseDto> getChatById(GetChatByIdRequestDto request_dto);
 
     void setChatRepo(
         std::shared_ptr<messenger::repositories::ChatRepositoryInterface>

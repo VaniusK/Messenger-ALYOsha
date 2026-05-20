@@ -107,8 +107,14 @@ public:
     ADD_METHOD_TO(
         ChatController::updateChatInfo,
         "/v1/chats/{1:chat_id}",
-        Post,
+        Patch,
         "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getChatById,
+        "/v1/chats/{1:chat_id}",
+        Get,
         "api::v1::AuthFilter"
     );
     METHOD_LIST_END
@@ -140,6 +146,8 @@ public:
     );
     Task<HttpResponsePtr>
     updateChatInfo(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    getChatById(const HttpRequestPtr req, int64_t chat_id);
 
     ChatController() {
         chat_service.setChatRepo(
@@ -154,7 +162,9 @@ public:
         chat_service.setAttachmentRepo(
             std::make_shared<messenger::repositories::AttachmentRepository>()
         );
-        chat_service.setUserRepo(std::make_shared<messenger::repositories::UserRepository>());
+        chat_service.setUserRepo(
+            std::make_shared<messenger::repositories::UserRepository>()
+        );
         chat_service.setS3Service(
             std::make_shared<S3Service>(
                 std::getenv("S3_ACCESS_KEY"), std::getenv("S3_SECRET_KEY"),

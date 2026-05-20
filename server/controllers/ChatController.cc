@@ -276,6 +276,11 @@ Task<HttpResponsePtr> ChatController::createGroup(const HttpRequestPtr req) {
         response_json["message"] = "Cannot create chat with empty name";
         RETURN_RESPONSE_CODE_400(response_json)
     }
+    if ((*request_json)["chat_name"].asString().size() > 30) {
+        response_json["message"] =
+            "Chat name length should be less or equal 30";
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
     if (!(*request_json)["members"].isArray()) {
         response_json["message"] = "Members is not array";
         RETURN_RESPONSE_CODE_400(response_json)
@@ -507,10 +512,24 @@ ChatController::updateChatInfo(const HttpRequestPtr req, int64_t chat_id) {
 
     auto request_json = req->getJsonObject();
     Json::Value response_json;
-    if (request_json->isMember("name") &&
-        (*request_json)["name"].asString() == "") {
-        response_json["message"] = "Cannot set empty name for the chat";
-        RETURN_RESPONSE_CODE_400(response_json)
+    if (request_json->isMember("name")) {
+        std::string name = (*request_json)["name"].asString();
+        if (name == "") {
+            response_json["message"] = "Cannot set empty name for the chat";
+            RETURN_RESPONSE_CODE_400(response_json)
+        }
+        if (name.size() > 30) {
+            response_json["message"] =
+                "Chat name length should be less or equal 30";
+            RETURN_RESPONSE_CODE_400(response_json)
+        }
+    }
+    if (request_json->isMember("description")) {
+        if ((*request_json)["description"].asString().size() > 400) {
+            response_json["message"] =
+                "Chat description length should be less or equal 400";
+            RETURN_RESPONSE_CODE_400(response_json)
+        }
     }
 
     UpdateChatInfoRequestDto request_dto(req, request_json, chat_id);
@@ -523,6 +542,30 @@ ChatController::updateChatInfo(const HttpRequestPtr req, int64_t chat_id) {
     } catch (const messenger::exceptions::ForbiddenException &e) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_403(response_json)
+    } catch (const messenger::exceptions::NotFoundException &e) {
+        response_json["message"] = e.what();
+        RETURN_RESPONSE_CODE_404(response_json)
+    } catch (const messenger::exceptions::InternalServerErrorException &e) {
+        response_json["messsage"] = e.what();
+        RETURN_RESPONSE_CODE_500(response_json)
+    } catch (const std::exception &e) {
+        response_json["message"] =
+            std::string("Internal server error: ") + e.what();
+        RETURN_RESPONSE_CODE_500(response_json)
+    }
+}
+
+Task<HttpResponsePtr>
+ChatController::getChatById(const HttpRequestPtr req, int64_t chat_id) {
+    LOG_INFO << "Entered ChatController -> getChatById";
+    GetChatByIdRequestDto request_dto(req, chat_id);
+
+    Json::Value response_json;
+    try {
+        GetChatByIdResponseDto response_dto =
+            co_await chat_service.getChatById(request_dto);
+        response_json = response_dto.toJson();
+        RETURN_RESPONSE_CODE_200(response_json)
     } catch (const messenger::exceptions::NotFoundException &e) {
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_404(response_json)

@@ -524,7 +524,15 @@ Task<GetChatMemberResponseDto> ChatService::getChatMember(
     auto member = co_await chat_repo->getMember(
         request_dto.chat_id, request_dto.member_id
     );
-    GetChatMemberResponseDto response_dto(std::move(member));
+    auto member_info = co_await user_repo->getById(member.getValueOfUserId());
+    if (!member_info.has_value()) {
+        throw messenger::exceptions::NotFoundException(
+            "Couldn't find user with member's user_id"
+        );
+    }
+    GetChatMemberResponseDto response_dto(
+        std::move(member), std::move(member_info.value())
+    );
     co_return response_dto;
 }
 
@@ -539,7 +547,32 @@ Task<GetChatMembersResponseDto> ChatService::getChatMembers(
         );
     }
     auto members = co_await chat_repo->getMembers(request_dto.chat_id);
-    GetChatMembersResponseDto response_dto(std::move(members));
+    std::vector<int64_t> members_user_ids;
+    members_user_ids.reserve(members.size());
+    for (auto &el : members) {
+        members_user_ids.push_back(el.getValueOfUserId());
+    }
+    std::vector<User> fetched_members_info =
+        co_await user_repo->getByIds(members_user_ids);
+
+    std::unordered_map<int64_t, User> users_map;
+    for (auto &user : fetched_members_info) {
+        users_map[user.getValueOfId()] = std::move(user);
+    }
+    std::vector<User> aligned_members_info;
+    aligned_members_info.reserve(members.size());
+
+    for (const auto &member : members) {
+        auto it = users_map.find(member.getValueOfUserId());
+        if (it != users_map.end()) {
+            aligned_members_info.push_back(it->second);
+        } else {
+            aligned_members_info.push_back(User{});
+        }
+    }
+    GetChatMembersResponseDto response_dto(
+        std::move(members), std::move(aligned_members_info)
+    );
     co_return response_dto;
 }
 
@@ -562,6 +595,24 @@ Task<RemoveMemberResponseDto> ChatService::removeMember(
         members.size() > 1) {
         throw messenger::exceptions::ConflictException(
             "Owner cannot leave chat without transfer of rights"
+        );
+    }
+    auto it = std::find_if(members.begin(), members.end(), [&](const auto &m) {
+        return m.getValueOfUserId() == request_dto.member_id;
+    });
+    if (it == members.end()) {
+        throw messenger::exceptions::NotFoundException(
+            "Member not found in chat"
+        );
+    }
+    auto to_delete_member = *it;
+    if (request_source_member.getValueOfRole() ==
+            messenger::models::ChatRole::Admin &&
+        request_dto.user_id != request_dto.member_id &&
+        to_delete_member.getValueOfRole() !=
+            messenger::models::ChatRole::Member) {
+        throw messenger::exceptions::ForbiddenException(
+            "Admins can only remove regular members"
         );
     }
     co_await chat_repo->removeMember(
@@ -619,4 +670,19 @@ Task<UpdateChatInfoResponseDto> ChatService::updateChatInfo(
         request_dto.description
     );
     co_return UpdateChatInfoResponseDto();
+}
+
+Task<GetChatByIdResponseDto> ChatService::getChatById(
+    GetChatByIdRequestDto request_dto
+) {
+    // TODO: access checking if chat is private
+    auto chat = co_await chat_repo->getById(request_dto.chat_id);
+    if (!chat.has_value()) {
+        throw messenger::exceptions::NotFoundException(
+            "Chat with id " + std::to_string(request_dto.chat_id) +
+            " doesn't exist"
+        );
+    }
+    GetChatByIdResponseDto response_dto(std::move(chat.value()));
+    co_return response_dto;
 }
