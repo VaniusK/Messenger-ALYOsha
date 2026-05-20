@@ -36,6 +36,10 @@ drogon::Task<T> createFakeTask(T data) {
     co_return data;
 }
 
+drogon::Task<void> createFakeVoidTask() {
+    co_return;
+}
+
 class BaseChatServiceTest : public ::testing::Test {
 protected:
     std::shared_ptr<MockChatRepository> mock_chat_repo;
@@ -1127,6 +1131,566 @@ INSTANTIATE_TEST_SUITE_P(
         }
     )
 );
+
+struct CreateGroupTestCase {
+    std::string test_name;
+    CreateGroupRequestDto request_dto;
+    bool should_succeed;
+};
+
+class ServiceCreateGroupTest
+    : public BaseChatServiceTest,
+      public ::testing::WithParamInterface<CreateGroupTestCase> {};
+
+TEST_P(ServiceCreateGroupTest, CreateGroupTest) {
+    auto param = GetParam();
+
+    if (param.should_succeed) {
+        EXPECT_CALL(
+            *mock_chat_repo,
+            createGroup(
+                param.request_dto.name, param.request_dto.creator_id,
+                param.request_dto.members_ids,
+                _  // транзакция по умолчанию nullptr
+            )
+        )
+            .WillRepeatedly(Invoke(
+                [](std::string name, int64_t creator_id,
+                   std::vector<int64_t> member_ids,
+                   auto transaction_ptr) -> drogon::Task<Chat> {
+                    Chat fake_chat;
+                    fake_chat.setId(42);
+                    fake_chat.setName(name);
+                    fake_chat.setType(messenger::models::ChatType::Group);
+                    return createFakeTask(fake_chat);
+                }
+            ));
+    }
+
+    if (!param.should_succeed) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->createGroup(param.request_dto)),
+            messenger::exceptions::BadRequestException
+        ) << "Failed test: "
+          << param.test_name;
+    } else {
+        CreateGroupResponseDto response_dto;
+        EXPECT_NO_THROW(
+            response_dto =
+                drogon::sync_wait(chat_service->createGroup(param.request_dto))
+        ) << "Failed test: "
+          << param.test_name;
+
+        EXPECT_EQ(response_dto.chat.getValueOfId(), 42);
+        EXPECT_EQ(response_dto.chat.getValueOfName(), param.request_dto.name);
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    CreateGroupTest,
+    ServiceCreateGroupTest,
+    ::testing::Values(
+        CreateGroupTestCase{
+            "Success: Creator is in members list",
+            CreateGroupRequestDto(10, "C++ Chat", {10, 20, 30}), true
+        },
+        CreateGroupTestCase{
+            "Fail: Creator is missing from members list",
+            CreateGroupRequestDto(10, "Hackers", {20, 30}), false
+        }
+    )
+);
+
+enum class RemoveMemberExpectedResult {
+    Success,
+    Forbidden,
+    Conflict,
+    NotFound
+};
+
+struct RemoveMemberTestCase {
+    std::string test_name;
+    RemoveMemberRequestDto request_dto;
+
+    std::string source_role;
+    std::string target_role;
+    bool is_target_in_chat;
+    int total_members;
+
+    RemoveMemberExpectedResult expected_result;
+};
+
+class ServiceRemoveMemberTest
+    : public BaseChatServiceTest,
+      public ::testing::WithParamInterface<RemoveMemberTestCase> {};
+
+TEST_P(ServiceRemoveMemberTest, RemoveMemberTest) {
+    auto param = GetParam();
+
+    EXPECT_CALL(
+        *mock_chat_repo,
+        getMember(param.request_dto.chat_id, param.request_dto.user_id)
+    )
+        .WillRepeatedly(Invoke(
+            [param](int64_t c_id, int64_t u_id) -> drogon::Task<ChatMember> {
+                ChatMember fake_source;
+                fake_source.setChatId(c_id);
+                fake_source.setUserId(u_id);
+                fake_source.setRole(param.source_role);
+                return createFakeTask(fake_source);
+            }
+        ));
+
+    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id, _))
+        .WillRepeatedly(Invoke(
+            [param](
+                int64_t c_id, auto t_ptr
+            ) -> drogon::Task<std::vector<ChatMember>> {
+                std::vector<ChatMember> members;
+                ChatMember source;
+                source.setUserId(param.request_dto.user_id);
+                source.setRole(param.source_role);
+                members.push_back(source);
+
+                if (param.request_dto.user_id != param.request_dto.member_id &&
+                    param.is_target_in_chat) {
+                    ChatMember target;
+                    target.setUserId(param.request_dto.member_id);
+                    target.setRole(param.target_role);
+                    members.push_back(target);
+                }
+
+                int current_id = 1000;
+                while (members.size() < param.total_members) {
+                    ChatMember extra;
+                    extra.setUserId(current_id++);
+                    extra.setRole(messenger::models::ChatRole::Member);
+                    members.push_back(extra);
+                }
+                return createFakeTask(members);
+            }
+        ));
+
+    if (param.expected_result == RemoveMemberExpectedResult::Success) {
+        EXPECT_CALL(
+            *mock_chat_repo,
+            removeMember(
+                param.request_dto.chat_id, param.request_dto.member_id, _
+            )
+        )
+            .WillRepeatedly(
+                Invoke([](int64_t, int64_t, auto) -> drogon::Task<void> {
+                    return createFakeVoidTask();
+                })
+            );
+    }
+
+    if (param.expected_result == RemoveMemberExpectedResult::Forbidden) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->removeMember(param.request_dto)),
+            messenger::exceptions::ForbiddenException
+        ) << param.test_name;
+    } else if (param.expected_result == RemoveMemberExpectedResult::Conflict) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->removeMember(param.request_dto)),
+            messenger::exceptions::ConflictException
+        ) << param.test_name;
+    } else if (param.expected_result == RemoveMemberExpectedResult::NotFound) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->removeMember(param.request_dto)),
+            messenger::exceptions::NotFoundException
+        ) << param.test_name;
+    } else {
+        EXPECT_NO_THROW(
+            drogon::sync_wait(chat_service->removeMember(param.request_dto))
+        ) << param.test_name;
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    RemoveMemberTest,
+    ServiceRemoveMemberTest,
+    ::testing::Values(
+        RemoveMemberTestCase{
+            "Fail: Member tries to remove another Member",
+            {10, 1, 99},
+            messenger::models::ChatRole::Member,
+            messenger::models::ChatRole::Member,
+            true,
+            3,
+            RemoveMemberExpectedResult::Forbidden
+        },
+        RemoveMemberTestCase{
+            "Fail: Admin tries to remove another Admin",
+            {10, 1, 99},
+            messenger::models::ChatRole::Admin,
+            messenger::models::ChatRole::Admin,
+            true,
+            3,
+            RemoveMemberExpectedResult::Forbidden
+        },
+        RemoveMemberTestCase{
+            "Fail: Admin tries to remove Owner",
+            {10, 1, 99},
+            messenger::models::ChatRole::Admin,
+            messenger::models::ChatRole::Owner,
+            true,
+            3,
+            RemoveMemberExpectedResult::Forbidden
+        },
+        RemoveMemberTestCase{
+            "Fail: Owner leaves chat with other people",
+            {10, 1, 10},
+            messenger::models::ChatRole::Owner,
+            messenger::models::ChatRole::Owner,
+            true,
+            5,
+            RemoveMemberExpectedResult::Conflict
+        },
+        RemoveMemberTestCase{
+            "Fail: Target not found in chat",
+            {10, 1, 99},
+            messenger::models::ChatRole::Admin,
+            messenger::models::ChatRole::Member,
+            false,
+            3,
+            RemoveMemberExpectedResult::NotFound
+        },
+        RemoveMemberTestCase{
+            "Success: Admin removes normal Member",
+            {10, 1, 99},
+            messenger::models::ChatRole::Admin,
+            messenger::models::ChatRole::Member,
+            true,
+            3,
+            RemoveMemberExpectedResult::Success
+        },
+        RemoveMemberTestCase{
+            "Success: Owner removes Admin",
+            {10, 1, 99},
+            messenger::models::ChatRole::Owner,
+            messenger::models::ChatRole::Admin,
+            true,
+            3,
+            RemoveMemberExpectedResult::Success
+        },
+        RemoveMemberTestCase{
+            "Success: Anyone leaves chat voluntarily",
+            {10, 1, 10},
+            messenger::models::ChatRole::Member,
+            messenger::models::ChatRole::Member,
+            true,
+            5,
+            RemoveMemberExpectedResult::Success
+        }
+    )
+);
+
+struct GetChatMemberTestCase {
+    std::string test_name;
+    GetChatMemberRequestDto request_dto;
+    bool is_requester_in_chat;
+    bool is_user_found;
+};
+
+class ServiceGetChatMemberTest
+    : public BaseChatServiceTest,
+      public ::testing::WithParamInterface<GetChatMemberTestCase> {};
+
+TEST_P(ServiceGetChatMemberTest, GetChatMemberTest) {
+    auto param = GetParam();
+
+    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id, _))
+        .WillRepeatedly(Invoke(
+            [param](
+                int64_t c_id, auto t
+            ) -> drogon::Task<std::vector<ChatMember>> {
+                std::vector<ChatMember> members;
+                if (param.is_requester_in_chat) {
+                    ChatMember m;
+                    m.setUserId(param.request_dto.user_id);
+                    members.push_back(m);
+                }
+                return createFakeTask(members);
+            }
+        ));
+
+    if (param.is_requester_in_chat) {
+        EXPECT_CALL(
+            *mock_chat_repo,
+            getMember(param.request_dto.chat_id, param.request_dto.member_id)
+        )
+            .WillRepeatedly(
+                Invoke([](int64_t c, int64_t m) -> drogon::Task<ChatMember> {
+                    ChatMember member;
+                    member.setUserId(m);
+                    member.setChatId(c);
+                    return createFakeTask(member);
+                })
+            );
+
+        EXPECT_CALL(*mock_user_repo, getById(param.request_dto.member_id))
+            .WillRepeatedly(Invoke(
+                [param](int64_t id) -> drogon::Task<std::optional<User>> {
+                    if (param.is_user_found) {
+                        User u;
+                        u.setId(id);
+                        return createFakeTask<std::optional<User>>(u);
+                    }
+                    return createFakeTask<std::optional<User>>(std::nullopt);
+                }
+            ));
+    }
+
+    if (!param.is_requester_in_chat) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->getChatMember(param.request_dto)),
+            messenger::exceptions::ForbiddenException
+        ) << param.test_name;
+    } else if (!param.is_user_found) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->getChatMember(param.request_dto)),
+            messenger::exceptions::NotFoundException
+        ) << param.test_name;
+    } else {
+        GetChatMemberResponseDto response_dto;
+        EXPECT_NO_THROW(
+            response_dto =
+                drogon::sync_wait(chat_service->getChatMember(param.request_dto)
+                )
+        ) << param.test_name;
+        EXPECT_EQ(
+            response_dto.member_info.getValueOfId(), param.request_dto.member_id
+        );
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    GetChatMemberTest,
+    ServiceGetChatMemberTest,
+    ::testing::Values(
+        GetChatMemberTestCase{"Success", {10, 42, 99}, true, true},
+        GetChatMemberTestCase{
+            "Forbidden: Requester not in chat",
+            {10, 42, 99},
+            false,
+            true
+        },
+        GetChatMemberTestCase{
+            "Not Found: Target user missing",
+            {10, 42, 99},
+            true,
+            false
+        }
+    )
+);
+
+struct GetChatMembersTestCase {
+    std::string test_name;
+    GetChatMembersRequestDto request_dto;
+    bool is_requester_in_chat;
+    int members_count;
+};
+
+class ServiceGetChatMembersTest
+    : public BaseChatServiceTest,
+      public ::testing::WithParamInterface<GetChatMembersTestCase> {};
+
+TEST_P(ServiceGetChatMembersTest, GetChatMembersTest) {
+    auto param = GetParam();
+
+    EXPECT_CALL(*mock_chat_repo, getMembers(param.request_dto.chat_id, _))
+        .WillRepeatedly(Invoke(
+            [param](
+                int64_t c_id, auto t
+            ) -> drogon::Task<std::vector<ChatMember>> {
+                std::vector<ChatMember> members;
+                if (param.is_requester_in_chat) {
+                    ChatMember m;
+                    m.setUserId(param.request_dto.user_id);
+                    members.push_back(m);
+                }
+                for (int i = 1; i < param.members_count; ++i) {
+                    ChatMember m;
+                    m.setUserId(param.request_dto.user_id + i);
+                    members.push_back(m);
+                }
+                return createFakeTask(members);
+            }
+        ));
+
+    if (param.is_requester_in_chat) {
+        EXPECT_CALL(*mock_user_repo, getByIds(_))
+            .WillRepeatedly(Invoke(
+                [](std::vector<int64_t> ids
+                ) -> drogon::Task<std::vector<User>> {
+                    std::vector<User> users;
+                    for (auto id : ids) {
+                        User u;
+                        u.setId(id);
+                        users.push_back(u);
+                    }
+                    return createFakeTask(users);
+                }
+            ));
+    }
+
+    if (!param.is_requester_in_chat) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->getChatMembers(param.request_dto)),
+            messenger::exceptions::ForbiddenException
+        ) << param.test_name;
+    } else {
+        GetChatMembersResponseDto response_dto;
+        EXPECT_NO_THROW(
+            response_dto =
+                drogon::sync_wait(chat_service->getChatMembers(param.request_dto
+                ))
+        ) << param.test_name;
+        EXPECT_EQ(response_dto.members.size(), param.members_count);
+        EXPECT_EQ(response_dto.members_info.size(), param.members_count);
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    GetChatMembersTest,
+    ServiceGetChatMembersTest,
+    ::testing::Values(
+        GetChatMembersTestCase{"Success: Fetch all members", {10, 42}, true, 5},
+        GetChatMembersTestCase{
+            "Forbidden: Requester not in chat",
+            {10, 42},
+            false,
+            5
+        }
+    )
+);
+
+struct UpdateChatInfoTestCase {
+    std::string test_name;
+    UpdateChatInfoRequestDto request_dto;
+    std::string requester_role;
+};
+
+class ServiceUpdateChatInfoTest
+    : public BaseChatServiceTest,
+      public ::testing::WithParamInterface<UpdateChatInfoTestCase> {};
+
+TEST_P(ServiceUpdateChatInfoTest, UpdateChatInfoTest) {
+    auto param = GetParam();
+
+    EXPECT_CALL(
+        *mock_chat_repo,
+        getMember(param.request_dto.chat_id, param.request_dto.user_id)
+    )
+        .WillRepeatedly(
+            Invoke([param](int64_t c, int64_t u) -> drogon::Task<ChatMember> {
+                ChatMember m;
+                m.setRole(param.requester_role);
+                m.setChatId(c);
+                m.setUserId(u);
+                return createFakeTask(m);
+            })
+        );
+
+    if (param.requester_role != messenger::models::ChatRole::Member) {
+        EXPECT_CALL(
+            *mock_chat_repo,
+            updateInfo(
+                param.request_dto.chat_id, param.request_dto.name,
+                param.request_dto.avatar, param.request_dto.description, _
+            )
+        )
+            .WillRepeatedly(Invoke([](...) -> drogon::Task<void> {
+                return createFakeVoidTask();
+            }));
+    }
+
+    if (param.requester_role == messenger::models::ChatRole::Member) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->updateChatInfo(param.request_dto)),
+            messenger::exceptions::ForbiddenException
+        ) << param.test_name;
+    } else {
+        EXPECT_NO_THROW(
+            drogon::sync_wait(chat_service->updateChatInfo(param.request_dto))
+        ) << param.test_name;
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    UpdateChatInfoTest,
+    ServiceUpdateChatInfoTest,
+    ::testing::Values(
+        UpdateChatInfoTestCase{
+            "Success: Admin changes info",
+            {10, 42, "New Name", std::nullopt, std::nullopt},
+            messenger::models::ChatRole::Admin
+        },
+        UpdateChatInfoTestCase{
+            "Success: Owner changes info",
+            {10, 42, "New Name", std::nullopt, std::nullopt},
+            messenger::models::ChatRole::Owner
+        },
+        UpdateChatInfoTestCase{
+            "Forbidden: Member tries to change info",
+            {10, 42, "New Name", std::nullopt, std::nullopt},
+            messenger::models::ChatRole::Member
+        }
+    )
+);
+
+struct GetChatByIdTestCase {
+    std::string test_name;
+    GetChatByIdRequestDto request_dto;
+    bool chat_exists;
+};
+
+class ServiceGetChatByIdTest
+    : public BaseChatServiceTest,
+      public ::testing::WithParamInterface<GetChatByIdTestCase> {};
+
+TEST_P(ServiceGetChatByIdTest, GetChatByIdTest) {
+    auto param = GetParam();
+
+    EXPECT_CALL(*mock_chat_repo, getById(param.request_dto.chat_id))
+        .WillRepeatedly(
+            Invoke([param](int64_t id) -> drogon::Task<std::optional<Chat>> {
+                if (param.chat_exists) {
+                    Chat chat;
+                    chat.setId(id);
+                    chat.setName("Test Chat");
+                    return createFakeTask<std::optional<Chat>>(chat);
+                }
+                return createFakeTask<std::optional<Chat>>(std::nullopt);
+            })
+        );
+
+    if (!param.chat_exists) {
+        EXPECT_THROW(
+            drogon::sync_wait(chat_service->getChatById(param.request_dto)),
+            messenger::exceptions::NotFoundException
+        ) << param.test_name;
+    } else {
+        GetChatByIdResponseDto response_dto;
+        EXPECT_NO_THROW(
+            response_dto =
+                drogon::sync_wait(chat_service->getChatById(param.request_dto))
+        ) << param.test_name;
+        EXPECT_EQ(response_dto.chat.getValueOfId(), param.request_dto.chat_id);
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    GetChatByIdTest,
+    ServiceGetChatByIdTest,
+    ::testing::Values(
+        GetChatByIdTestCase{"Success: Chat exists", {42, 10}, true},
+        GetChatByIdTestCase{"Not Found: Chat doesn't exist", {42, 10}, false}
+    )
+);
+
+// TODO: methods that creates transactions.
 
 // struct ***TestCase {
 //     std::string test_name;

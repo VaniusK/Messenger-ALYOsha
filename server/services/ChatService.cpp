@@ -469,7 +469,6 @@ Task<CreateGroupResponseDto> ChatService::createGroup(
             "Creator ID must be included in the members list"
         );
     }
-    LOG_INFO << request_dto.members_ids.size();
     Chat chat = co_await chat_repo->createGroup(
         request_dto.name, request_dto.creator_id,
         std::move(request_dto.members_ids)

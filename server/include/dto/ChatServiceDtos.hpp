@@ -510,8 +510,14 @@ struct CreateGroupRequestDto : RequestDto {
     std::string name;
     std::vector<int64_t> members_ids;
 
-    CreateGroupRequestDto(std::string name_, std::vector<int64_t> members_ids_)
-        : name(std::move(name_)), members_ids(std::move(members_ids_)) {
+    CreateGroupRequestDto(
+        int64_t creator_id_,
+        std::string name_,
+        std::vector<int64_t> members_ids_
+    )
+        : creator_id(creator_id_),
+          name(std::move(name_)),
+          members_ids(std::move(members_ids_)) {
     }
 
     CreateGroupRequestDto(
@@ -755,12 +761,14 @@ struct UpdateChatInfoRequestDto : RequestDto {
     std::optional<std::string> description;
 
     UpdateChatInfoRequestDto(
+        int64_t user_id_,
         int64_t chat_id_,
         std::optional<std::string> name_,
         std::optional<std::string> avatar_,
         std::optional<std::string> description_
     )
-        : chat_id(chat_id_),
+        : user_id(user_id_),
+          chat_id(chat_id_),
           name(std::move(name_)),
           avatar(std::move(avatar_)),
           description(std::move(description_)) {
