@@ -345,7 +345,7 @@ jobs:
           username: ${{ secrets.STAGING_SERVER_USER }}
           key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
-            cd /opt/messenger-backend/Messenger-ALYOsha
+            cd /opt/messenger/Messenger-ALYOsha/
             
             git fetch origin dev
             git reset --hard origin/dev
