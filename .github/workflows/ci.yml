@@ -338,7 +338,21 @@ jobs:
     needs: [docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     steps:
-      - name: Execute deploy script
-        run: |
-          echo "Bebebe"
+      - name: Execute deployment script via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_SERVER_HOST }}
+          username: ${{ secrets.STAGING_SERVER_USER }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          script: |
+            cd /opt/messenger-backend/Messenger-ALYOsha
+            
+            git fetch origin dev
+            git reset --hard origin/dev
+            
+            sed -i 's/api.localhost/api.alyosha-test.ru/g' server/nginx/nginx.conf
+            sed -i 's/localhost/alyosha-test.ru/g' server/nginx/nginx.conf
+
+            docker compose down
+            make run_server
   
