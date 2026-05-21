@@ -344,6 +344,7 @@ jobs:
           host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ${{ secrets.STAGING_SERVER_USER }}
           key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          command_timeout: 60m
           script: |
             cd /opt/messenger/Messenger-ALYOsha/
             
