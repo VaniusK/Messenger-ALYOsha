@@ -332,3 +332,13 @@ jobs:
       
       - name: Cleanup
         run: docker compose --profile test down -v
+  deploy:
+    name: Deploy on staging server
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    steps:
+      - name: Execute deploy script
+        run: |
+          echo "Bebebe"
+  
