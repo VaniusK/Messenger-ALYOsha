@@ -24,7 +24,7 @@ ARG CMAKE_RELEASE_TYPE=Release
 
 RUN cmake -B build -S . -DCMAKE_BUILD_TYPE=${CMAKE_RELEASE_TYPE} -DBUILD_TESTS=ON \
     -DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake -DENABLE_COVERAGE=${ENABLE_COVERAGE}
-RUN cmake --build build --parallel
+RUN cmake --build build --parallel -j2
 
 # Coverage stage
 FROM builder AS coverage

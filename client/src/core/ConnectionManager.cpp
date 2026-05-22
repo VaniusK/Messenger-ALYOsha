@@ -69,15 +69,6 @@ ConnectionManager::post(const QString &endpoint, const QByteArray &body) {
     return m_networkManager->post(createAuthRequest(endpoint), body);
 }
 
-QNetworkReply *ConnectionManager::getWithBody(
-    const QString &endpoint,
-    const QByteArray &body
-) {
-    return m_networkManager->sendCustomRequest(
-        createAuthRequest(endpoint), "GET", body
-    );
-}
-
 QNetworkAccessManager *ConnectionManager::networkManager() const {
     return m_networkManager;
 }
