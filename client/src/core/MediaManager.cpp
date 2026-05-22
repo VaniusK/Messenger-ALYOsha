@@ -16,12 +16,14 @@ MediaManager::MediaManager(
     ConnectionManager *connection,
     StateManager *state,
     LocalChatStorage *chatStorage,
+    ChatManager *chatManager,
     QObject *parent
 )
     : QObject(parent),
       m_connection(connection),
       m_state(state),
-      m_chatStorage(chatStorage) {
+      m_chatStorage(chatStorage),
+      m_chatManager(chatManager) {
 }
 
 void MediaManager::uploadFile(
@@ -158,7 +160,7 @@ void MediaManager::uploadFile(
                                 emit uploadProgress(100);
                                 emit uploadFinished();
                                 emit messageSentSucces(msg);
-                                emit messageSentSucces();
+                                m_chatManager->fetchChats();
                                 qDebug() << "Sent message with MediaManager";
                             }
                         }

@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
         &app
     );
     auto *mediaManager = new MediaManager(
-        connectionManager, stateManager, localChatStorage, &app
+        connectionManager, stateManager, localChatStorage, chatManager, &app
     );
     auto *voiceManager = new VoiceManager(&app);
 
