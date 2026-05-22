@@ -464,22 +464,6 @@ Rectangle {
                     ? (senderInfo.display_name || senderInfo.handle || "User " + (model.sender_id || "")) 
                     : ("User " + (model.sender_id || ""))
 
-                // // system message
-                // Rectangle {
-                //     visible: model.type === "system"
-                //     width: sysText.width + 24; height: 26; radius: 13
-                //     anchors.horizontalCenter: parent.horizontalCenter
-                //     color: Qt.rgba(0, 0, 0, 0.2)
-                //     Text {
-                //         id: sysText
-                //         anchors.centerIn: parent
-                //         text: model.text || ""
-                //         color: "white"
-                //         font.pixelSize: 13
-                //         font.family: "Segoe UI"
-                //     }
-                // }
-
                 Item {
                     visible: model.type !== "system"
                     width: parent.width
