@@ -161,7 +161,6 @@ void MediaManager::uploadFile(
                                 emit uploadFinished();
                                 emit messageSentSucces(msg);
                                 m_chatManager->fetchChats();
-                                qDebug() << "Sent message with MediaManager";
                             }
                         }
                     );
