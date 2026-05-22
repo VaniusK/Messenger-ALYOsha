@@ -29,14 +29,6 @@ public:
     Q_INVOKABLE void connectWebSocket();
     Q_INVOKABLE void
     openDirectChat(int targetUserId, const QString &targetUserName = "");
-    Q_INVOKABLE void sendMessageWithAttachment(
-        const QString &chatId,
-        const QString &caption,
-        const QString &fileName,
-        const QString &fileType,
-        qint64 fileSizeBytes,
-        const QString &s3ObjectKey
-    );
     Q_INVOKABLE void cacheMessageMedia(QJsonObject &message);
     Q_INVOKABLE void clearCache();
     Q_INVOKABLE void createGroupChat(

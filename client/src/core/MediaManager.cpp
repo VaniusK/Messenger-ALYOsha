@@ -15,9 +15,15 @@
 MediaManager::MediaManager(
     ConnectionManager *connection,
     StateManager *state,
+    LocalChatStorage *chatStorage,
+    ChatManager *chatManager,
     QObject *parent
 )
-    : QObject(parent), m_connection(connection), m_state(state) {
+    : QObject(parent),
+      m_connection(connection),
+      m_state(state),
+      m_chatStorage(chatStorage),
+      m_chatManager(chatManager) {
 }
 
 void MediaManager::uploadFile(
@@ -149,9 +155,12 @@ void MediaManager::uploadFile(
                                     QJsonDocument::fromJson(msgReply->readAll())
                                         .object();
                                 QJsonObject msg = obj["message"].toObject();
+                                msg["is_me"] = true;
+                                m_chatStorage->addMessage(msg);
                                 emit uploadProgress(100);
                                 emit uploadFinished();
-                                emit messageSent(msg);
+                                emit messageSentSucces(msg);
+                                m_chatManager->fetchChats();
                             }
                         }
                     );

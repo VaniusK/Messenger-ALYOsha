@@ -1,7 +1,9 @@
 #pragma once
 #include <QObject>
 #include <QString>
+#include "ChatManager.hpp"
 #include "ConnectionManager.hpp"
+#include "LocalChatStorage.hpp"
 #include "StateManager.hpp"
 
 class MediaManager : public QObject {
@@ -11,6 +13,8 @@ public:
     explicit MediaManager(
         ConnectionManager *connection,
         StateManager *state,
+        LocalChatStorage *chatStorage,
+        ChatManager *chatManager,
         QObject *parent = nullptr
     );
 
@@ -36,10 +40,12 @@ signals:
     );
     void uploadProgress(int percent);
     void uploadFinished();
-    void messageSent(const QJsonObject &message);
+    void messageSentSucces(const QJsonObject &message);
     void uploadFailed(const QString &errorMessage);
 
 private:
     ConnectionManager *m_connection;
     StateManager *m_state;
+    LocalChatStorage *m_chatStorage;
+    ChatManager *m_chatManager;
 };

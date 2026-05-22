@@ -167,7 +167,6 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                     QString currentUserIdStr = QString::number(currentUserId);
 
                     msg["is_me"] = (senderIdStr == currentUserIdStr);
-                    qDebug() << "Got raw id of " << msg["id"].toInt();
                     if (!oldest_message.has_value() ||
                         oldest_message.value()["id"].toInt() >
                             msg["id"].toInt()) {
@@ -313,75 +312,6 @@ void ChatManager::clearCache() {
 void ChatManager::onWebSocketError(QAbstractSocket::SocketError error) {
     qDebug() << "[ChatManager] WS error:" << error;
     emit chatError("WebSocket error: " + QString::number(error));
-}
-
-void ChatManager::sendMessageWithAttachment(
-    const QString &chatId,
-    const QString &caption,
-    const QString &fileName,
-    const QString &fileType,
-    qint64 fileSizeBytes,
-    const QString &s3ObjectKey
-) {
-    QJsonObject json;
-    json["text"] = caption.trimmed();
-    int64_t chat_id = chatId.toLongLong();
-
-    QNetworkReply *reply = m_connection->post(
-        "/chats/" + chatId + "/messages", QJsonDocument(json).toJson()
-    );
-
-    connect(
-        reply, &QNetworkReply::finished, this,
-        [this, chat_id, reply, chatId, fileName, fileType, fileSizeBytes,
-         s3ObjectKey]() {
-            reply->deleteLater();
-
-            if (reply->error() != QNetworkReply::NoError) {
-                emit chatError(
-                    "Не удалось создать сообщение: " + reply->errorString()
-                );
-                return;
-            }
-
-            QJsonObject obj =
-                QJsonDocument::fromJson(reply->readAll()).object();
-            QJsonObject msg = obj["message"].toObject();
-            msg["is_me"] = true;
-            m_chatStorage->addMessage(msg);
-            emit messageSentSuccess(msg);
-
-            QJsonValue idVal = msg["id"];
-            qint64 messageId = idVal.isString()
-                                   ? idVal.toString().toLongLong()
-                                   : static_cast<qint64>(idVal.toDouble());
-
-            QJsonObject attachJson;
-            attachJson["chat_id"] = chatId.toLongLong();
-            attachJson["message_id"] = messageId;
-            attachJson["file_name"] = fileName;
-            attachJson["file_type"] = fileType;
-            attachJson["file_size_bytes"] = fileSizeBytes;
-            attachJson["s3_object_key"] = s3ObjectKey;
-
-            QNetworkReply *attachReply = m_connection->post(
-                "/chats/attachments", QJsonDocument(attachJson).toJson()
-            );
-
-            connect(
-                attachReply, &QNetworkReply::finished,
-                [this, attachReply]() {
-                    attachReply->deleteLater();
-                    if (attachReply->error() != QNetworkReply::NoError) {
-                        qDebug() << "[ChatManager] Ошибка привязки файла:"
-                                 << attachReply->errorString();
-                    } else {
-                        qDebug() << "[ChatManager] Файл успешно привязан";
-                    }
-                }
-            );
-        }
-    );
 }
 
 // group chats methods
