@@ -151,7 +151,7 @@ void MediaManager::uploadFile(
                                 QJsonObject msg = obj["message"].toObject();
                                 emit uploadProgress(100);
                                 emit uploadFinished();
-                                emit messageSent(msg);
+                                emit messageSentSucces(msg);
                             }
                         }
                     );
