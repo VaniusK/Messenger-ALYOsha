@@ -31,13 +31,15 @@ Rectangle {
             Layout.fillHeight: true
             activeChatId: chatArea.activeChatId
 
-            onChatSelected: function(chatId, chatName) {
+            onChatSelected: function(chatId, chatName, chatType, chatDescription) {
                 if (VoiceLayer.isRecording) {
                     chatArea.showCancelPrompt()
                     return
                 }
                 chatArea.activeChatId = chatId
                 chatArea.activeChatName = chatName
+                chatArea.activeChatType = chatType
+                chatArea.activeChatDescription = chatDescription || ""
             }
 
             onLogoutRequested: {

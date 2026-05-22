@@ -1,5 +1,4 @@
 #pragma once
-#include <qtmetamacros.h>
 #include <QAbstractSocket>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -39,17 +38,33 @@ public:
     Q_INVOKABLE void cacheMessageMedia(QJsonObject &message);
     Q_INVOKABLE void clearCache();
     Q_INVOKABLE void addMessageToCache(const QJsonObject &msg);
-    Q_INVOKABLE void
-    createGroupChat(const QString &name, const QList<qint64> &memberIds);
+    Q_INVOKABLE void createGroupChat(
+        const QString &name,
+        const QString &description,
+        const QVariantList &memberIds
+    );
     Q_INVOKABLE void fetchChatMembers(const QString &chatId);
     Q_INVOKABLE void addChatMember(
         const QString &chatId,
         qint64 userId,
         const QString &role = "member"
     );
-    Q_INVOKABLE void removeChatMember(const QString &chatId, qint64 userId);
-    Q_INVOKABLE void
-    updateChatName(const QString &chatId, const QString &newName);
+    Q_INVOKABLE void removeChatMember(
+        const QString &chatId,
+        qint64 userId,
+        bool fetchAfter = true
+    );
+    Q_INVOKABLE void updateChatInfo(
+        const QString &chatId,
+        const QString &newName,
+        const QString &newDescription
+    );
+    Q_INVOKABLE void changeMemberRole(
+        const QString &chatId,
+        qint64 userId,
+        const QString &newRole
+    );
+    Q_INVOKABLE void fetchChatInfo(const QString &chatId);
 
 signals:
     void usersFound(const QJsonArray &users);
@@ -63,9 +78,10 @@ signals:
     void webSocketDisconnected();
     void incomingWebSocketMessage(const QJsonObject &data);
     void groupChatCreated(const QJsonObject &chat);
-    void chatMemdersLoaded(const QJsonArray &members);
+    void chatMembersLoaded(const QJsonArray &members);
     void chatMemberAdded(const QJsonObject &member);
     void actionSuccess(const QString &message);
+    void chatInfoLoaded(const QJsonObject &chat);
 
 private slots:
     void onWebSocketConnected();

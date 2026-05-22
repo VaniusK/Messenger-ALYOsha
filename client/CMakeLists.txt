@@ -44,6 +44,7 @@ qt_add_qml_module(client
         src/ui/ChatArea.qml
         src/ui/MediaPickerPopup.qml
         src/ui/MediaPreviewDialog.qml
+        src/ui/CreateGroupPopup.qml
     RESOURCES
         assets/icons/clip.svg
         assets/icons/clip_active.svg
@@ -63,6 +64,9 @@ qt_add_qml_module(client
         assets/icons/camera.svg
         assets/icons/gear.svg
         assets/icons/person_plus.svg
+        assets/icons/admin_shield.svg
+        assets/icons/delete_user.svg
+        assets/icons/owner_shield.svg
 )
 target_include_directories(client PRIVATE include)
 target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)

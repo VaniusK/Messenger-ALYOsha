@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Messenger 1.0
 
 Rectangle {
@@ -20,7 +21,7 @@ Rectangle {
     }
 
     signal logoutRequested()
-    signal chatSelected(string chatId, string chatName)
+    signal chatSelected(string chatId, string chatName, string chatType, string chatDescription)
 
     Connections {
         target: ChatLayer
@@ -57,7 +58,7 @@ Rectangle {
         }
 
         function onUsersFound(users) {
-            if (isSearching) {
+            if (isSearching && !createGroupPopup.visible) {
                 chatDataList = users
                 chatList.model = chatDataList
             }
@@ -66,7 +67,18 @@ Rectangle {
         function onDirectChatOpened(chatId, chatTitle) {
             searchInput.text = ""
             isSearching = false
-            sidebarRoot.chatSelected(chatId, chatTitle)
+            sidebarRoot.chatSelected(chatId, chatTitle, "direct", "")
+        }
+
+        function onGroupChatCreated(chat) {
+            createGroupPopup.close()
+            ChatLayer.fetchChats()
+
+            var cid = String(chat.id || chat.chat_id)
+            var cname = chat.name || chat.title || "Группа"
+            var cdesc = chat.description || ""
+            sidebarRoot.chatSelected(cid, cname, "group", cdesc)
+            ChatLayer.fetchChatHistory(cid, 0)
         }
     }
 
@@ -90,48 +102,93 @@ Rectangle {
     Rectangle {
         id: searchHeader
         width: parent.width
-        height: 100
-        color: "#242f3d"
+        height: 110
+        color: "#1c242f"
         anchors.top: parent.top
 
-        RowLayout {
+        ColumnLayout {
             anchors.fill: parent
             anchors.margins: 15
             spacing: 12
 
-            Rectangle {
-                width: 90
-                height: 36
-                radius: 8
-                color: logoutBtnMouseArea.containsMouse ? "#d9363e" : "#ff4d4f"
-                Layout.alignment: Qt.AlignVCenter
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
 
                 Text {
-                    text: "Выйти"
+                    text: "Чаты"
                     color: "white"
-                    font.pixelSize: 14
+                    font.pixelSize: 18
                     font.bold: true
                     font.family: "Segoe UI"
-                    anchors.centerIn: parent
                 }
 
-                MouseArea {
-                    id: logoutBtnMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onPressed: parent.color = "#a22026"
-                    onReleased: parent.color = logoutBtnMouseArea.containsMouse ? "#d9363e" : "#ff4d4f"
-                    onClicked: sidebarRoot.logoutRequested()
+                Item { Layout.fillWidth: true }
+
+                // "НОВАЯ ГРУППА"
+                Rectangle {
+                    Layout.preferredHeight: 32
+                    Layout.preferredWidth: newGroupContent.width + 24
+                    radius: 16
+                    color: createGroupArea.containsMouse ? "#6dbcf8" : "#5eb5f7"
+
+                    RowLayout {
+                        id: newGroupContent
+                        anchors.centerIn: parent
+                        spacing: 6
+                        Image { 
+                            source: "qrc:/messenger_client_uri/assets/icons/person_plus.svg" 
+                            width: 16; height: 16; sourceSize: Qt.size(16, 16) 
+                        }
+                        Text { 
+                            text: "Новая группа"
+                            color: "white"
+                            font.pixelSize: 13
+                            font.bold: true
+                            font.family: "Segoe UI" 
+                        }
+                    }
+
+                    MouseArea {
+                        id: createGroupArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: createGroupPopup.open()
+                    }
+                }
+
+                // КНОПКА ВЫХОДА
+                Rectangle {
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 32
+                    radius: 16
+                    color: logoutBtnMouseArea.containsMouse ? "rgba(255, 77, 77, 0.1)" : "transparent"
+
+                    Text {
+                        text: "✕"
+                        color: "#ff4d4f"
+                        font.pixelSize: 16
+                        font.bold: true
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        id: logoutBtnMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: sidebarRoot.logoutRequested()
+                    }
                 }
             }
 
+            // Поиск
             Rectangle {
                 Layout.fillWidth: true
                 height: 36
-                color: "#17212b"
+                color: "#242f3d"
                 radius: 18
-                Layout.alignment: Qt.AlignVCenter
 
                 Timer {
                     id: searchDelayTimer
@@ -145,7 +202,9 @@ Rectangle {
                     anchors.fill: parent
                     anchors.leftMargin: 15
                     anchors.rightMargin: 15
-                    verticalAlignment: Text.AlignVCenter
+                    verticalAlignment: TextInput.AlignVCenter
+                    topPadding: 0
+                    bottomPadding: 0
                     font.pixelSize: 14
                     font.family: "Segoe UI"
                     color: "white"
@@ -159,10 +218,7 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
-                    Keys.onEscapePressed: {
-                        text = ""
-                        focus = false
-                    }
+                    Keys.onEscapePressed: { text = ""; focus = false }
 
                     onTextChanged: {
                         if (text.trim() === "") {
@@ -200,10 +256,10 @@ Rectangle {
 
         delegate: Rectangle {
             id: chatItem
-            width: chatList.width
+            width: ListView.view ? ListView.view.width : 0
             height: 70 
 
-            property var itemData: modelData
+            property var itemData: modelData ? modelData : {}
             property bool isActive: !sidebarRoot.isSearching && String(itemData.chat_id) === sidebarRoot.activeChatId
             property bool isSelf: isSearching && String(itemData.id) === String(AppState.userId)
             color: isActive ? "#2b5278" : (chatMouseArea.containsMouse ? "#202b36" : "#1c242f")
@@ -220,7 +276,9 @@ Rectangle {
                         var displayName = (itemData.type === "saved") ? "Избранное" : (itemData.title ? itemData.title : "")
                         sidebarRoot.chatSelected(
                             String(itemData.chat_id),
-                            displayName
+                            displayName,
+                            itemData.type,
+                            itemData.description || ""
                         )
                         ChatLayer.fetchChatHistory(String(itemData.chat_id))
                     }
@@ -268,7 +326,7 @@ Rectangle {
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: chatItem.width - 95
+                    width: Math.max(0, chatItem.width - 95)
 
                     Item {
                         width: parent.width
@@ -319,7 +377,9 @@ Rectangle {
                         }
                         
                         Image {
-                            property bool isMyLastMsg: itemData.last_message && String(itemData.last_message.sender_id) === String(AppState.userId)
+                            property bool isMyLastMsg: !!itemData 
+                                                    && !!itemData.last_message 
+                                                    && String(itemData.last_message.sender_id) === String(AppState.userId)
                             visible: isMyLastMsg && !isSearching && itemData.type !== "saved"
                             width: 14; height: 14
                             sourceSize: Qt.size(14, 14)
@@ -337,46 +397,87 @@ Rectangle {
                         visible: !isSearching
                         spacing: 4
 
+                        property string senderNameStr: {
+                            if (isSearching || !itemData || !itemData.last_message || itemData.type !== "group") return "";
+                            
+                            var msg = itemData.last_message;
+                            if (String(msg.sender_id) === String(AppState.userId)) return ""; // Если это мы, имя не пишем
+
+                            // Берем имя из sender_info
+                            var sInfo = msg.sender_info;
+                            var sName = sInfo ? (sInfo.display_name || sInfo.handle || "User") : (msg.sender_name || "User");
+                            
+                            return sName + ":";
+                        }
+
+                        // ТИП ВЛОЖЕНИЯ
+                        property string mediaPrefix: {
+                            if (isSearching || !itemData || !itemData.last_message) return "";
+                            var msg = itemData.last_message;
+                            
+                            var isImage = msg.type === "media" || msg.type === "image";
+                            var isVideo = msg.type === "video" || msg.type === "round";
+                            var isVoice = msg.type === "voice";
+                            var isDoc = msg.type === "file" || msg.type === "document";
+
+                            if (msg.attachments && msg.attachments.length > 0) {
+                                var fType = msg.attachments[0].file_type || "";
+                                if (fType.startsWith("image/")) { isImage = true; isVideo = false; isVoice = false; isDoc = false; }
+                                else if (fType.startsWith("video/")) { isVideo = true; isImage = false; isVoice = false; isDoc = false; }
+                                else if (fType.startsWith("audio/")) { isVoice = true; isImage = false; isVideo = false; isDoc = false; }
+                                else { isDoc = true; isImage = false; isVideo = false; isVoice = false; }
+                            }
+
+                            if (isImage) return "Фотография";
+                            if (isVideo) return "Видео";
+                            if (isVoice) return "Голосовое сообщение";
+                            if (isDoc) return "Файл";
+                            
+                            return "";
+                        }
+
+                        // ИМЯ ОТПРАВИТЕЛЯ
+                        Text {
+                            visible: parent.senderNameStr !== ""
+                            text: parent.senderNameStr
+                            color: "#5eb5f7"
+                            font.pixelSize: 14
+                            font.family: "Segoe UI"
+
+                            Layout.maximumWidth: parent.width * 0.4 
+                            elide: Text.ElideRight
+                        }
+
+                        // МЕДИА-ПРЕФИКС
+                        Text {
+                            visible: parent.mediaPrefix !== ""
+                            text: parent.mediaPrefix
+                            color: "#5eb5f7"
+                            font.pixelSize: 14
+                            font.family: "Segoe UI"
+                        }
+
+                        // ТЕКСТ СООБЩЕНИЯ
                         Text {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
                             color: "#8a96a3"
                             font.pixelSize: 14
                             font.family: "Segoe UI"
+                            
                             elide: Text.ElideRight
                             maximumLineCount: 1
-                            textFormat: Text.RichText
-
+                            textFormat: Text.PlainText
+                            
                             text: {
-                                if (!itemData.last_message && itemData.unread_count === 0) return "Нет сообщений";
-                                if (!itemData.last_message && itemData.unread_count > 0) return "Новое сообщение";
+                                if (isSearching || !itemData) return "";
 
-                                var msg = itemData.last_message;
-
-                                var safeText = msg.text ? msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim() : "";
-
-                                var isImage = msg.type === "media" || msg.type === "image";
-                                var isVideo = msg.type === "video" || msg.type === "round";
-                                var isVoice = msg.type === "voice";
-                                var isDoc = msg.type === "file" || msg.type === "document";
-
-                                if (msg.attachments && msg.attachments.length > 0) {
-                                    var fType = msg.attachments[0].file_type || "";
-                                    if (fType.startsWith("image/")) { isImage = true; isVideo = false; isVoice = false; isDoc = false; }
-                                    else if (fType.startsWith("video/")) { isVideo = true; isImage = false; isVoice = false; isDoc = false; }
-                                    else if (fType.startsWith("audio/")) { isVoice = true; isImage = false; isVideo = false; isDoc = false; }
-                                    else { isDoc = true; isImage = false; isVideo = false; isVoice = false; }
+                                if (!itemData.last_message) {
+                                    if (itemData.unread_count && itemData.unread_count > 0) return "Новое сообщение";
+                                    return "Нет сообщений";
                                 }
 
-                                var prefix = "";
-                                var colorStr = "#5eb5f7";
-
-                                if (isImage) prefix = "<font color='" + colorStr + "'>Фотография</font> ";
-                                else if (isVideo) prefix = "<font color='" + colorStr + "'>Видео</font> ";
-                                else if (isVoice) prefix = "<font color='" + colorStr + "'>Голосовое сообщение</font> ";
-                                else if (isDoc) prefix = "<font color='" + colorStr + "'>Файл</font> ";
-
-                                return prefix + safeText;
+                                return itemData.last_message.text ? itemData.last_message.text.trim() : "";
                             }
                         }
                     }
@@ -388,5 +489,10 @@ Rectangle {
                 }
             }
         }
+    }
+
+    CreateGroupPopup {
+        id: createGroupPopup
+        recentChatsData: sidebarRoot.chatDataList
     }
 }
