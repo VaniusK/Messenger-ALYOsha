@@ -39,6 +39,7 @@ signals:
     void uploadProgress(int percent);
     void uploadFinished();
     void messageSentSucces(const QJsonObject &message);
+    void messageSentSucces();
     void uploadFailed(const QString &errorMessage);
 
 private:

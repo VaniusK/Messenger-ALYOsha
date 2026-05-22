@@ -158,6 +158,7 @@ void MediaManager::uploadFile(
                                 emit uploadProgress(100);
                                 emit uploadFinished();
                                 emit messageSentSucces(msg);
+                                emit messageSentSucces();
                                 qDebug() << "Sent message with MediaManager";
                             }
                         }
