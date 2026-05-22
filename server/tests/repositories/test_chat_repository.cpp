@@ -256,6 +256,31 @@ TEST_F(ChatTestFixture, TestCreateGroup) {
     EXPECT_EQ(chat.getValueOfName(), "Чат жабоманов");
 }
 
+TEST_F(ChatTestFixture, TestCreateGroupFail) {
+    /* When creator isn't a member,
+    CreateGroup should throw
+    and transaction should rollback*/
+    EXPECT_THROW(
+        sync_wait(repo_.createGroup(
+            "Чат жабоманов", dummy_user1_.getValueOfId(),
+            {dummy_user2_.getValueOfId(), dummy_user3_.getValueOfId()}
+        )),
+        messenger::exceptions::NotFoundException
+    );
+    EXPECT_EQ(
+        sync_wait(repo_.getByUser(dummy_user1_.getValueOfId())).size(), 0
+    );
+    ;
+    EXPECT_EQ(
+        sync_wait(repo_.getByUser(dummy_user2_.getValueOfId())).size(), 0
+    );
+    ;
+    EXPECT_EQ(
+        sync_wait(repo_.getByUser(dummy_user3_.getValueOfId())).size(), 0
+    );
+    ;
+}
+
 TEST_F(ChatTestFixture, TestGetMembers) {
     /* When valid data is provided,
     getMembers should return members of the chat*/

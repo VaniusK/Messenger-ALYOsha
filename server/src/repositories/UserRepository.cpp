@@ -74,6 +74,10 @@ Task<bool> UserRepository::create(
 Task<std::vector<User>> UserRepository::getByIds(std::vector<int64_t> ids) {
     auto mapper = getMapper();
 
+    if (ids.size() == 0) {
+        co_return {};
+    }
+
     try {
         std::vector<User> users = co_await mapper.findBy(
             Criteria(User::Cols::_id, CompareOperator::In, ids)

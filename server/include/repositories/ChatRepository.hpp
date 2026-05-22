@@ -80,7 +80,9 @@ public:
         std::vector<int64_t> member_ids,
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
-    virtual drogon::Task<std::vector<ChatMember>> getMembers(int64_t chat_id
+    virtual drogon::Task<std::vector<ChatMember>> getMembers(
+        int64_t chat_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) = 0;
     virtual drogon::Task<ChatMember>
     getMember(int64_t chat_id, int64_t user_id) = 0;
@@ -175,7 +177,10 @@ public:
         std::vector<int64_t> member_ids,
         std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
     ) override;
-    drogon::Task<std::vector<ChatMember>> getMembers(int64_t chat_id) override;
+    drogon::Task<std::vector<ChatMember>> getMembers(
+        int64_t chat_id,
+        std::shared_ptr<drogon::orm::Transaction> transaction_ptr = nullptr
+    ) override;
     drogon::Task<ChatMember> getMember(int64_t chat_id, int64_t user_id)
         override;
     drogon::Task<ChatMember> addMember(

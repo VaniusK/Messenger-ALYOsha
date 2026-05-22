@@ -472,6 +472,268 @@ INSTANTIATE_TEST_SUITE_P(
     })
 );
 
+struct CreateGroupRequestDtoTestCase {
+    std::string test_name;
+    int64_t attribute_user_id;
+    std::string str_json;
+
+    int64_t expected_creator_id;
+    std::string expected_name;
+    std::vector<int64_t> expected_members_ids;
+};
+
+class CreateGroupRequestDtoTest
+    : public testing::TestWithParam<CreateGroupRequestDtoTestCase> {};
+
+TEST_P(CreateGroupRequestDtoTest, CorrectlyParsesValidRequest) {
+    auto param = GetParam();
+
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->getAttributes()->insert("user_id", param.attribute_user_id);
+
+    Json::Value json_body;
+    std::istringstream s(param.str_json);
+    ASSERT_TRUE(
+        Json::parseFromStream(Json::CharReaderBuilder(), s, &json_body, nullptr)
+    ) << "Wrong json in test: "
+      << param.test_name;
+
+    CreateGroupRequestDto dto(req, std::make_shared<Json::Value>(json_body));
+
+    EXPECT_EQ(dto.creator_id, param.expected_creator_id)
+        << "Failed test: " << param.test_name;
+    EXPECT_EQ(dto.name, param.expected_name)
+        << "Failed test: " << param.test_name;
+    EXPECT_EQ(dto.members_ids.size(), param.expected_members_ids.size())
+        << "Failed test: " << param.test_name;
+
+    for (size_t i = 0; i < dto.members_ids.size(); ++i) {
+        EXPECT_EQ(dto.members_ids[i], param.expected_members_ids[i])
+            << "Failed test: " << param.test_name << " at index " << i;
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DtoTests,
+    CreateGroupRequestDtoTest,
+    ::testing::Values(
+        CreateGroupRequestDtoTestCase{
+            "Success with full members list",
+            67,
+            R"({"chat_name": "C++ Enjoyers", "members": [10, 20, 30]})",
+            67,
+            "C++ Enjoyers",
+            {10, 20, 30}
+        },
+        CreateGroupRequestDtoTestCase{
+            "Success with empty members list",
+            67,
+            R"({"chat_name": "Solo Chat", "members": []})",
+            67,
+            "Solo Chat",
+            {}
+        },
+        CreateGroupRequestDtoTestCase{
+            "Success without members field",
+            67,
+            R"({"chat_name": "Secret Chat"})",
+            67,
+            "Secret Chat",
+            {}
+        }
+    )
+);
+
+struct AddGroupChatMemberRequestDtoTestCase {
+    std::string test_name;
+    int64_t attribute_user_id;
+    int64_t chat_id;
+    std::string str_json;
+
+    int64_t expected_user_id;
+    int64_t expected_chat_id;
+    int64_t expected_new_member_id;
+    std::string expected_role;
+};
+
+class AddGroupChatMemberRequestDtoTest
+    : public testing::TestWithParam<AddGroupChatMemberRequestDtoTestCase> {};
+
+TEST_P(AddGroupChatMemberRequestDtoTest, CorrectlyParsesValidRequest) {
+    auto param = GetParam();
+
+    Json::Value json_body;
+    std::istringstream s(param.str_json);
+    ASSERT_TRUE(
+        Json::parseFromStream(Json::CharReaderBuilder(), s, &json_body, nullptr)
+    );
+
+    auto req = drogon::HttpRequest::newHttpJsonRequest(json_body);
+    req->getAttributes()->insert("user_id", param.attribute_user_id);
+
+    AddGroupChatMemberRequestDto dto(req, param.chat_id);
+
+    EXPECT_EQ(dto.user_id, param.expected_user_id);
+    EXPECT_EQ(dto.chat_id, param.expected_chat_id);
+    EXPECT_EQ(dto.new_member_id, param.expected_new_member_id);
+    EXPECT_EQ(dto.role, param.expected_role);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DtoTests,
+    AddGroupChatMemberRequestDtoTest,
+    ::testing::Values(AddGroupChatMemberRequestDtoTestCase{
+        "Success parsing", 10, 42, R"({"user_id": 99, "role": "Admin"})", 10,
+        42, 99, "Admin"
+    })
+);
+
+struct UpdateChatInfoRequestDtoTestCase {
+    std::string test_name;
+    int64_t attribute_user_id;
+    int64_t chat_id;
+    std::string str_json;
+
+    std::optional<std::string> expected_name;
+    std::optional<std::string> expected_avatar;
+    std::optional<std::string> expected_description;
+};
+
+class UpdateChatInfoRequestDtoTest
+    : public testing::TestWithParam<UpdateChatInfoRequestDtoTestCase> {};
+
+TEST_P(UpdateChatInfoRequestDtoTest, CorrectlyParsesOptionals) {
+    auto param = GetParam();
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->getAttributes()->insert("user_id", param.attribute_user_id);
+
+    Json::Value json_body;
+    std::istringstream s(param.str_json);
+    ASSERT_TRUE(
+        Json::parseFromStream(Json::CharReaderBuilder(), s, &json_body, nullptr)
+    );
+
+    UpdateChatInfoRequestDto dto(
+        req, std::make_shared<Json::Value>(json_body), param.chat_id
+    );
+
+    EXPECT_EQ(dto.user_id, param.attribute_user_id);
+    EXPECT_EQ(dto.chat_id, param.chat_id);
+    EXPECT_EQ(dto.name, param.expected_name);
+    EXPECT_EQ(dto.avatar, param.expected_avatar);
+    EXPECT_EQ(dto.description, param.expected_description);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DtoTests,
+    UpdateChatInfoRequestDtoTest,
+    ::testing::Values(
+        UpdateChatInfoRequestDtoTestCase{
+            "All fields provided", 1, 2,
+            R"({"name": "New Name", "avatar": "path/to/ava.png", "description": "Cool chat"})",
+            "New Name", "path/to/ava.png", "Cool chat"
+        },
+        UpdateChatInfoRequestDtoTestCase{
+            "Only description provided", 1, 2,
+            R"({"description": "Only desc"})", std::nullopt, std::nullopt,
+            "Only desc"
+        },
+        UpdateChatInfoRequestDtoTestCase{
+            "Empty JSON", 1, 2, R"({})", std::nullopt, std::nullopt,
+            std::nullopt
+        }
+    )
+);
+
+TEST(GetChatMembersRequestDtoTest, CorrectlyParsesPathAndAttributes) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->getAttributes()->insert("user_id", (int64_t)777);
+
+    GetChatMembersRequestDto dto(req, 42);
+
+    EXPECT_EQ(dto.user_id, 777);
+    EXPECT_EQ(dto.chat_id, 42);
+}
+
+TEST(GetChatMemberRequestDtoTest, CorrectlyParsesPathAndAttributes) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->getAttributes()->insert("user_id", (int64_t)777);
+
+    GetChatMemberRequestDto dto(req, 42, 99);
+
+    EXPECT_EQ(dto.user_id, 777);
+    EXPECT_EQ(dto.chat_id, 42);
+    EXPECT_EQ(dto.member_id, 99);
+}
+
+TEST(RemoveMemberRequestDtoTest, CorrectlyParsesPathAndAttributes) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->getAttributes()->insert("user_id", (int64_t)777);
+
+    RemoveMemberRequestDto dto(req, 42, 99);
+
+    EXPECT_EQ(dto.user_id, 777);
+    EXPECT_EQ(dto.chat_id, 42);
+    EXPECT_EQ(dto.member_id, 99);
+}
+
+TEST(GetChatByIdRequestDtoTest, CorrectlyParsesPathAndAttributes) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->getAttributes()->insert("user_id", (int64_t)777);
+
+    GetChatByIdRequestDto dto(req, 42);
+
+    EXPECT_EQ(dto.user_id, 777);
+    EXPECT_EQ(dto.chat_id, 42);
+}
+
+struct UpdateMemberRoleRequestDtoTestCase {
+    std::string test_name;
+    int64_t attribute_user_id;
+    int64_t chat_id;
+    int64_t member_id;
+    std::string str_json;
+
+    int64_t expected_user_id;
+    int64_t expected_chat_id;
+    int64_t expected_member_id;
+    std::string expected_role;
+};
+
+class UpdateMemberRoleRequestDtoTest
+    : public testing::TestWithParam<UpdateMemberRoleRequestDtoTestCase> {};
+
+TEST_P(UpdateMemberRoleRequestDtoTest, CorrectlyParsesValidRequest) {
+    auto param = GetParam();
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->getAttributes()->insert("user_id", param.attribute_user_id);
+
+    Json::Value json_body;
+    std::istringstream s(param.str_json);
+    ASSERT_TRUE(
+        Json::parseFromStream(Json::CharReaderBuilder(), s, &json_body, nullptr)
+    );
+
+    UpdateMemberRoleRequestDto dto(
+        req, std::make_shared<Json::Value>(json_body), param.chat_id,
+        param.member_id
+    );
+
+    EXPECT_EQ(dto.user_id, param.expected_user_id);
+    EXPECT_EQ(dto.chat_id, param.expected_chat_id);
+    EXPECT_EQ(dto.member_id, param.expected_member_id);
+    EXPECT_EQ(dto.new_role, param.expected_role);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DtoTests,
+    UpdateMemberRoleRequestDtoTest,
+    ::testing::Values(UpdateMemberRoleRequestDtoTestCase{
+        "Success parsing", 10, 42, 99, R"({"role": "Admin"})", 10, 42, 99,
+        "Admin"
+    })
+);
+
 // struct ***RequestDtoTestCase {
 //     std::string test_name;
 //     int64_t attribute_user_id;
@@ -524,10 +786,17 @@ struct AttachmentInfo {
     int64_t message_id;
 };
 
+struct UserInfo {
+    int64_t id;
+    std::string display_name;
+    std::optional<std::string> avatar_path;
+};
+
 struct MessageInfo {
     int64_t id;
     int64_t chat_id;
     std::string text;
+    std::optional<UserInfo> sender_info;
 };
 
 struct ChatPreviewInfo {
@@ -568,7 +837,9 @@ TEST_P(GetUserChatsResponseDtoTest, CorrectlyBuildingJsonFromData) {
     }
 
     std::vector<ChatPreview> chats_previews;
+    std::vector<std::optional<User>> last_messages_senders;
     chats_previews.reserve(param.chats_previews.size());
+    last_messages_senders.reserve(param.chats_previews.size());
     for (const auto &preview : param.chats_previews) {
         ChatPreview fake_preview;
         fake_preview.chat_id = preview.chat_id;
@@ -582,13 +853,26 @@ TEST_P(GetUserChatsResponseDtoTest, CorrectlyBuildingJsonFromData) {
             fake_msg.setChatId(preview.last_message->chat_id);
             fake_msg.setText(preview.last_message->text);
             fake_preview.last_message = fake_msg;
+
+            if (preview.last_message->sender_info.has_value()) {
+                User fake_user;
+                fake_user.setId(preview.last_message->sender_info->id);
+                fake_user.setDisplayName(
+                    preview.last_message->sender_info->display_name
+                );
+                last_messages_senders.push_back(fake_user);
+            } else {
+                last_messages_senders.push_back(std::nullopt);
+            }
         } else {
             fake_preview.last_message = std::nullopt;
+            last_messages_senders.push_back(std::nullopt);
         }
         chats_previews.push_back(fake_preview);
     }
     GetUserChatsResponseDto dto(
-        std::move(chats_previews), std::move(attachments)
+        std::move(chats_previews), std::move(attachments),
+        std::move(last_messages_senders)
     );
     Json::Value json_dto = dto.toJson();
     ASSERT_TRUE(json_dto.isMember("chats"));
@@ -640,6 +924,23 @@ TEST_P(GetUserChatsResponseDtoTest, CorrectlyBuildingJsonFromData) {
                 json_dto["chats"][i]["last_message"]["attachments"].size(),
                 param.last_message_attachments[i].size()
             );
+            ASSERT_TRUE(
+                json_dto["chats"][i]["last_message"].isMember("sender_info")
+            );
+            if (param.chats_previews[i].last_message->sender_info.has_value()) {
+                auto expected_sender =
+                    param.chats_previews[i].last_message->sender_info.value();
+                auto json_sender =
+                    json_dto["chats"][i]["last_message"]["sender_info"];
+                EXPECT_EQ(json_sender["id"], expected_sender.id);
+                EXPECT_EQ(
+                    json_sender["display_name"], expected_sender.display_name
+                );
+            } else {
+                EXPECT_TRUE(
+                    json_dto["chats"][i]["last_message"]["sender_info"].isNull()
+                );
+            }
             for (Json::ArrayIndex j = 0;
                  j < param.last_message_attachments[i].size(); j++) {
                 Json::Value att_info =
@@ -672,11 +973,19 @@ INSTANTIATE_TEST_SUITE_P(
             "Rich data: messages, attachments, optionals",
             {ChatPreviewInfo{
                  1, "C++ Developers", "media/cpp_ava.png",
-                 MessageInfo{100, 1, "Look what bug I found!"}, 3, "group"
+                 MessageInfo{
+                     100, 1, "Look what bug I found!",
+                     UserInfo{777, "Test User", std::nullopt}
+                 },
+                 3, "group"
              },
              ChatPreviewInfo{
-                 2, "Alesha", std::nullopt, MessageInfo{101, 2, "Hello"}, 0,
-                 "dialog"
+                 2, "Alesha", std::nullopt,
+                 MessageInfo{
+                     101, 2, "Hello",
+                     UserInfo{888, "Alesha", "media/alesha_ava.png"}
+                 },
+                 0, "dialog"
              }},
             {{AttachmentInfo{50, "bug_report.txt", 1024, 100},
               AttachmentInfo{51, "screen.png", 2048, 100}},
@@ -685,7 +994,7 @@ INSTANTIATE_TEST_SUITE_P(
         GetUserChatsResponseDtoTestCase{
             "New chat without messages",
             {ChatPreviewInfo{
-                3, "Secret chat", std::nullopt, std::nullopt, 0, "dialog"
+                3, "Secret chat", std::nullopt, std::nullopt, 0, "direct"
             }},
             {{}}
         },
@@ -743,13 +1052,24 @@ TEST_P(GetChatMessagesResponseDtoTest, CorrectlyBuildingJsonFromData) {
     auto param = GetParam();
 
     std::vector<Message> messages;
+    std::vector<User> senders_info;
     messages.reserve(param.messages.size());
+    senders_info.reserve(param.messages.size());
     for (const auto &msg_info : param.messages) {
         Message msg;
         msg.setId(msg_info.id);
         msg.setChatId(msg_info.chat_id);
         msg.setText(msg_info.text);
         messages.push_back(msg);
+
+        if (msg_info.sender_info.has_value()) {
+            User fake_user;
+            fake_user.setId(msg_info.sender_info->id);
+            fake_user.setDisplayName(msg_info.sender_info->display_name);
+            senders_info.push_back(fake_user);
+        } else {
+            senders_info.push_back(User{});
+        }
     }
 
     std::vector<std::vector<Attachment>> attachments(param.attachments.size());
@@ -766,7 +1086,7 @@ TEST_P(GetChatMessagesResponseDtoTest, CorrectlyBuildingJsonFromData) {
 
     GetChatMessagesResponseDto dto(
         std::move(messages), std::move(attachments),
-        param.attachments_download_urls
+        param.attachments_download_urls, std::move(senders_info)
     );
     Json::Value json_dto = dto.toJson();
 
@@ -807,6 +1127,16 @@ TEST_P(GetChatMessagesResponseDtoTest, CorrectlyBuildingJsonFromData) {
                 EXPECT_EQ(msg["attachments"][j]["download_url"], "");
             }
         }
+        ASSERT_TRUE(msg.isMember("sender_info"));
+        if (param.messages[i].sender_info.has_value()) {
+            EXPECT_EQ(
+                msg["sender_info"]["id"], param.messages[i].sender_info->id
+            );
+            EXPECT_EQ(
+                msg["sender_info"]["display_name"],
+                param.messages[i].sender_info->display_name
+            );
+        }
     }
 }
 
@@ -816,8 +1146,12 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         GetChatMessagesResponseDtoTestCase{
             "Rich data: messages with and without attachments",
-            {MessageInfo{100, 1, "Here are the files you requested"},
-             MessageInfo{101, 1, "Thanks!"}},
+            {MessageInfo{
+                 100, 1, "Here are the files you requested",
+                 UserInfo{777, "Alice", "media/alice_ava.png"}
+             },
+             MessageInfo{101, 1, "Thanks!", UserInfo{888, "Bob", std::nullopt}}
+            },
             {{AttachmentInfo{50, "report.pdf", 15000, 100},
               AttachmentInfo{51, "meme.jpg", 3000, 100}},
              {}},
@@ -825,7 +1159,7 @@ INSTANTIATE_TEST_SUITE_P(
         },
         GetChatMessagesResponseDtoTestCase{
             "Message without attachments",
-            {MessageInfo{102, 2, "Just a plain text message"}},
+            {MessageInfo{102, 2, "Just a plain text message", std::nullopt}},
             {{}},
             {{}}
         },
@@ -979,8 +1313,17 @@ TEST_P(GetMessageByIdResponseDtoTest, CorrectlyBuildingJsonFromData) {
         attachments.push_back(fake_att);
     }
 
+    std::optional<User> sender_opt = std::nullopt;
+    if (param.message.sender_info.has_value()) {
+        User fake_user;
+        fake_user.setId(param.message.sender_info->id);
+        fake_user.setDisplayName(param.message.sender_info->display_name);
+        sender_opt = fake_user;
+    }
+
     GetMessageByIdResponseDto dto(
-        std::move(msg), std::move(attachments), param.attachments_download_urls
+        std::move(msg), std::move(attachments), param.attachments_download_urls,
+        std::move(sender_opt)
     );
     Json::Value json_dto = dto.toJson();
 
@@ -1014,6 +1357,16 @@ TEST_P(GetMessageByIdResponseDtoTest, CorrectlyBuildingJsonFromData) {
             EXPECT_EQ(att_json["download_url"], "");
         }
     }
+    ASSERT_TRUE(json_msg.isMember("sender_info"));
+    if (param.message.sender_info.has_value()) {
+        EXPECT_EQ(json_msg["sender_info"]["id"], param.message.sender_info->id);
+        EXPECT_EQ(
+            json_msg["sender_info"]["display_name"],
+            param.message.sender_info->display_name
+        );
+    } else {
+        EXPECT_TRUE(json_msg["sender_info"].isNull());
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1022,14 +1375,17 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         GetMessageByIdResponseDtoTestCase{
             "Message with mixed attachments",
-            MessageInfo{10, 5, "Found the message"},
+            MessageInfo{
+                10, 5, "Found the message",
+                UserInfo{999, "Charlie", "media/charlie_ava.png"}
+            },
             {AttachmentInfo{200, "log.txt", 1024, 10},
              AttachmentInfo{201, "error.png", 4096, 10}},
             {"https://s3.myproject.com/files/log.txt", std::nullopt}
         },
         GetMessageByIdResponseDtoTestCase{
             "Plain text message without attachments",
-            MessageInfo{11, 5, "No files here"},
+            MessageInfo{11, 5, "No files here", std::nullopt},
             {},
             {}
         }
@@ -1088,3 +1444,215 @@ INSTANTIATE_TEST_SUITE_P(
         GetAttachmentLinksResponseDtoTestCase{"Empty lists", {}, {}}
     )
 );
+
+TEST(RemoveMemberResponseDtoTest, CorrectlyBuildsMessageJson) {
+    RemoveMemberResponseDto dto;
+    Json::Value json_dto = dto.toJson();
+
+    ASSERT_TRUE(json_dto.isMember("message"));
+    EXPECT_EQ(json_dto["message"].asString(), "Successfully removed member");
+}
+
+TEST(UpdateMemberRoleResponseDtoTest, CorrectlyBuildsMessageJson) {
+    UpdateMemberRoleResponseDto dto;
+    Json::Value json_dto = dto.toJson();
+
+    ASSERT_TRUE(json_dto.isMember("message"));
+    EXPECT_EQ(json_dto["message"].asString(), "Successfully changed role");
+}
+
+TEST(UpdateChatInfoResponseDtoTest, CorrectlyBuildsMessageJson) {
+    UpdateChatInfoResponseDto dto;
+    Json::Value json_dto = dto.toJson();
+
+    ASSERT_TRUE(json_dto.isMember("message"));
+    EXPECT_EQ(json_dto["message"].asString(), "Successfully changed chat info");
+}
+
+struct ChatMemberDummyInfo {
+    int64_t chat_id;
+    int64_t user_id;
+    std::string role;
+};
+
+struct UserDummyInfo {
+    int64_t id;
+    std::string display_name;
+    std::string password_hash;
+};
+
+struct GetChatMembersResponseDtoTestCase {
+    std::string test_name;
+    std::vector<ChatMemberDummyInfo> members_data;
+    std::vector<UserDummyInfo> users_data;
+};
+
+class GetChatMembersResponseDtoTest
+    : public ::testing::TestWithParam<GetChatMembersResponseDtoTestCase> {};
+
+TEST_P(GetChatMembersResponseDtoTest, CorrectlyBuildingJsonFromData) {
+    auto param = GetParam();
+
+    std::vector<drogon_model::messenger_db::ChatMembers> members;
+    std::vector<User> users;
+
+    // Генерируем фейковые объекты БД
+    for (size_t i = 0; i < param.members_data.size(); ++i) {
+        drogon_model::messenger_db::ChatMembers fake_member;
+        fake_member.setChatId(param.members_data[i].chat_id);
+        fake_member.setUserId(param.members_data[i].user_id);
+        fake_member.setRole(param.members_data[i].role);
+        members.push_back(fake_member);
+
+        User fake_user;
+        fake_user.setId(param.users_data[i].id);
+        fake_user.setDisplayName(param.users_data[i].display_name);
+        fake_user.setPasswordHash(param.users_data[i].password_hash);
+        users.push_back(fake_user);
+    }
+
+    GetChatMembersResponseDto dto(std::move(members), std::move(users));
+    Json::Value json_dto = dto.toJson();
+
+    ASSERT_TRUE(json_dto.isMember("members")) << param.test_name;
+    ASSERT_TRUE(json_dto["members"].isArray()) << param.test_name;
+    ASSERT_EQ(json_dto["members"].size(), param.members_data.size())
+        << param.test_name;
+
+    for (Json::ArrayIndex i = 0; i < json_dto["members"].size(); i++) {
+        Json::Value json_member = json_dto["members"][i];
+
+        EXPECT_EQ(
+            json_member["chat_id"].asInt64(), param.members_data[i].chat_id
+        );
+        EXPECT_EQ(
+            json_member["user_id"].asInt64(), param.members_data[i].user_id
+        );
+        EXPECT_EQ(json_member["role"].asString(), param.members_data[i].role);
+
+        ASSERT_TRUE(json_member.isMember("member_info"));
+        Json::Value json_user = json_member["member_info"];
+
+        EXPECT_EQ(json_user["id"].asInt64(), param.users_data[i].id);
+        EXPECT_EQ(
+            json_user["display_name"].asString(),
+            param.users_data[i].display_name
+        );
+
+        EXPECT_FALSE(json_user.isMember("password_hash"))
+            << "CRITICAL SECURITY FAILURE: password_hash leaked in test: "
+            << param.test_name;
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DtoTests,
+    GetChatMembersResponseDtoTest,
+    ::testing::Values(
+        GetChatMembersResponseDtoTestCase{
+            "Multiple members serialization and security check",
+            {{1, 10, "Owner"}, {1, 20, "Admin"}},
+            {{10, "Alesha", "super_secret_hash_1"},
+             {20, "Bob", "super_secret_hash_2"}}
+        },
+        GetChatMembersResponseDtoTestCase{"Empty members list", {}, {}}
+    )
+);
+
+struct GetChatMemberResponseDtoTestCase {
+    std::string test_name;
+    ChatMemberDummyInfo member_data;
+    UserDummyInfo user_data;
+};
+
+class GetChatMemberResponseDtoTest
+    : public ::testing::TestWithParam<GetChatMemberResponseDtoTestCase> {};
+
+TEST_P(GetChatMemberResponseDtoTest, CorrectlyBuildingJsonAndRemovesPassword) {
+    auto param = GetParam();
+
+    drogon_model::messenger_db::ChatMembers fake_member;
+    fake_member.setChatId(param.member_data.chat_id);
+    fake_member.setUserId(param.member_data.user_id);
+    fake_member.setRole(param.member_data.role);
+
+    User fake_user;
+    fake_user.setId(param.user_data.id);
+    fake_user.setDisplayName(param.user_data.display_name);
+    fake_user.setPasswordHash(param.user_data.password_hash);
+
+    GetChatMemberResponseDto dto(std::move(fake_member), std::move(fake_user));
+    Json::Value json_dto = dto.toJson();
+
+    ASSERT_TRUE(json_dto.isMember("chat_member"));
+    Json::Value json_member = json_dto["chat_member"];
+
+    EXPECT_EQ(json_member["chat_id"].asInt64(), param.member_data.chat_id);
+    EXPECT_EQ(json_member["role"].asString(), param.member_data.role);
+
+    ASSERT_TRUE(json_member.isMember("member_info"));
+    Json::Value json_user = json_member["member_info"];
+
+    EXPECT_EQ(json_user["id"].asInt64(), param.user_data.id);
+    EXPECT_EQ(
+        json_user["display_name"].asString(), param.user_data.display_name
+    );
+
+    EXPECT_FALSE(json_user.isMember("password_hash"))
+        << "CRITICAL: Password hash leaked in single member DTO!";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DtoTests,
+    GetChatMemberResponseDtoTest,
+    ::testing::Values(GetChatMemberResponseDtoTestCase{
+        "Correct serialization and password removal",
+        {42, 777, "Admin"},
+        {777, "Test Admin", "secret_admin_hash_123"}
+    })
+);
+
+TEST(CreateGroupResponseDtoTest, CorrectlyBuildsJson) {
+    drogon_model::messenger_db::Chats fake_chat;
+    fake_chat.setId(42);
+    fake_chat.setName("New Group Chat");
+    fake_chat.setType("group");
+
+    CreateGroupResponseDto dto(std::move(fake_chat));
+    Json::Value json_dto = dto.toJson();
+
+    ASSERT_TRUE(json_dto.isMember("chat"));
+    EXPECT_EQ(json_dto["chat"]["id"].asInt64(), 42);
+    EXPECT_EQ(json_dto["chat"]["name"].asString(), "New Group Chat");
+    EXPECT_EQ(json_dto["chat"]["type"].asString(), "group");
+}
+
+TEST(GetChatByIdResponseDtoTest, CorrectlyBuildsJson) {
+    drogon_model::messenger_db::Chats fake_chat;
+    fake_chat.setId(100);
+    fake_chat.setName("Existing Chat");
+    fake_chat.setType("channel");
+
+    GetChatByIdResponseDto dto(std::move(fake_chat));
+    Json::Value json_dto = dto.toJson();
+
+    ASSERT_TRUE(json_dto.isMember("chat"));
+    EXPECT_EQ(json_dto["chat"]["id"].asInt64(), 100);
+    EXPECT_EQ(json_dto["chat"]["name"].asString(), "Existing Chat");
+    EXPECT_EQ(json_dto["chat"]["type"].asString(), "channel");
+}
+
+TEST(AddGroupChatMemberResponseDtoTest, CorrectlyBuildsJson) {
+    drogon_model::messenger_db::ChatMembers fake_member;
+    fake_member.setChatId(42);
+    fake_member.setUserId(99);
+    fake_member.setRole("Member");
+
+    AddGroupChatMemberResponseDto dto(std::move(fake_member));
+    Json::Value json_dto = dto.toJson();
+
+    ASSERT_TRUE(json_dto.isMember("chat_member"));
+    EXPECT_EQ(json_dto["chat_member"]["chat_id"].asInt64(), 42);
+    EXPECT_EQ(json_dto["chat_member"]["user_id"].asInt64(), 99);
+    EXPECT_EQ(json_dto["chat_member"]["role"].asString(), "Member");
+}

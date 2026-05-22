@@ -86,7 +86,7 @@ Rectangle {
             height: 50
 
             Text {
-                text: "Имя профиля"
+                text: "Имя"
                 color: displayNameField.activeFocus ? "#5eb5f7" : "#8a96a3"
                 font.pixelSize: (displayNameField.length > 0 || displayNameField.activeFocus) ? 12 : 16
                 font.family: "Segoe UI"
@@ -283,6 +283,11 @@ Rectangle {
                         return
                     } else if (passwordField.text !== repeatPasswordField.text) {
                         errorText.text = "Пароли не совпадают!"
+                        errorText.visible = true
+                        errorTimer.restart()
+                        return
+                    } else if (displayNameField.length > 40) {
+                        errorText.text = "Имя слишком длинное"
                         errorText.visible = true
                         errorTimer.restart()
                         return
