@@ -332,6 +332,7 @@ void ChatManager::sendMessageWithAttachment(
     QNetworkReply *reply = m_connection->post(
         "/chats/" + chatId + "/messages", QJsonDocument(json).toJson()
     );
+    qDebug() << "[ChatManager] Sending message with attachment";
 
     connect(
         reply, &QNetworkReply::finished, this,
@@ -340,6 +341,8 @@ void ChatManager::sendMessageWithAttachment(
             reply->deleteLater();
 
             if (reply->error() != QNetworkReply::NoError) {
+                qDebug(
+                ) << "[ChatManager] Sending message with attachment ERROR";
                 emit chatError(
                     "Не удалось создать сообщение: " + reply->errorString()
                 );
