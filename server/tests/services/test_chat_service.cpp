@@ -577,6 +577,15 @@ TEST_P(ServiceSendMessageTest, SendMessageTest) {
                     std::shared_ptr<drogon::orm::Transaction> transaction_ptr
                 ) -> drogon::Task<bool> { return createFakeTask(true); }
             );
+        EXPECT_CALL(*mock_user_repo, getById(param.request_dto.user_id))
+            .WillRepeatedly(
+                [param](int64_t user_id) -> drogon::Task<std::optional<User>> {
+                    User fake_user;
+                    fake_user.setId(param.request_dto.user_id);
+                    fake_user.setHandle("Pidorok");
+                    return createFakeTask<std::optional<User>>(fake_user);
+                }
+            );
     }
 
     if (!param.is_member) {
@@ -637,6 +646,10 @@ TEST_P(ServiceSendMessageTest, SendMessageTest) {
             ) << "Failed test: "
               << param.test_name;
         }
+        EXPECT_EQ(
+            response_dto.sender_info.getValueOfId(), param.request_dto.user_id
+        );
+        EXPECT_EQ(response_dto.sender_info.getValueOfHandle(), "Pidorok");
     }
 }
 
