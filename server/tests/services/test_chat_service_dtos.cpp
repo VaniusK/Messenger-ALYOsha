@@ -1172,6 +1172,7 @@ struct SendMessageResponseDtoTestCase {
     MessageInfo message;
     std::vector<AttachmentInfo> attachments;
     std::vector<std::optional<std::string>> attachments_download_urls;
+    UserInfo sender_info;
 };
 
 class SendMessageResponseDtoTest
@@ -1196,8 +1197,18 @@ TEST_P(SendMessageResponseDtoTest, CorrectlyBuildingJsonFromData) {
         attachments.push_back(fake_att);
     }
 
+    User sender_info;
+    sender_info.setId(param.sender_info.id);
+    sender_info.setDisplayName(param.sender_info.display_name);
+    sender_info.setAvatarPath(
+        param.sender_info.avatar_path.has_value()
+            ? param.sender_info.avatar_path.value()
+            : ""
+    );
+
     SendMessageResponseDto dto(
-        std::move(msg), std::move(attachments), param.attachments_download_urls
+        std::move(msg), std::move(attachments), param.attachments_download_urls,
+        std::move(sender_info)
     );
     Json::Value json_dto = dto.toJson();
 
@@ -1231,6 +1242,17 @@ TEST_P(SendMessageResponseDtoTest, CorrectlyBuildingJsonFromData) {
             EXPECT_EQ(att_json["download_url"], "");
         }
     }
+
+    EXPECT_EQ(json_msg["sender_info"]["id"], param.sender_info.id);
+    EXPECT_EQ(
+        json_msg["sender_info"]["display_name"], param.sender_info.display_name
+    );
+    EXPECT_EQ(
+        json_msg["sender_info"]["avatar_path"],
+        param.sender_info.avatar_path.has_value()
+            ? param.sender_info.avatar_path.value()
+            : ""
+    );
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1242,13 +1264,15 @@ INSTANTIATE_TEST_SUITE_P(
             MessageInfo{1, 42, "Check out these files!"},
             {AttachmentInfo{100, "avatar.png", 5000, 1},
              AttachmentInfo{101, "document.pdf", 12000, 1}},
-            {"https://s3.myproject.com/files/avatar.png", std::nullopt}
+            {"https://s3.myproject.com/files/avatar.png", std::nullopt},
+            {777, "Alice", "media/alice_ava.png"}
         },
         SendMessageResponseDtoTestCase{
             "Plain text message without attachments",
             MessageInfo{2, 42, "Just a simple text message"},
             {},
-            {}
+            {},
+            {777, "Alice", std::nullopt}
         }
     )
 );

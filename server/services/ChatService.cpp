@@ -338,9 +338,10 @@ Task<SendMessageResponseDto> ChatService::sendMessage(
         LOG_WARN << "Couldnt't mark message as read";
     }
 
+    auto sender_info = co_await user_repo->getById(user_id);
     SendMessageResponseDto response_dto(
         std::move(message), std::move(created_attachments),
-        std::move(attachments_download_urls)
+        std::move(attachments_download_urls), std::move(sender_info.value())
     );
 
     Json::Value websocket_message_json;

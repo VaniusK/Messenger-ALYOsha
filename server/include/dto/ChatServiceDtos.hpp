@@ -292,17 +292,20 @@ struct SendMessageResponseDto : ResponseDto {
     Message message;
     std::vector<Attachment> attachments;
     std::vector<std::optional<std::string>> attachments_download_urls;
+    User sender_info;
 
     SendMessageResponseDto() = default;
 
     SendMessageResponseDto(
         Message message_,
         std::vector<Attachment> attachments_,
-        std::vector<std::optional<std::string>> attachments_download_urls_
+        std::vector<std::optional<std::string>> attachments_download_urls_,
+        User sender_info_
     )
         : message(std::move(message_)),
           attachments(std::move(attachments_)),
-          attachments_download_urls(std::move(attachments_download_urls_)) {
+          attachments_download_urls(std::move(attachments_download_urls_)),
+          sender_info(std::move(sender_info_)) {
     }
 
     Json::Value toJson() override {
@@ -319,6 +322,7 @@ struct SendMessageResponseDto : ResponseDto {
             json_attachments_array.append(attachment_json);
         }
         response_json["message"]["attachments"] = json_attachments_array;
+        response_json["message"]["sender_info"] = sender_info.toJson();
         return response_json;
     }
 };
