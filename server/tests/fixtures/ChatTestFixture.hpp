@@ -7,6 +7,7 @@
 using ChatRepository = messenger::repositories::ChatRepository;
 using UserRepository = messenger::repositories::UserRepository;
 using MessageRepository = messenger::repositories::MessageRepository;
+using AttachmentRepository = messenger::repositories::AttachmentRepository;
 using User = messenger::repositories::User;
 using Message = messenger::repositories::Message;
 
@@ -16,12 +17,20 @@ private:
 
 protected:
     ChatRepository repo_ = ChatRepository(
-        std::make_unique<MessageRepository>(),
+        std::make_unique<MessageRepository>(
+            std::make_unique<AttachmentRepository>()
+        ),
         std::make_unique<UserRepository>()
     );
     User dummy_user1_;
     User dummy_user2_;
     User dummy_user3_;
+
+    Task<std::shared_ptr<drogon::orm::Transaction>> createTransaction() {
+        auto transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+        co_return transaction_ptr;
+    }
 
 public:
     void SetUp() override {

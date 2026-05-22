@@ -14,10 +14,32 @@ services:
     env_file:
       - .env
     ports:
-      - "5555:5555"
+      - "8080:8080"
     depends_on:
       - db
   
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./server/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./server/certbot/www:/var/www/certbot:ro
+      - ./server/certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - server
+    profiles:
+      - prod
+  
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./server/certbot/www:/var/www/certbot:rw
+      - ./server/certbot/conf:/etc/letsencrypt:rw
+    profiles:
+      - prod
+    
   client-build:
     build: ./client
     volumes:
@@ -30,11 +52,64 @@ services:
     command: ["./server_tests"]
     env_file: .env
     depends_on:
-      - db
+      db:
+        condition: service_started
+      minio:
+        condition: service_healthy
     profiles:
       - test
     environment:
       POSTGRES_DB: messenger_db_test
+      S3_BASE_URL: minio:9000
+      S3_PRIVATE_BUCKETNAME: messenger-alyosha
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_SHOULD_USE_HTTPS: false
+  
+  test-server-coverage:
+    build:
+      context: ./server
+      target: coverage
+      args:
+        ENABLE_COVERAGE: "ON"
+        CMAKE_BUILD_TYPE: "Debug"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_started
+      minio:
+        condition: service_healthy
+    profiles:
+      - test
+    environment:
+      POSTGRES_DB: messenger_db_test
+      S3_BASE_URL: minio:9000
+      S3_PRIVATE_BUCKETNAME: messenger-alyosha
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_SHOULD_USE_HTTPS: false
+    volumes:
+      - ./server-artifacts:/output
+    
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    profiles:
+      - test
 
 volumes:
   postgres_data:
+  minio_data:

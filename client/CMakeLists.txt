@@ -8,13 +8,13 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network WebSockets Test)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Sql Network WebSockets Test Widgets Multimedia Svg)
 
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
-endif()
+#if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+#    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
+#endif()
 
-qt_add_executable(client WIN32
+qt_add_executable(client #WIN32
     src/core/main.cpp
     src/core/AuthManager.cpp
     include/AuthManager.hpp
@@ -24,6 +24,14 @@ qt_add_executable(client WIN32
     include/ChatManager.hpp
     src/core/ConnectionManager.cpp
     include/ConnectionManager.hpp
+    src/core/MediaManager.cpp
+    include/MediaManager.hpp
+    src/core/VoiceManager.cpp
+    include/VoiceManager.hpp
+    src/core/MediaCacheManager.cpp
+    include/MediaCacheManager.hpp
+    src/core/LocalChatStorage.cpp
+    include/LocalChatStorage.hpp
 )
 
 qt_add_qml_module(client
@@ -36,9 +44,34 @@ qt_add_qml_module(client
         src/ui/chat.qml
         src/ui/Sidebar.qml
         src/ui/ChatArea.qml
+        src/ui/MediaPickerPopup.qml
+        src/ui/MediaPreviewDialog.qml
+        src/ui/CreateGroupPopup.qml
+    RESOURCES
+        assets/icons/clip.svg
+        assets/icons/clip_active.svg
+        assets/icons/photo.svg
+        assets/icons/document.svg
+        assets/icons/bookmark.svg
+        assets/icons/send.svg
+        assets/icons/send_active.svg
+        assets/icons/mic.svg
+        assets/icons/play.svg
+        assets/icons/pause.svg
+        assets/icons/play_blue.svg
+        assets/icons/pause_blue.svg
+        assets/icons/volume.svg
+        assets/icons/check_single.svg
+        assets/icons/check_double.svg
+        assets/icons/camera.svg
+        assets/icons/gear.svg
+        assets/icons/person_plus.svg
+        assets/icons/admin_shield.svg
+        assets/icons/delete_user.svg
+        assets/icons/owner_shield.svg
 )
 target_include_directories(client PRIVATE include)
-target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::WebSockets)
+target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)
 
 # Tests (optional, Qt Test or GTest)
 option(BUILD_TESTS "Build tests" OFF)

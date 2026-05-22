@@ -2,27 +2,25 @@
 #include <drogon/HttpController.h>
 #include <json/value.h>
 #include <memory>
+#include "dto/UserServiceDtos.hpp"
 #include "include/repositories/UserRepository.hpp"
 #include "repositories/ChatRepository.hpp"
 #include "utils/password_hasher.hpp"
 
 using namespace drogon;
+using namespace messenger::dto;
 
 namespace api {
 namespace v1 {
 class UserService {
 public:
-    Task<HttpResponsePtr> registerUser(
-        const std::shared_ptr<Json::Value> request_json
+    Task<RegisterUserResponseDto> registerUser(
+        RegisterUserRequestDto request_dto
     );
-    Task<HttpResponsePtr> loginUser(
-        const std::shared_ptr<Json::Value> request_json
-    );
-    Task<HttpResponsePtr> getUserById(int64_t user_id);
-    Task<HttpResponsePtr> getUserByHandle(std::string &&user_handle);
-    Task<HttpResponsePtr> searchUser(
-        const std::shared_ptr<Json::Value> request_json
-    );
+    Task<LoginUserResponseDto> loginUser(LoginUserRequestDto request_dto);
+    Task<GetUserResponseDto> getUserById(int64_t user_id);
+    Task<GetUserResponseDto> getUserByHandle(std::string user_handle);
+    Task<SearchUserResponseDto> searchUser(SearchUserRequestDto request_dto);
 
     void setUserRepo(
         const std::shared_ptr<messenger::repositories::UserRepositoryInterface>

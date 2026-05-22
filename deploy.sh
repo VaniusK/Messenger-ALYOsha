@@ -6,7 +6,7 @@ REMOTE="ivan@158.160.219.207"
 REMOTE_DIR="~/"
 
 echo "Building..."
-make run_docker
+make run_server
 
 echo "Saving..."
 docker save $IMAGE | gzip > /tmp/alesha.gz
@@ -20,7 +20,7 @@ ssh -i ~/.ssh/my_key.pem $REMOTE << 'EOF'
   cd Messenger-ALYOsha
   docker load -i alesha.gz
   docker tag c_project-server:latest messenger-alyosha-server:latest
-  docker compose up -d
+  docker compose --profile prod up -d
 EOF
 
 echo "Done!"

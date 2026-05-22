@@ -1,38 +1,60 @@
 #pragma once
 
 #include <drogon/HttpController.h>
+#include <drogon/HttpResponse.h>
 #include <memory>
+#include "dto/ChatServiceDtos.hpp"
+#include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
+#include "repositories/UserRepository.hpp"
+#include "services/S3Service.hpp"
 
 using namespace drogon;
+using namespace messenger::dto;
 
 namespace api {
 namespace v1 {
 class ChatService {
 public:
-    Task<HttpResponsePtr> getMessageById(
-        const std::shared_ptr<Json::Value> request_json,
-        int64_t message_id
+    Task<GetMessageByIdResponseDto> getMessageById(
+        GetMessageByIdRequestDto request_dto
     );
-    Task<HttpResponsePtr> getUserChats(
-        const std::shared_ptr<Json::Value> request_json,
-        int64_t user_id
+    Task<GetUserChatsResponseDto> getUserChats(
+        GetUserChatsRequestDto request_dto
     );
-    Task<HttpResponsePtr> createOrGetDirectChat(
-        const std::shared_ptr<Json::Value> request_json
+    Task<CreateOrGetDirectResponseDto> createOrGetDirectChat(
+        CreateOrGetDirectRequestDto request_dto
     );
-    Task<HttpResponsePtr> getChatMessages(
-        const std::shared_ptr<Json::Value> request_json,
-        int64_t chat_id
+    Task<GetChatMessagesResponseDto> getChatMessages(
+        GetChatMessagesRequestDto request_dto
     );
-    Task<HttpResponsePtr> sendMessage(
-        const std::shared_ptr<Json::Value> request_json,
-        int64_t chat_id
+    Task<SendMessageResponseDto> sendMessage(SendMessageRequestDto request_dto);
+    Task<ReadMessagesResponseDto> readMessages(
+        ReadMessagesRequestDto request_dto
     );
-    Task<HttpResponsePtr> readMessages(
-        const std::shared_ptr<Json::Value> request_json,
-        int64_t chat_id
+    Task<GetAttachmentLinksResponseDto> getAttachmentLinks(
+        GetAttachmentLinksRequestDto request_dto
     );
+    Task<CreateGroupResponseDto> createGroup(CreateGroupRequestDto request_dto);
+    Task<AddGroupChatMemberResponseDto> addGroupChatMember(
+        AddGroupChatMemberRequestDto request_dto
+    );
+    Task<GetChatMemberResponseDto> getChatMember(
+        GetChatMemberRequestDto request_dto
+    );
+    Task<GetChatMembersResponseDto> getChatMembers(
+        GetChatMembersRequestDto request_dto
+    );
+    Task<RemoveMemberResponseDto> removeMember(
+        RemoveMemberRequestDto request_dto
+    );
+    Task<UpdateMemberRoleResponseDto> updateMemberRole(
+        UpdateMemberRoleRequestDto request_dto
+    );
+    Task<UpdateChatInfoResponseDto> updateChatInfo(
+        UpdateChatInfoRequestDto request_dto
+    );
+    Task<GetChatByIdResponseDto> getChatById(GetChatByIdRequestDto request_dto);
 
     void setChatRepo(
         std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
@@ -41,9 +63,35 @@ public:
         this->chat_repo = chat_repo;
     }
 
+    void setAttachmentRepo(
+        std::shared_ptr<messenger::repositories::AttachmentRepositoryInterface>
+            attachment_repo
+    ) {
+        this->attachment_repo = attachment_repo;
+    }
+
+    void setUserRepo(
+        std::shared_ptr<messenger::repositories::UserRepositoryInterface>
+            user_repo
+    ) {
+        this->user_repo = user_repo;
+    }
+
+    void setS3Service(std::shared_ptr<S3ServiceInterface> s3_service) {
+        s3_service_ = s3_service;
+    }
+
 private:
+    std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo;
     std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
+    std::shared_ptr<messenger::repositories::AttachmentRepositoryInterface>
+        attachment_repo;
+    std::shared_ptr<S3ServiceInterface> s3_service_;
     Task<bool> checkChatAccess(int64_t user_id, int64_t chat_id);
+    bool validateFileType(
+        const std::string &message_type,
+        const std::string &mime_type
+    );
 };
 }  // namespace v1
 }  // namespace api

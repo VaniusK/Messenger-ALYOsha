@@ -9,3 +9,5 @@ LICENSE
 docs
 experiments
 compile_commands.json
+server/certbot/
+.env

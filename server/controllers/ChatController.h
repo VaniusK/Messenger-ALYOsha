@@ -1,44 +1,191 @@
 #pragma once
 
 #include <drogon/HttpController.h>
+#include <drogon/HttpRequest.h>
+#include <drogon/HttpResponse.h>
+#include <cstdint>
 #include <memory>
+#include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
 #include "repositories/MessageRepository.hpp"
 #include "repositories/UserRepository.hpp"
 #include "services/ChatService.hpp"
+#include "services/S3Service.hpp"
 
 using namespace drogon;
 
-namespace api
-{
-namespace v1
-{
-class ChatController : public drogon::HttpController<ChatController>
-{
-  public:
+namespace api {
+namespace v1 {
+class ChatController : public drogon::HttpController<ChatController> {
+public:
     METHOD_LIST_BEGIN
-    ADD_METHOD_TO(ChatController::getUserChats, "/api/v1/chats/user/{1:user_id}", Get, "api::v1::IpFilter", "api::v1::AuthFilter");
-    ADD_METHOD_TO(ChatController::createOrGetDirectChat, "/api/v1/chats/direct", Post, "api::v1::IpFilter", "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
-    ADD_METHOD_TO(ChatController::getChatMessages, "/api/v1/chats/{1:chat_id}/messages", Get, "api::v1::IpFilter", "api::v1::AuthFilter");
-    ADD_METHOD_TO(ChatController::sendMessage, "/api/v1/chats/{1:chat_id}/messages", Post, "api::v1::IpFilter", "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
-    ADD_METHOD_TO(ChatController::readMessages, "/api/v1/chats/{1:chat_id}/read", Post, "api::v1::IpFilter", "api::v1::JsonValidatorFilter", "api::v1::AuthFilter");
-    ADD_METHOD_TO(ChatController::getMessageById, "/api/v1/chats/messages/{1:message_id}", Get, "api::v1::IpFilter", "api::v1::AuthFilter");
+    ADD_METHOD_TO(
+        ChatController::getUserChats,
+        "/v1/chats/user/{1:user_id}",
+        Get,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::createOrGetDirectChat,
+        "/v1/chats/direct",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getChatMessages,
+        "/v1/chats/{1:chat_id}/messages",
+        Get,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::sendMessage,
+        "/v1/chats/{1:chat_id}/messages",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::readMessages,
+        "/v1/chats/{1:chat_id}/read",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getMessageById,
+        "/v1/chats/messages/{1:message_id}",
+        Get,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getAttachmentLinks,
+        "/v1/chats/attachments/presigned-links",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::createGroup,
+        "/v1/chats/group",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::addGroupChatMember,
+        "/v1/chats/{1:chat_id}/members",
+        Post,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getChatMember,
+        "/v1/chats/{1:chat_id}/members/{2:member_id}",
+        Get,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getChatMembers,
+        "/v1/chats/{1:chat_id}/members",
+        Get,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::removeMember,
+        "/v1/chats/{1:chat_id}/members/{2:member_id}",
+        Delete,
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::updateMemberRole,
+        "/v1/chats/{1:chat_id}/members/{2:member_id}",
+        Patch,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::updateChatInfo,
+        "/v1/chats/{1:chat_id}",
+        Patch,
+        "api::v1::JsonValidatorFilter",
+        "api::v1::AuthFilter"
+    );
+    ADD_METHOD_TO(
+        ChatController::getChatById,
+        "/v1/chats/{1:chat_id}",
+        Get,
+        "api::v1::AuthFilter"
+    );
     METHOD_LIST_END
-    Task<HttpResponsePtr> getUserChats(const HttpRequestPtr req, int64_t user_id);
+    Task<HttpResponsePtr>
+    getUserChats(const HttpRequestPtr req, int64_t user_id);
     Task<HttpResponsePtr> createOrGetDirectChat(const HttpRequestPtr req);
-    Task<HttpResponsePtr> getChatMessages(const HttpRequestPtr req, int64_t chat_id);
-    Task<HttpResponsePtr> sendMessage(const HttpRequestPtr req, int64_t chat_id);
-    Task<HttpResponsePtr> readMessages(const HttpRequestPtr req, int64_t chat_id);
-    Task<HttpResponsePtr> getMessageById(const HttpRequestPtr req, int64_t message_id);
+    Task<HttpResponsePtr>
+    getChatMessages(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    sendMessage(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    readMessages(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    getMessageById(const HttpRequestPtr req, int64_t message_id);
+    Task<HttpResponsePtr> getAttachmentLinks(const HttpRequestPtr req);
+    Task<HttpResponsePtr> createGroup(const HttpRequestPtr req);
+    Task<HttpResponsePtr>
+    addGroupChatMember(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    getChatMember(const HttpRequestPtr req, int64_t chat_id, int64_t member_id);
+    Task<HttpResponsePtr>
+    getChatMembers(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    removeMember(const HttpRequestPtr req, int64_t chat_id, int64_t member_id);
+    Task<HttpResponsePtr> updateMemberRole(
+        const HttpRequestPtr req,
+        int64_t chat_id,
+        int64_t member_id
+    );
+    Task<HttpResponsePtr>
+    updateChatInfo(const HttpRequestPtr req, int64_t chat_id);
+    Task<HttpResponsePtr>
+    getChatById(const HttpRequestPtr req, int64_t chat_id);
 
     ChatController() {
-      chat_service.setChatRepo(std::make_shared<messenger::repositories::ChatRepository>(std::make_unique<messenger::repositories::MessageRepository>(), std::make_unique<messenger::repositories::UserRepository>()));
+        chat_service.setChatRepo(
+            std::make_shared<messenger::repositories::ChatRepository>(
+                std::make_unique<messenger::repositories::MessageRepository>(
+                    std::make_unique<
+                        messenger::repositories::AttachmentRepository>()
+                ),
+                std::make_unique<messenger::repositories::UserRepository>()
+            )
+        );
+        chat_service.setAttachmentRepo(
+            std::make_shared<messenger::repositories::AttachmentRepository>()
+        );
+        chat_service.setUserRepo(
+            std::make_shared<messenger::repositories::UserRepository>()
+        );
+        chat_service.setS3Service(
+            std::make_shared<S3Service>(
+                std::getenv("S3_ACCESS_KEY"), std::getenv("S3_SECRET_KEY"),
+                std::getenv("S3_BASE_URL"),
+                std::getenv("S3_PRIVATE_BUCKETNAME"),
+                std::getenv("S3_SHOULD_USE_HTTPS") == std::string("true")
+            )
+        );
     }
-    void setRepo(std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo) {
-      this->chat_service.setChatRepo(chat_repo);
+
+    void setRepo(
+        std::shared_ptr<messenger::repositories::ChatRepositoryInterface>
+            chat_repo
+    ) {
+        this->chat_service.setChatRepo(chat_repo);
     }
-  private:
+
+private:
     ChatService chat_service;
+    bool validateMessageType(const std::string &message_type);
+    static std::set<std::string> chat_roles;
 };
-}
-}
+}  // namespace v1
+}  // namespace api

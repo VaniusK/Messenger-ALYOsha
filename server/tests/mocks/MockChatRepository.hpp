@@ -13,6 +13,7 @@ using User = drogon_model::messenger_db::Users;
 using Chat = drogon_model::messenger_db::Chats;
 using ChatPreview = messenger::dto::ChatPreview;
 using ChatMember = drogon_model::messenger_db::ChatMembers;
+using Attachment = drogon_model::messenger_db::Attachments;
 
 class MockChatRepository
     : public messenger::repositories::ChatRepositoryInterface {
@@ -31,13 +32,16 @@ public:
         (override)
     );
     MOCK_METHOD(
-        drogon::Task<Message>,
+        (drogon::Task<std::pair<Message, std::vector<Attachment>>>),
         sendMessage,
         (int64_t,
          int64_t,
          std::string,
          std::optional<int64_t>,
-         std::optional<int64_t>),
+         std::optional<int64_t>,
+         std::string,
+         std::vector<messenger::dto::AttachmentData>,
+         std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(
@@ -49,14 +53,19 @@ public:
     MOCK_METHOD(
         drogon::Task<bool>,
         editMessage,
-        (int64_t, std::string),
+        (int64_t, std::string, std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
-    MOCK_METHOD(drogon::Task<bool>, removeMessage, (int64_t), (override));
+    MOCK_METHOD(
+        drogon::Task<bool>,
+        removeMessage,
+        (int64_t, std::shared_ptr<drogon::orm::Transaction>),
+        (override)
+    );
     MOCK_METHOD(
         drogon::Task<Chat>,
         getOrCreateDirect,
-        (int64_t, int64_t),
+        (int64_t, int64_t, std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(
@@ -80,48 +89,75 @@ public:
     MOCK_METHOD(
         drogon::Task<bool>,
         markAsRead,
-        (int64_t, int64_t, int64_t),
+        (int64_t, int64_t, int64_t, std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(
         drogon::Task<Chat>,
         createGroup,
-        (std::string, int64_t, std::vector<int64_t>),
+        (std::string,
+         int64_t,
+         std::vector<int64_t>,
+         std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(
         drogon::Task<std::vector<ChatMember>>,
         getMembers,
-        (int64_t),
+        (int64_t, std::shared_ptr<drogon::orm::Transaction>),
+        (override)
+    );
+    MOCK_METHOD(
+        drogon::Task<ChatMember>,
+        getMember,
+        (int64_t, int64_t),
         (override)
     );
     MOCK_METHOD(
         drogon::Task<ChatMember>,
         addMember,
-        (int64_t, int64_t, std::string),
+        (int64_t,
+         int64_t,
+         std::string,
+         std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(
-        drogon::Task<bool>,
+        drogon::Task<void>,
         removeMember,
-        (int64_t, int64_t),
+        (int64_t, int64_t, std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(
-        drogon::Task<bool>,
+        drogon::Task<void>,
         updateMemberRole,
-        (int64_t, int64_t, std::string),
+        (int64_t,
+         int64_t,
+         std::string,
+         std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
     MOCK_METHOD(
-        drogon::Task<bool>,
+        drogon::Task<void>,
         updateInfo,
         (int64_t chat_id,
          std::optional<std::string>,
          std::optional<std::string>,
-         std::optional<std::string>),
+         std::optional<std::string>,
+         std::shared_ptr<drogon::orm::Transaction>),
         (override)
     );
-    MOCK_METHOD(drogon::Task<Chat>, createSaved, (int64_t), (override));
+    MOCK_METHOD(
+        drogon::Task<Chat>,
+        createSaved,
+        (int64_t, std::shared_ptr<drogon::orm::Transaction>),
+        (override)
+    );
     MOCK_METHOD(drogon::Task<Chat>, getSaved, (int64_t), (override));
+    MOCK_METHOD(
+        drogon::Task<void>,
+        lockChat,
+        (int64_t, std::shared_ptr<drogon::orm::Transaction>),
+        (override)
+    );
 };

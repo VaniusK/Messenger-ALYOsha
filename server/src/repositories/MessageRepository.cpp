@@ -6,6 +6,7 @@
 
 using Message = drogon_model::messenger_db::Messages;
 using User = drogon_model::messenger_db::Users;
+using Attachment = drogon_model::messenger_db::Attachments;
 using MessageRepository = messenger::repositories::MessageRepository;
 using UserRepository = messenger::repositories::UserRepository;
 
@@ -38,14 +39,26 @@ Task<std::vector<Message>> MessageRepository::getAll() {
     }
 }
 
-Task<Message> MessageRepository::send(
+Task<std::pair<Message, std::vector<Attachment>>> MessageRepository::send(
     int64_t chat_id,
     int64_t sender_id,
     std::string text,
     std::optional<int64_t> reply_to_id,
-    std::optional<int64_t> forwarded_from_id
+    std::optional<int64_t> forwarded_from_id,
+    std::string type,
+    std::vector<dto::AttachmentData> attachments,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
 ) {
-    auto mapper = getMapper();
+    bool own_transaction = false;
+    if (!transaction_ptr) {
+        transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+        own_transaction = true;
+    }
+
+    auto mapper = getMapper(transaction_ptr);
+
+    std::exception_ptr eptr;
 
     try {
         Message message;
@@ -64,9 +77,29 @@ Task<Message> MessageRepository::send(
                 forwarded_from_user.getValueOfDisplayName()
             );
         }
+        message.setType(type);
         message = co_await mapper.insert(message);
-        co_return message;
-    } catch (const DrogonDbException &e) {
+        std::vector<Attachment> created_attachments;
+        for (auto &attachmentData : attachments) {
+            Attachment created_attachment = co_await attachment_repo_->create(
+                message.getValueOfId(), attachmentData.file_name,
+                attachmentData.file_type, attachmentData.file_size_bytes,
+                attachmentData.s3_object_key, transaction_ptr
+            );
+            created_attachments.push_back(created_attachment);
+        }
+        if (own_transaction) {
+            co_await transaction_ptr->execSqlCoro("COMMIT;");
+        }
+        co_return {message, created_attachments};
+    } catch (...) {
+        eptr = std::current_exception();
+    }
+
+    co_await transaction_ptr->execSqlCoro("ROLLBACK;");
+    try {
+        std::rethrow_exception(eptr);
+    } catch (const DrogonDbException &) {
         throw std::runtime_error("Database error");
     }
 }
@@ -95,24 +128,49 @@ Task<std::vector<Message>> MessageRepository::getByChat(
     }
 }
 
-Task<bool> MessageRepository::edit(int64_t id, std::string text) {
-    auto mapper = getMapper();
+Task<bool> MessageRepository::edit(
+    int64_t id,
+    std::string text,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    bool own_transaction = false;
+    if (!transaction_ptr) {
+        transaction_ptr =
+            co_await drogon::app().getDbClient()->newTransactionCoro();
+        own_transaction = true;
+    }
+
+    auto mapper = getMapper(transaction_ptr);
+    std::exception_ptr eptr;
     try {
         Message message = co_await mapper.findByPrimaryKey(id);
         message.setText(text);
         trantor::Date now = trantor::Date::date();
         message.setEditedAt(now);
         co_await mapper.update(message);
+        if (own_transaction) {
+            co_await transaction_ptr->execSqlCoro("COMMIT;");
+        }
         co_return true;
-    } catch (const UnexpectedRows &e) {
+    } catch (...) {
+        eptr = std::current_exception();
+    }
+
+    co_await transaction_ptr->execSqlCoro("ROLLBACK;");
+    try {
+        std::rethrow_exception(eptr);
+    } catch (const UnexpectedRows &) {
         co_return false;
-    } catch (const DrogonDbException &e) {
+    } catch (const DrogonDbException &) {
         throw std::runtime_error("Database error");
     }
 }
 
-Task<bool> MessageRepository::remove(int64_t id) {
-    auto mapper = getMapper();
+Task<bool> MessageRepository::remove(
+    int64_t id,
+    std::shared_ptr<drogon::orm::Transaction> transaction_ptr
+) {
+    auto mapper = getMapper(transaction_ptr);
     try {
         Message message = co_await mapper.findByPrimaryKey(id);
         co_await mapper.deleteByPrimaryKey(id);

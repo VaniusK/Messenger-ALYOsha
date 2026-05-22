@@ -53,7 +53,7 @@
 | ------------------------------------------------------- | ------------------------------------------ | --------------------- |
 | `getMessageById(message_id)`                                         | Получить сообщение            | `Message?`        |
 | `getMessagesByChat(chat_id, before_id?, limit)`                        | Сообщения чата с пагинацией   | `vector<Message>` |
-| `sendMessage(chat_id, sender_id, text, reply_to_id?, forwarded_from_id?)` | Отправить сообщение           | `Message`         |
+| `sendMessage(chat_id, sender_id, text, reply_to_id?, forwarded_from_id?, vector<AttachmentData> attachments = {})` | Отправить сообщение           | `pair<Message, vector<Attachment>>`         |
 | `editMessage(message_id, new_text)`                                  | Редактировать сообщение       | `bool`            |
 | `removeMessage(message_id)`                                         | Удалить сообщение             | `bool`            |
 | `getById(chat_id)`                                  | Получить чат по ID                         | `Chat?`               |
@@ -62,6 +62,7 @@
 | `getDirect(user1_id, user2_id)`             | Получить личку | `Chat?`                |
 | `createGroup(name, creator_id, member_ids(vector<id>))`         | Создать групповой чат                      | `Chat`                |
 | `getMembers(chat_id)`                               | Список участников чата                     | `vector<ChatMember>`  |
+| `getMember(chat_id, user_id)`                               | Участник чата                     | `ChatMember`  |
 | `addMember(chat_id, user_id, role)`                 | Добавить участника                         | `ChatMember`                |
 | `removeMember(chat_id, user_id)`                    | Удалить участника                          | `bool`                |
 | `updateMemberRole(chat_id, user_id, new_role)`          | Изменить роль участника                    | `bool`                |
@@ -90,6 +91,7 @@
 |---|---|---|
 | `id` | `int64` | ID сообщения |
 | `chat_id` | `int64` | ID чата |
+| `type` | `string` | Тип сообщения(text, media, voice, round, sticker) |
 | `sender_id` | `int64?` | ID отправителя (null если удален) |
 | `reply_to_message_id` | `int64?` | Ответ на сообщение |
 | `forwarded_from_user_id` | `int64?` | ID автора оригинала (при пересылке) |
@@ -97,6 +99,7 @@
 | `text` | `string` | Текст сообщения |
 | `sent_at` | `timestamp` | Время отправки |
 | `edited_at` | `timestamp?`| Время редактирования |
+
 
 
 | Метод                                                                | Описание                      | Возвращает        |
@@ -208,18 +211,17 @@
 | Поле | Тип | Описание |
 |---|---|---|
 | `id` | `int64` | ID вложения |
-| `message_id` | `int64?` | ID сообщения (XOR post_id) |
-| `post_id` | `int64?` | ID поста (XOR message_id) |
+| `message_id` | `int64` | ID сообщения |
+| `file_name` | `string` | Название файла |
 | `file_type` | `string` | MIME-тип |
-| `file_size` | `int64` | Размер в байтах |
-| `file_path` | `string` | Путь к файлу на сервере |
+| `file_size_bytes` | `int64` | Размер в байтах |
+| `s3_object_key` | `string` | Ключ в S3 |
 | `uploaded_at` | `timestamp` | Время загрузки |
 
 
 | Метод                                                               | Описание                      | Возвращает           |
 | ------------------------------------------------------------------- | ----------------------------- | -------------------- |
-| `addMessageAttachment(message_id, file_type, file_size, file_path)` | Добавить вложение к сообщению | `Attachment`         |
-| `addPostAttachment(post_id, file_type, file_size, file_path)`       | Добавить вложение к посту     | `Attachment`         |
-| `getMessageAttachments(message_id)`                                 | Вложения сообщения            | `vector<Attachment>` |
-| `getPostAttachments(post_id)`                                       | Вложения поста                | `vector<Attachment>` |
-| `delete(attachment_id)`                                   | Удалить вложение              | `bool`               |
+| `add(message_id, file_name, file_type, file_size_bytes, s3_object_key)` | Добавить вложение к сообщению | `Attachment`         |
+| `getByMessage(message_id)`                                 | Вложения сообщения            | `vector<Attachment>` |
+| `getByMessages(vector<message_id>)`                                 | Вложения сообщений            | `vector<vector<Attachment>>` |
+| `remove(id)`                                   | Удалить вложение              | `bool`               |

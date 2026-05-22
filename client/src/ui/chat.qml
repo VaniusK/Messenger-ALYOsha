@@ -10,7 +10,9 @@ Rectangle {
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (sidebar.isSearching || sidebar.hasSearchFocus) {
+            if (VoiceLayer.isRecording) {
+                chatArea.showCancelPrompt()
+            } else if (sidebar.isSearching || sidebar.hasSearchFocus) {
                 sidebar.clearSearch()
             } else if (chatArea.activeChatId !== "") {
                 chatArea.activeChatId = ""
@@ -29,9 +31,15 @@ Rectangle {
             Layout.fillHeight: true
             activeChatId: chatArea.activeChatId
 
-            onChatSelected: function(chatId, chatName) {
+            onChatSelected: function(chatId, chatName, chatType, chatDescription) {
+                if (VoiceLayer.isRecording) {
+                    chatArea.showCancelPrompt()
+                    return
+                }
                 chatArea.activeChatId = chatId
                 chatArea.activeChatName = chatName
+                chatArea.activeChatType = chatType
+                chatArea.activeChatDescription = chatDescription || ""
             }
 
             onLogoutRequested: {
@@ -135,6 +143,7 @@ Rectangle {
                         onClicked: {
                             logoutDialog.close()
                             console.log("[Chat] exit to LogIn window")
+                            ChatLayer.clearCache()
                             AppState.clearState()
 
                             var loader = root.parent

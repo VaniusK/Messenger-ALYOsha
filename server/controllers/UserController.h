@@ -15,28 +15,25 @@ namespace v1 {
 class UserController : public drogon::HttpController<UserController> {
 public:
     METHOD_LIST_BEGIN
-    ADD_METHOD_TO(UserController::getUserById, "/api/v1/users/{1:user_id}", Get, "api::v1::IpFilter");
+    ADD_METHOD_TO(UserController::getUserById, "/v1/users/{1:user_id}", Get);
     ADD_METHOD_TO(
         UserController::getUserByHandle,
-        "/api/v1/users/handle/{1:user_handle}",
-        Get,
-        "api::v1::IpFilter"
+        "/v1/users/handle/{1:user_handle}",
+        Get
     );
     ADD_METHOD_TO(
         UserController::searchUser,
-        "/api/v1/users/search",
-        Get,
-        "api::v1::IpFilter",
-        "api::v1::JsonValidatorFilter"
+        "/v1/users/search",
+        Get
     );
-    ADD_METHOD_TO(UserController::registerUser, "/api/v1/auth/register", Post, "api::v1::IpFilter", "api::v1::JsonValidatorFilter");
-    ADD_METHOD_TO(UserController::loginUser, "/api/v1/auth/login", Post, "api::v1::IpFilter", "api::v1::JsonValidatorFilter");
+    ADD_METHOD_TO(UserController::registerUser, "/v1/auth/register", Post, "api::v1::JsonValidatorFilter");
+    ADD_METHOD_TO(UserController::loginUser, "/v1/auth/login", Post, "api::v1::JsonValidatorFilter");
 
     METHOD_LIST_END
     Task<HttpResponsePtr>
-    getUserById(const HttpRequestPtr req, int64_t &&user_id);
+    getUserById(const HttpRequestPtr req, int64_t user_id);
     Task<HttpResponsePtr>
-    getUserByHandle(const HttpRequestPtr req, std::string &&user_handle);
+    getUserByHandle(const HttpRequestPtr req, std::string user_handle);
     Task<HttpResponsePtr> searchUser(const HttpRequestPtr req);
     Task<HttpResponsePtr> registerUser(const HttpRequestPtr req);
     Task<HttpResponsePtr> loginUser(const HttpRequestPtr req);
@@ -51,7 +48,7 @@ public:
         );
         user_service.setChatRepo(
             std::make_shared<messenger::repositories::ChatRepository>(
-                std::make_unique<messenger::repositories::MessageRepository>(),
+                std::make_unique<messenger::repositories::MessageRepository>(std::make_unique<messenger::repositories::AttachmentRepository>()),
                 std::make_unique<messenger::repositories::UserRepository>()
             )
         );

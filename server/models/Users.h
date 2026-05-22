@@ -50,7 +50,6 @@ class Users
         static const std::string _password_hash;
         static const std::string _avatar_path;
         static const std::string _last_synced_message_id;
-        static const std::string _last_synced_post_id;
         static const std::string _description;
         static const std::string _created_at;
     };
@@ -158,15 +157,6 @@ class Users
     void setLastSyncedMessageId(const int64_t &pLastSyncedMessageId) noexcept;
     void setLastSyncedMessageIdToNull() noexcept;
 
-    /**  For column last_synced_post_id  */
-    ///Get the value of the column last_synced_post_id, returns the default value if the column is null
-    const int64_t &getValueOfLastSyncedPostId() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<int64_t> &getLastSyncedPostId() const noexcept;
-    ///Set the value of the column last_synced_post_id
-    void setLastSyncedPostId(const int64_t &pLastSyncedPostId) noexcept;
-    void setLastSyncedPostIdToNull() noexcept;
-
     /**  For column description  */
     ///Get the value of the column description, returns the default value if the column is null
     const std::string &getValueOfDescription() const noexcept;
@@ -186,7 +176,7 @@ class Users
     void setCreatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 9;  }
+    static size_t getColumnNumber() noexcept {  return 8;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -214,7 +204,6 @@ class Users
     std::shared_ptr<std::string> passwordHash_;
     std::shared_ptr<std::string> avatarPath_;
     std::shared_ptr<int64_t> lastSyncedMessageId_;
-    std::shared_ptr<int64_t> lastSyncedPostId_;
     std::shared_ptr<std::string> description_;
     std::shared_ptr<::trantor::Date> createdAt_;
     struct MetaData
@@ -228,7 +217,7 @@ class Users
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[9]={ false };
+    bool dirtyFlag_[8]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -274,21 +263,15 @@ class Users
         {
             needSelection=true;
         }
-        sql += "last_synced_post_id,";
+        sql += "description,";
         ++parametersCount;
         if(!dirtyFlag_[6])
         {
             needSelection=true;
         }
-        sql += "description,";
-        ++parametersCount;
-        if(!dirtyFlag_[7])
-        {
-            needSelection=true;
-        }
         sql += "created_at,";
         ++parametersCount;
-        if(!dirtyFlag_[8])
+        if(!dirtyFlag_[7])
         {
             needSelection=true;
         }
@@ -344,15 +327,6 @@ class Users
             sql +="default,";
         }
         if(dirtyFlag_[7])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
-        }
-        if(dirtyFlag_[8])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

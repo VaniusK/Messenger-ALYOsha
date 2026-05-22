@@ -15,7 +15,6 @@ using namespace drogon_model::messenger_db;
 
 const std::string Reactions::Cols::_id = "\"id\"";
 const std::string Reactions::Cols::_message_id = "\"message_id\"";
-const std::string Reactions::Cols::_post_id = "\"post_id\"";
 const std::string Reactions::Cols::_user_id = "\"user_id\"";
 const std::string Reactions::Cols::_emoji = "\"emoji\"";
 const std::string Reactions::Cols::_reacted_at = "\"reacted_at\"";
@@ -25,8 +24,7 @@ const std::string Reactions::tableName = "\"reactions\"";
 
 const std::vector<typename Reactions::MetaData> Reactions::metaData_={
 {"id","int64_t","bigint",8,1,1,1},
-{"message_id","int64_t","bigint",8,0,0,0},
-{"post_id","int64_t","bigint",8,0,0,0},
+{"message_id","int64_t","bigint",8,0,0,1},
 {"user_id","int64_t","bigint",8,0,0,1},
 {"emoji","std::string","character varying",64,0,0,1},
 {"reacted_at","::trantor::Date","timestamp with time zone",0,0,0,0}
@@ -47,10 +45,6 @@ Reactions::Reactions(const Row &r, const ssize_t indexOffset) noexcept
         if(!r["message_id"].isNull())
         {
             messageId_=std::make_shared<int64_t>(r["message_id"].as<int64_t>());
-        }
-        if(!r["post_id"].isNull())
-        {
-            postId_=std::make_shared<int64_t>(r["post_id"].as<int64_t>());
         }
         if(!r["user_id"].isNull())
         {
@@ -86,7 +80,7 @@ Reactions::Reactions(const Row &r, const ssize_t indexOffset) noexcept
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 6 > r.size())
+        if(offset + 5 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -105,19 +99,14 @@ Reactions::Reactions(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 2;
         if(!r[index].isNull())
         {
-            postId_=std::make_shared<int64_t>(r[index].as<int64_t>());
+            userId_=std::make_shared<int64_t>(r[index].as<int64_t>());
         }
         index = offset + 3;
         if(!r[index].isNull())
         {
-            userId_=std::make_shared<int64_t>(r[index].as<int64_t>());
-        }
-        index = offset + 4;
-        if(!r[index].isNull())
-        {
             emoji_=std::make_shared<std::string>(r[index].as<std::string>());
         }
-        index = offset + 5;
+        index = offset + 4;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -146,7 +135,7 @@ Reactions::Reactions(const Row &r, const ssize_t indexOffset) noexcept
 
 Reactions::Reactions(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 6)
+    if(pMasqueradingVector.size() != 5)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -172,7 +161,7 @@ Reactions::Reactions(const Json::Value &pJson, const std::vector<std::string> &p
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            postId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[2]].asInt64());
+            userId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[2]].asInt64());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -180,7 +169,7 @@ Reactions::Reactions(const Json::Value &pJson, const std::vector<std::string> &p
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            userId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[3]].asInt64());
+            emoji_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -188,15 +177,7 @@ Reactions::Reactions(const Json::Value &pJson, const std::vector<std::string> &p
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            emoji_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
-        }
-    }
-    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
-    {
-        dirtyFlag_[5] = true;
-        if(!pJson[pMasqueradingVector[5]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[5]].asString();
+            auto timeStr = pJson[pMasqueradingVector[4]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -237,17 +218,9 @@ Reactions::Reactions(const Json::Value &pJson) noexcept(false)
             messageId_=std::make_shared<int64_t>((int64_t)pJson["message_id"].asInt64());
         }
     }
-    if(pJson.isMember("post_id"))
-    {
-        dirtyFlag_[2]=true;
-        if(!pJson["post_id"].isNull())
-        {
-            postId_=std::make_shared<int64_t>((int64_t)pJson["post_id"].asInt64());
-        }
-    }
     if(pJson.isMember("user_id"))
     {
-        dirtyFlag_[3]=true;
+        dirtyFlag_[2]=true;
         if(!pJson["user_id"].isNull())
         {
             userId_=std::make_shared<int64_t>((int64_t)pJson["user_id"].asInt64());
@@ -255,7 +228,7 @@ Reactions::Reactions(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("emoji"))
     {
-        dirtyFlag_[4]=true;
+        dirtyFlag_[3]=true;
         if(!pJson["emoji"].isNull())
         {
             emoji_=std::make_shared<std::string>(pJson["emoji"].asString());
@@ -263,7 +236,7 @@ Reactions::Reactions(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("reacted_at"))
     {
-        dirtyFlag_[5]=true;
+        dirtyFlag_[4]=true;
         if(!pJson["reacted_at"].isNull())
         {
             auto timeStr = pJson["reacted_at"].asString();
@@ -292,7 +265,7 @@ Reactions::Reactions(const Json::Value &pJson) noexcept(false)
 void Reactions::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 6)
+    if(pMasqueradingVector.size() != 5)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -317,7 +290,7 @@ void Reactions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            postId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[2]].asInt64());
+            userId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[2]].asInt64());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -325,7 +298,7 @@ void Reactions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            userId_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[3]].asInt64());
+            emoji_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -333,15 +306,7 @@ void Reactions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            emoji_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
-        }
-    }
-    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
-    {
-        dirtyFlag_[5] = true;
-        if(!pJson[pMasqueradingVector[5]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[5]].asString();
+            auto timeStr = pJson[pMasqueradingVector[4]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -381,17 +346,9 @@ void Reactions::updateByJson(const Json::Value &pJson) noexcept(false)
             messageId_=std::make_shared<int64_t>((int64_t)pJson["message_id"].asInt64());
         }
     }
-    if(pJson.isMember("post_id"))
-    {
-        dirtyFlag_[2] = true;
-        if(!pJson["post_id"].isNull())
-        {
-            postId_=std::make_shared<int64_t>((int64_t)pJson["post_id"].asInt64());
-        }
-    }
     if(pJson.isMember("user_id"))
     {
-        dirtyFlag_[3] = true;
+        dirtyFlag_[2] = true;
         if(!pJson["user_id"].isNull())
         {
             userId_=std::make_shared<int64_t>((int64_t)pJson["user_id"].asInt64());
@@ -399,7 +356,7 @@ void Reactions::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("emoji"))
     {
-        dirtyFlag_[4] = true;
+        dirtyFlag_[3] = true;
         if(!pJson["emoji"].isNull())
         {
             emoji_=std::make_shared<std::string>(pJson["emoji"].asString());
@@ -407,7 +364,7 @@ void Reactions::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("reacted_at"))
     {
-        dirtyFlag_[5] = true;
+        dirtyFlag_[4] = true;
         if(!pJson["reacted_at"].isNull())
         {
             auto timeStr = pJson["reacted_at"].asString();
@@ -471,33 +428,6 @@ void Reactions::setMessageId(const int64_t &pMessageId) noexcept
     messageId_ = std::make_shared<int64_t>(pMessageId);
     dirtyFlag_[1] = true;
 }
-void Reactions::setMessageIdToNull() noexcept
-{
-    messageId_.reset();
-    dirtyFlag_[1] = true;
-}
-
-const int64_t &Reactions::getValueOfPostId() const noexcept
-{
-    static const int64_t defaultValue = int64_t();
-    if(postId_)
-        return *postId_;
-    return defaultValue;
-}
-const std::shared_ptr<int64_t> &Reactions::getPostId() const noexcept
-{
-    return postId_;
-}
-void Reactions::setPostId(const int64_t &pPostId) noexcept
-{
-    postId_ = std::make_shared<int64_t>(pPostId);
-    dirtyFlag_[2] = true;
-}
-void Reactions::setPostIdToNull() noexcept
-{
-    postId_.reset();
-    dirtyFlag_[2] = true;
-}
 
 const int64_t &Reactions::getValueOfUserId() const noexcept
 {
@@ -513,7 +443,7 @@ const std::shared_ptr<int64_t> &Reactions::getUserId() const noexcept
 void Reactions::setUserId(const int64_t &pUserId) noexcept
 {
     userId_ = std::make_shared<int64_t>(pUserId);
-    dirtyFlag_[3] = true;
+    dirtyFlag_[2] = true;
 }
 
 const std::string &Reactions::getValueOfEmoji() const noexcept
@@ -530,12 +460,12 @@ const std::shared_ptr<std::string> &Reactions::getEmoji() const noexcept
 void Reactions::setEmoji(const std::string &pEmoji) noexcept
 {
     emoji_ = std::make_shared<std::string>(pEmoji);
-    dirtyFlag_[4] = true;
+    dirtyFlag_[3] = true;
 }
 void Reactions::setEmoji(std::string &&pEmoji) noexcept
 {
     emoji_ = std::make_shared<std::string>(std::move(pEmoji));
-    dirtyFlag_[4] = true;
+    dirtyFlag_[3] = true;
 }
 
 const ::trantor::Date &Reactions::getValueOfReactedAt() const noexcept
@@ -552,12 +482,12 @@ const std::shared_ptr<::trantor::Date> &Reactions::getReactedAt() const noexcept
 void Reactions::setReactedAt(const ::trantor::Date &pReactedAt) noexcept
 {
     reactedAt_ = std::make_shared<::trantor::Date>(pReactedAt);
-    dirtyFlag_[5] = true;
+    dirtyFlag_[4] = true;
 }
 void Reactions::setReactedAtToNull() noexcept
 {
     reactedAt_.reset();
-    dirtyFlag_[5] = true;
+    dirtyFlag_[4] = true;
 }
 
 void Reactions::updateId(const uint64_t id)
@@ -568,7 +498,6 @@ const std::vector<std::string> &Reactions::insertColumns() noexcept
 {
     static const std::vector<std::string> inCols={
         "message_id",
-        "post_id",
         "user_id",
         "emoji",
         "reacted_at"
@@ -591,17 +520,6 @@ void Reactions::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[2])
     {
-        if(getPostId())
-        {
-            binder << getValueOfPostId();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[3])
-    {
         if(getUserId())
         {
             binder << getValueOfUserId();
@@ -611,7 +529,7 @@ void Reactions::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[4])
+    if(dirtyFlag_[3])
     {
         if(getEmoji())
         {
@@ -622,7 +540,7 @@ void Reactions::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[4])
     {
         if(getReactedAt())
         {
@@ -654,10 +572,6 @@ const std::vector<std::string> Reactions::updateColumns() const
     {
         ret.push_back(getColumnName(4));
     }
-    if(dirtyFlag_[5])
-    {
-        ret.push_back(getColumnName(5));
-    }
     return ret;
 }
 
@@ -676,17 +590,6 @@ void Reactions::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[2])
     {
-        if(getPostId())
-        {
-            binder << getValueOfPostId();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[3])
-    {
         if(getUserId())
         {
             binder << getValueOfUserId();
@@ -696,7 +599,7 @@ void Reactions::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[4])
+    if(dirtyFlag_[3])
     {
         if(getEmoji())
         {
@@ -707,7 +610,7 @@ void Reactions::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[4])
     {
         if(getReactedAt())
         {
@@ -737,14 +640,6 @@ Json::Value Reactions::toJson() const
     else
     {
         ret["message_id"]=Json::Value();
-    }
-    if(getPostId())
-    {
-        ret["post_id"]=(Json::Int64)getValueOfPostId();
-    }
-    else
-    {
-        ret["post_id"]=Json::Value();
     }
     if(getUserId())
     {
@@ -782,7 +677,7 @@ Json::Value Reactions::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 6)
+    if(pMasqueradingVector.size() == 5)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -808,9 +703,9 @@ Json::Value Reactions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[2].empty())
         {
-            if(getPostId())
+            if(getUserId())
             {
-                ret[pMasqueradingVector[2]]=(Json::Int64)getValueOfPostId();
+                ret[pMasqueradingVector[2]]=(Json::Int64)getValueOfUserId();
             }
             else
             {
@@ -819,9 +714,9 @@ Json::Value Reactions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[3].empty())
         {
-            if(getUserId())
+            if(getEmoji())
             {
-                ret[pMasqueradingVector[3]]=(Json::Int64)getValueOfUserId();
+                ret[pMasqueradingVector[3]]=getValueOfEmoji();
             }
             else
             {
@@ -830,24 +725,13 @@ Json::Value Reactions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[4].empty())
         {
-            if(getEmoji())
+            if(getReactedAt())
             {
-                ret[pMasqueradingVector[4]]=getValueOfEmoji();
+                ret[pMasqueradingVector[4]]=getReactedAt()->toDbStringLocal();
             }
             else
             {
                 ret[pMasqueradingVector[4]]=Json::Value();
-            }
-        }
-        if(!pMasqueradingVector[5].empty())
-        {
-            if(getReactedAt())
-            {
-                ret[pMasqueradingVector[5]]=getReactedAt()->toDbStringLocal();
-            }
-            else
-            {
-                ret[pMasqueradingVector[5]]=Json::Value();
             }
         }
         return ret;
@@ -868,14 +752,6 @@ Json::Value Reactions::toMasqueradedJson(
     else
     {
         ret["message_id"]=Json::Value();
-    }
-    if(getPostId())
-    {
-        ret["post_id"]=(Json::Int64)getValueOfPostId();
-    }
-    else
-    {
-        ret["post_id"]=Json::Value();
     }
     if(getUserId())
     {
@@ -916,14 +792,14 @@ bool Reactions::validateJsonForCreation(const Json::Value &pJson, std::string &e
         if(!validJsonOfField(1, "message_id", pJson["message_id"], err, true))
             return false;
     }
-    if(pJson.isMember("post_id"))
+    else
     {
-        if(!validJsonOfField(2, "post_id", pJson["post_id"], err, true))
-            return false;
+        err="The message_id column cannot be null";
+        return false;
     }
     if(pJson.isMember("user_id"))
     {
-        if(!validJsonOfField(3, "user_id", pJson["user_id"], err, true))
+        if(!validJsonOfField(2, "user_id", pJson["user_id"], err, true))
             return false;
     }
     else
@@ -933,7 +809,7 @@ bool Reactions::validateJsonForCreation(const Json::Value &pJson, std::string &e
     }
     if(pJson.isMember("emoji"))
     {
-        if(!validJsonOfField(4, "emoji", pJson["emoji"], err, true))
+        if(!validJsonOfField(3, "emoji", pJson["emoji"], err, true))
             return false;
     }
     else
@@ -943,7 +819,7 @@ bool Reactions::validateJsonForCreation(const Json::Value &pJson, std::string &e
     }
     if(pJson.isMember("reacted_at"))
     {
-        if(!validJsonOfField(5, "reacted_at", pJson["reacted_at"], err, true))
+        if(!validJsonOfField(4, "reacted_at", pJson["reacted_at"], err, true))
             return false;
     }
     return true;
@@ -952,7 +828,7 @@ bool Reactions::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                    const std::vector<std::string> &pMasqueradingVector,
                                                    std::string &err)
 {
-    if(pMasqueradingVector.size() != 6)
+    if(pMasqueradingVector.size() != 5)
     {
         err = "Bad masquerading vector";
         return false;
@@ -973,6 +849,11 @@ bool Reactions::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(1, pMasqueradingVector[1], pJson[pMasqueradingVector[1]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[1] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[2].empty())
       {
@@ -981,6 +862,11 @@ bool Reactions::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(2, pMasqueradingVector[2], pJson[pMasqueradingVector[2]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[2] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[3].empty())
       {
@@ -1000,19 +886,6 @@ bool Reactions::validateMasqueradedJsonForCreation(const Json::Value &pJson,
           if(pJson.isMember(pMasqueradingVector[4]))
           {
               if(!validJsonOfField(4, pMasqueradingVector[4], pJson[pMasqueradingVector[4]], err, true))
-                  return false;
-          }
-        else
-        {
-            err="The " + pMasqueradingVector[4] + " column cannot be null";
-            return false;
-        }
-      }
-      if(!pMasqueradingVector[5].empty())
-      {
-          if(pJson.isMember(pMasqueradingVector[5]))
-          {
-              if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, true))
                   return false;
           }
       }
@@ -1041,24 +914,19 @@ bool Reactions::validateJsonForUpdate(const Json::Value &pJson, std::string &err
         if(!validJsonOfField(1, "message_id", pJson["message_id"], err, false))
             return false;
     }
-    if(pJson.isMember("post_id"))
-    {
-        if(!validJsonOfField(2, "post_id", pJson["post_id"], err, false))
-            return false;
-    }
     if(pJson.isMember("user_id"))
     {
-        if(!validJsonOfField(3, "user_id", pJson["user_id"], err, false))
+        if(!validJsonOfField(2, "user_id", pJson["user_id"], err, false))
             return false;
     }
     if(pJson.isMember("emoji"))
     {
-        if(!validJsonOfField(4, "emoji", pJson["emoji"], err, false))
+        if(!validJsonOfField(3, "emoji", pJson["emoji"], err, false))
             return false;
     }
     if(pJson.isMember("reacted_at"))
     {
-        if(!validJsonOfField(5, "reacted_at", pJson["reacted_at"], err, false))
+        if(!validJsonOfField(4, "reacted_at", pJson["reacted_at"], err, false))
             return false;
     }
     return true;
@@ -1067,7 +935,7 @@ bool Reactions::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                  const std::vector<std::string> &pMasqueradingVector,
                                                  std::string &err)
 {
-    if(pMasqueradingVector.size() != 6)
+    if(pMasqueradingVector.size() != 5)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1101,11 +969,6 @@ bool Reactions::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
       {
           if(!validJsonOfField(4, pMasqueradingVector[4], pJson[pMasqueradingVector[4]], err, false))
-              return false;
-      }
-      if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
-      {
-          if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, false))
               return false;
       }
     }
@@ -1144,7 +1007,8 @@ bool Reactions::validJsonOfField(size_t index,
         case 1:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
             if(!pJson.isInt64())
             {
@@ -1153,17 +1017,6 @@ bool Reactions::validJsonOfField(size_t index,
             }
             break;
         case 2:
-            if(pJson.isNull())
-            {
-                return true;
-            }
-            if(!pJson.isInt64())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            break;
-        case 3:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";
@@ -1175,7 +1028,7 @@ bool Reactions::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 4:
+        case 3:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";
@@ -1195,7 +1048,7 @@ bool Reactions::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 5:
+        case 4:
             if(pJson.isNull())
             {
                 return true;

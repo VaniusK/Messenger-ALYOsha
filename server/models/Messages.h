@@ -53,6 +53,8 @@ class Messages
         static const std::string _text;
         static const std::string _sent_at;
         static const std::string _edited_at;
+        static const std::string _discussion_message_id;
+        static const std::string _type;
     };
 
     static const int primaryKeyNumber;
@@ -184,8 +186,26 @@ class Messages
     void setEditedAt(const ::trantor::Date &pEditedAt) noexcept;
     void setEditedAtToNull() noexcept;
 
+    /**  For column discussion_message_id  */
+    ///Get the value of the column discussion_message_id, returns the default value if the column is null
+    const int64_t &getValueOfDiscussionMessageId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int64_t> &getDiscussionMessageId() const noexcept;
+    ///Set the value of the column discussion_message_id
+    void setDiscussionMessageId(const int64_t &pDiscussionMessageId) noexcept;
+    void setDiscussionMessageIdToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 9;  }
+    /**  For column type  */
+    ///Get the value of the column type, returns the default value if the column is null
+    const std::string &getValueOfType() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getType() const noexcept;
+    ///Set the value of the column type
+    void setType(const std::string &pType) noexcept;
+    void setType(std::string &&pType) noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 11;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -216,6 +236,8 @@ class Messages
     std::shared_ptr<std::string> text_;
     std::shared_ptr<::trantor::Date> sentAt_;
     std::shared_ptr<::trantor::Date> editedAt_;
+    std::shared_ptr<int64_t> discussionMessageId_;
+    std::shared_ptr<std::string> type_;
     struct MetaData
     {
         const std::string colName_;
@@ -227,7 +249,7 @@ class Messages
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[9]={ false };
+    bool dirtyFlag_[11]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -289,6 +311,16 @@ class Messages
             sql += "edited_at,";
             ++parametersCount;
         }
+        if(dirtyFlag_[9])
+        {
+            sql += "discussion_message_id,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[10])
+        {
+            sql += "type,";
+            ++parametersCount;
+        }
         needSelection=true;
         if(parametersCount > 0)
         {
@@ -346,6 +378,16 @@ class Messages
             sql +="default,";
         }
         if(dirtyFlag_[8])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[9])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[10])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

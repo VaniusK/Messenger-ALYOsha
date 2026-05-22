@@ -1,7 +1,9 @@
 #include <drogon/orm/Result.h>
+#include <gtest/gtest.h>
 #include "../fixtures/ChatTestFixture.hpp"
 #include "dto/ChatPreview.hpp"
 #include "utils/Enum.hpp"
+#include "utils/server_exceptions.hpp"
 
 using ChatRepository = messenger::repositories::ChatRepository;
 using Chat = drogon_model::messenger_db::Chats;
@@ -93,10 +95,13 @@ TEST_F(ChatTestFixture, TestGetByUserDirect) {
     Chat chat3 = sync_wait(repo_.getOrCreateDirect(
         dummy_user2_.getValueOfId(), dummy_user3_.getValueOfId()
     ));
-    Message message = sync_wait(repo_.sendMessage(
-        chat1.getValueOfId(), dummy_user2_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
-    ));
+    Message message =
+        sync_wait(repo_.sendMessage(
+                      chat1.getValueOfId(), dummy_user2_.getValueOfId(),
+                      "my message", std::nullopt, std::nullopt,
+                      messenger::models::MessageType::Text
+                  ))
+            .first;
     std::vector<ChatPreview> chatPreviews =
         sync_wait(repo_.getByUser(dummy_user1_.getValueOfId()));
     EXPECT_EQ(chatPreviews.size(), 2);
@@ -179,10 +184,13 @@ TEST_F(ChatTestFixture, TestMarkAsRead) {
     Chat chat = sync_wait(repo_.getOrCreateDirect(
         dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
     ));
-    Message message = sync_wait(repo_.sendMessage(
-        chat.getValueOfId(), dummy_user2_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
-    ));
+    Message message =
+        sync_wait(repo_.sendMessage(
+                      chat.getValueOfId(), dummy_user2_.getValueOfId(),
+                      "my message", std::nullopt, std::nullopt,
+                      messenger::models::MessageType::Text
+                  ))
+            .first;
     bool result = sync_wait(repo_.markAsRead(
         chat.getValueOfId(), dummy_user1_.getValueOfId(), message.getValueOfId()
     ));
@@ -199,10 +207,13 @@ TEST_F(ChatTestFixture, TestMarkAsReadFailNoChat) {
     Chat chat = sync_wait(repo_.getOrCreateDirect(
         dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
     ));
-    Message message = sync_wait(repo_.sendMessage(
-        chat.getValueOfId(), dummy_user2_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
-    ));
+    Message message =
+        sync_wait(repo_.sendMessage(
+                      chat.getValueOfId(), dummy_user2_.getValueOfId(),
+                      "my message", std::nullopt, std::nullopt,
+                      messenger::models::MessageType::Text
+                  ))
+            .first;
     bool result = sync_wait(repo_.markAsRead(
         chat.getValueOfId() - 1, dummy_user1_.getValueOfId(),
         message.getValueOfId()
@@ -216,10 +227,13 @@ TEST_F(ChatTestFixture, TestMarkAsReadFailNoUser) {
     Chat chat = sync_wait(repo_.getOrCreateDirect(
         dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
     ));
-    Message message = sync_wait(repo_.sendMessage(
-        chat.getValueOfId(), dummy_user2_.getValueOfId(), "my message",
-        std::nullopt, std::nullopt
-    ));
+    Message message =
+        sync_wait(repo_.sendMessage(
+                      chat.getValueOfId(), dummy_user2_.getValueOfId(),
+                      "my message", std::nullopt, std::nullopt,
+                      messenger::models::MessageType::Text
+                  ))
+            .first;
     bool result = sync_wait(repo_.markAsRead(
         chat.getValueOfId(), dummy_user1_.getValueOfId() - 1,
         message.getValueOfId()
@@ -240,6 +254,31 @@ TEST_F(ChatTestFixture, TestCreateGroup) {
     EXPECT_TRUE(chat_result.has_value());
     EXPECT_EQ(chat_result.value().getValueOfId(), chat.getValueOfId());
     EXPECT_EQ(chat.getValueOfName(), "Чат жабоманов");
+}
+
+TEST_F(ChatTestFixture, TestCreateGroupFail) {
+    /* When creator isn't a member,
+    CreateGroup should throw
+    and transaction should rollback*/
+    EXPECT_THROW(
+        sync_wait(repo_.createGroup(
+            "Чат жабоманов", dummy_user1_.getValueOfId(),
+            {dummy_user2_.getValueOfId(), dummy_user3_.getValueOfId()}
+        )),
+        messenger::exceptions::NotFoundException
+    );
+    EXPECT_EQ(
+        sync_wait(repo_.getByUser(dummy_user1_.getValueOfId())).size(), 0
+    );
+    ;
+    EXPECT_EQ(
+        sync_wait(repo_.getByUser(dummy_user2_.getValueOfId())).size(), 0
+    );
+    ;
+    EXPECT_EQ(
+        sync_wait(repo_.getByUser(dummy_user3_.getValueOfId())).size(), 0
+    );
+    ;
 }
 
 TEST_F(ChatTestFixture, TestGetMembers) {
@@ -318,7 +357,7 @@ TEST_F(ChatTestFixture, TestAddMemberFail) {
             chat.getValueOfId(), dummy_user3_.getValueOfId(),
             messenger::models::ChatRole::Moderator
         )),
-        std::logic_error
+        messenger::exceptions::ForbiddenException
     );
 }
 
@@ -329,7 +368,7 @@ TEST_F(ChatTestFixture, TestRemoveMember) {
     Chat chat = sync_wait(repo_.getOrCreateDirect(
         dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()
     ));
-    EXPECT_TRUE(sync_wait(
+    EXPECT_NO_THROW(sync_wait(
         repo_.removeMember(chat.getValueOfId(), dummy_user2_.getValueOfId())
     ));
 }
@@ -342,11 +381,10 @@ TEST_F(ChatTestFixture, TestUpdateMemberRole) {
         "Чат жабоманов", dummy_user1_.getValueOfId(),
         {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
     ));
-    auto result = sync_wait(repo_.updateMemberRole(
+    EXPECT_NO_THROW(sync_wait(repo_.updateMemberRole(
         chat.getValueOfId(), dummy_user2_.getValueOfId(),
         messenger::models::ChatRole::Moderator
-    ));
-    EXPECT_TRUE(result);
+    )));
     auto members = sync_wait(repo_.getMembers(chat.getValueOfId()));
     auto chat_member2 = *std::find_if(
         members.begin(), members.end(),
@@ -366,11 +404,10 @@ TEST_F(ChatTestFixture, TestUpdateMemberRoleFail) {
         "Чат жабоманов", dummy_user1_.getValueOfId(),
         {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
     ));
-    auto result = sync_wait(repo_.updateMemberRole(
+    EXPECT_ANY_THROW(sync_wait(repo_.updateMemberRole(
         chat.getValueOfId(), dummy_user3_.getValueOfId(),
         messenger::models::ChatRole::Moderator
-    ));
-    EXPECT_FALSE(result);
+    )));
 }
 
 TEST_F(ChatTestFixture, TestUpdateInfo) {
@@ -381,10 +418,9 @@ TEST_F(ChatTestFixture, TestUpdateInfo) {
         "Чат жабоманов", dummy_user1_.getValueOfId(),
         {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
     ));
-    auto result = sync_wait(repo_.updateInfo(
+    EXPECT_NO_THROW(sync_wait(repo_.updateInfo(
         chat.getValueOfId(), std::nullopt, "new_avatar", "new_description"
-    ));
-    EXPECT_TRUE(result);
+    )));
     Chat new_chat = sync_wait(repo_.getById(chat.getValueOfId())).value();
     EXPECT_EQ(new_chat.getValueOfAvatarPath(), "new_avatar");
     EXPECT_EQ(new_chat.getValueOfDescription(), "new_description");
@@ -397,10 +433,9 @@ TEST_F(ChatTestFixture, TestUpdateInfoFail) {
         "Чат жабоманов", dummy_user1_.getValueOfId(),
         {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
     ));
-    auto result = sync_wait(repo_.updateInfo(
+    EXPECT_ANY_THROW(sync_wait(repo_.updateInfo(
         chat.getValueOfId() - 1, std::nullopt, "new_avatar", "new_description"
-    ));
-    EXPECT_FALSE(result);
+    )));
 }
 
 TEST_F(ChatTestFixture, TestCreateSaved) {
@@ -413,4 +448,47 @@ TEST_F(ChatTestFixture, TestCreateSaved) {
     EXPECT_EQ(members.size(), 1);
     auto member = members[0];
     EXPECT_EQ(member.getValueOfChatType(), messenger::models::ChatType::Saved);
+}
+
+TEST_F(ChatTestFixture, TestGetMember) {
+    /* When valid data is provided,
+    getMember should return member of the chat*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId(),
+         dummy_user3_.getValueOfId()}
+    ));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Group);
+    auto chat_member = sync_wait(
+        repo_.getMember(chat.getValueOfId(), dummy_user1_.getValueOfId())
+    );
+    EXPECT_EQ(chat_member.getValueOfChatId(), chat.getValueOfId());
+    EXPECT_EQ(chat_member.getValueOfUserId(), dummy_user1_.getValueOfId());
+}
+
+TEST_F(ChatTestFixture, TestGetMemberFail) {
+    /* When user isn't a member of a chat,
+    getMember should throw*/
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    EXPECT_EQ(chat.getValueOfType(), messenger::models::ChatType::Group);
+    EXPECT_THROW(
+        sync_wait(
+            repo_.getMember(chat.getValueOfId(), dummy_user3_.getValueOfId())
+        ),
+        std::runtime_error
+    );
+}
+
+TEST_F(ChatTestFixture, TestLockChat) {
+    /* When LockChat is called,
+    it shouldn't throw any errors*/
+    auto transaction_ptr = sync_wait(createTransaction());
+    Chat chat = sync_wait(repo_.createGroup(
+        "Чат жабоманов", dummy_user1_.getValueOfId(),
+        {dummy_user1_.getValueOfId(), dummy_user2_.getValueOfId()}
+    ));
+    sync_wait(repo_.lockChat(chat.getValueOfId(), transaction_ptr));
 }

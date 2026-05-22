@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Qt
-          key: qt-6.7.3-linux-gcc
+          key: qt-6.7.3-linux-gcc-multimedia
 
       - name: Install system build dependencies
         run: |
@@ -48,7 +48,16 @@ jobs:
             libssl-dev \
             libglib2.0-dev \
             imagemagick \
-            libfuse2
+            libfuse2 \
+            libasound2-dev \
+            libpulse-dev \
+            libgstreamer1.0-0 \
+            libgstreamer-plugins-base1.0-0 \
+            libgstreamer-gl1.0-0 \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            ca-certificates \
+            openssl
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -56,7 +65,7 @@ jobs:
           python3 -m pip install aqtinstall
           aqt install-qt linux desktop 6.7.3 linux_gcc_64 \
             --outputdir ~/Qt \
-            -m qtwebsockets
+            -m qtwebsockets qtmultimedia
 
       - name: Export Qt path
         run: echo "QT_ROOT=$HOME/Qt/6.7.3/gcc_64" >> $GITHUB_ENV
@@ -98,6 +107,8 @@ jobs:
           CLIENT_BIN=$(find build/client -type f -name "client" -executable | head -n 1)
           if [ -z "$CLIENT_BIN" ]; then echo "Client binary not found!"; exit 1; fi
 
+          rm -f /home/runner/Qt/6.7.3/gcc_64/plugins/sqldrivers/libqsqlmimer.so
+
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             --executable "$CLIENT_BIN" \
@@ -122,7 +133,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:\Qt
-          key: qt-6.7.3-windows-msvc2019
+          key: qt-6.7.3-windows-msvc2019-multimedia
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt-win.outputs.cache-hit != 'true'
@@ -130,7 +141,7 @@ jobs:
           python -m pip install aqtinstall
           aqt install-qt windows desktop 6.7.3 win64_msvc2019_64 `
             --outputdir C:\Qt `
-            -m qtwebsockets
+            -m qtwebsockets qtmultimedia
 
       - name: Configure & Build client
         run: |
@@ -192,7 +203,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Qt
-          key: qt-6.7.3-macos-clang
+          key: qt-6.7.3-macos-clang-multimedia
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt-mac.outputs.cache-hit != 'true'
@@ -200,7 +211,7 @@ jobs:
           pipx install aqtinstall
           aqt install-qt mac desktop 6.7.3 clang_64 \
             --outputdir ~/Qt \
-            -m qtwebsockets
+            -m qtwebsockets qtmultimedia
 
       - name: Export Qt path
         run: echo "QT_ROOT=$HOME/Qt/6.7.3/macos" >> $GITHUB_ENV
@@ -266,7 +277,7 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
-    needs: [build-client, build-client-macos, run-format]
+    needs: [run-format]
     steps:
       - uses: actions/checkout@v4
       - name: Create test .env
@@ -279,6 +290,11 @@ jobs:
           echo "SERVER_WINDOW_FOR_REQUESTS_SECONDS=10" >> .env
           echo "SERVER_MAX_REQUESTS_PER_WINDOW=1000000" >> .env
           echo "SERVER_IP_LIST_CLEANING_SECONDS_COOLDOWN=60" >> .env
+          echo "S3_BASE_URL=minio:9000" >> .env
+          echo "S3_PRIVATE_BUCKETNAME=messenger-alyosha" >> .env
+          echo "S3_ACCESS_KEY=minioadmin" >> .env
+          echo "S3_SECRET_KEY=minioadmin" >> .env
+          echo "S3_SHOULD_USE_HTTPS=false" >> .env
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -302,17 +318,44 @@ jobs:
           ls -la artifacts/
           test -f artifacts/client || (echo "Client binary not found!" && exit 1)
       
-      - name: Start services
-        run: docker compose up -d
-    
-      - name: Check services are running
-        run: |
-          sleep 3
-          docker compose ps
-          docker compose logs
-      
+
       - name: Run server tests
-        run: docker compose run test-server
+        run: docker compose --profile test run test-server
+      
+      - name: Generate server tests coverage report
+        run: docker compose --profile test run test-server-coverage
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: server-artifacts/coverage_report
+        
       
       - name: Cleanup
-        run: docker compose down -v
+        run: docker compose --profile test down -v
+  deploy:
+    name: Deploy on staging server
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    steps:
+      - name: Execute deployment script via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_SERVER_HOST }}
+          username: ${{ secrets.STAGING_SERVER_USER }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          command_timeout: 60m
+          script: |
+            cd /opt/messenger/Messenger-ALYOsha/
+            
+            git fetch origin dev
+            git reset --hard origin/dev
+            
+            sed -i 's/api.localhost/api.alyosha-test.ru/g' server/nginx/nginx.conf
+            sed -i 's/localhost/alyosha-test.ru/g' server/nginx/nginx.conf
+
+            docker compose down
+            make run_server
+  

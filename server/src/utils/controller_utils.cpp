@@ -1,3 +1,4 @@
+#include <drogon/HttpRequest.h>
 #include <json/value.h>
 #include <string>
 #include <vector>
@@ -24,6 +25,33 @@ bool find_missed_fields(
         }
         resp_json["message"] =
             "Invalid JSON: couldn't find some fields. " + missing_fields_str;
+        return true;
+    }
+    return false;
+}
+
+bool find_missed_queries(
+    Json::Value &resp_json,
+    const drogon::HttpRequestPtr req,
+    std::vector<std::string> &&necessary_queries
+) {
+    std::vector<std::string> unfinded_queries;
+    for (const auto &required_query : necessary_queries) {
+        if (req->getParameter(required_query).empty()) {
+            unfinded_queries.push_back(required_query);
+        }
+    }
+    if (!unfinded_queries.empty()) {
+        std::string missing_queries_str = "Missing query-parameters: ";
+        for (const auto &field : unfinded_queries) {
+            missing_queries_str += field;
+            if (field != unfinded_queries.back()) {
+                missing_queries_str += ", ";
+            }
+        }
+        resp_json["message"] =
+            "Invalid request: couldn't find some query-parameters. " +
+            missing_queries_str;
         return true;
     }
     return false;

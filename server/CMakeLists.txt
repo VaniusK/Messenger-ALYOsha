@@ -26,25 +26,19 @@ FetchContent_Declare( # download bcrypt from github
 )
 fetchcontent_makeavailable(jwt-cpp bcrypt) # make available for the project
 
+
 configure_file(
     "config.json"
     "${CMAKE_CURRENT_BINARY_DIR}/config.json"
     COPYONLY
 )
 
+
 add_executable(${PROJECT_NAME} src/main.cc) # create executable
 
-# ##############################################################################
-# If you include the drogon source code locally in your project, use this method
-# to add drogon 
-# add_subdirectory(drogon) 
-# target_link_libraries(${PROJECT_NAME} PRIVATE drogon jwt-cpp::jwt-cpp bcrypt)
-#
-# and comment out the following lines
 find_package(Drogon CONFIG REQUIRED) # find drogon
-target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon jwt-cpp::jwt-cpp bcrypt) # link libraries
-
-# ##############################################################################
+find_package(miniocpp REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon jwt-cpp::jwt-cpp bcrypt miniocpp::miniocpp) # link libraries
 
 if (CMAKE_CXX_STANDARD LESS 20)
     message(FATAL_ERROR "c++20 or higher is required")
@@ -54,9 +48,21 @@ else ()
     message(STATUS "use c++20")
 endif ()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror=return-type -Werror=maybe-uninitialized)
+endif()
+
+option(ENABLE_COVERAGE "Включить вычисления покрытия тестами" OFF)
+
+if(ENABLE_COVERAGE)
+    target_compile_options(${PROJECT_NAME} PRIVATE -O0 --coverage)
+    target_link_options(${PROJECT_NAME} PRIVATE --coverage)
+endif()
+
 aux_source_directory(src SRC_SRC) # get all files from src
 aux_source_directory(src/repositories REPO_SRC) # get all files from src/repositories
 aux_source_directory(src/utils UTILS_SRC) # get all files from src/utils
+aux_source_directory(src/dto DTO_SRC)
 aux_source_directory(services SERVICES_SRC) # get all files from services
 
 aux_source_directory(controllers CTL_SRC) # get all files from controllers
@@ -110,9 +116,10 @@ if(BUILD_TESTS)
     
     add_executable(server_tests 
         ${TEST_FILES}
+        ${SERVICE_UNIT_TEST_FILES}
     )
     target_link_libraries(server_tests GTest::gtest GTest::gmock)
-    target_link_libraries(server_tests Drogon::Drogon jwt-cpp::jwt-cpp bcrypt)
+    target_link_libraries(server_tests Drogon::Drogon jwt-cpp::jwt-cpp bcrypt miniocpp::miniocpp)
 
     aux_source_directory(src SRC_SRC) # get all files from src
     aux_source_directory(src/repositories REPO_SRC) # get all files from src/repositories
@@ -123,9 +130,14 @@ if(BUILD_TESTS)
     aux_source_directory(models MODEL_SRC) # get all files from models
 
     target_include_directories(server_tests PRIVATE ${bcrypt_SOURCE_DIR}/include) # include bcrypt headers
-    target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include) # include project headers
+    target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/tests) # include project headers
     target_sources(server_tests PRIVATE ${REPO_SRC} ${UTILS_SRC} ${SERVICES_SRC} ${CTL_SRC} ${FILTER_SRC} ${MODEL_SRC})
     
+    if(ENABLE_COVERAGE)
+        target_compile_options(server_tests PRIVATE -O0 --coverage)
+        target_link_options(server_tests PRIVATE --coverage)
+    endif()
+
     include(GoogleTest)
     gtest_discover_tests(server_tests)
 endif()

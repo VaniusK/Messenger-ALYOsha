@@ -46,7 +46,6 @@ class Reactions
     {
         static const std::string _id;
         static const std::string _message_id;
-        static const std::string _post_id;
         static const std::string _user_id;
         static const std::string _emoji;
         static const std::string _reacted_at;
@@ -116,16 +115,6 @@ class Reactions
     const std::shared_ptr<int64_t> &getMessageId() const noexcept;
     ///Set the value of the column message_id
     void setMessageId(const int64_t &pMessageId) noexcept;
-    void setMessageIdToNull() noexcept;
-
-    /**  For column post_id  */
-    ///Get the value of the column post_id, returns the default value if the column is null
-    const int64_t &getValueOfPostId() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<int64_t> &getPostId() const noexcept;
-    ///Set the value of the column post_id
-    void setPostId(const int64_t &pPostId) noexcept;
-    void setPostIdToNull() noexcept;
 
     /**  For column user_id  */
     ///Get the value of the column user_id, returns the default value if the column is null
@@ -154,7 +143,7 @@ class Reactions
     void setReactedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 6;  }
+    static size_t getColumnNumber() noexcept {  return 5;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -178,7 +167,6 @@ class Reactions
     void updateId(const uint64_t id);
     std::shared_ptr<int64_t> id_;
     std::shared_ptr<int64_t> messageId_;
-    std::shared_ptr<int64_t> postId_;
     std::shared_ptr<int64_t> userId_;
     std::shared_ptr<std::string> emoji_;
     std::shared_ptr<::trantor::Date> reactedAt_;
@@ -193,7 +181,7 @@ class Reactions
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[6]={ false };
+    bool dirtyFlag_[5]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -220,22 +208,17 @@ class Reactions
         }
         if(dirtyFlag_[2])
         {
-            sql += "post_id,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[3])
-        {
             sql += "user_id,";
             ++parametersCount;
         }
-        if(dirtyFlag_[4])
+        if(dirtyFlag_[3])
         {
             sql += "emoji,";
             ++parametersCount;
         }
         sql += "reacted_at,";
         ++parametersCount;
-        if(!dirtyFlag_[5])
+        if(!dirtyFlag_[4])
         {
             needSelection=true;
         }
@@ -268,11 +251,6 @@ class Reactions
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[4])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        if(dirtyFlag_[5])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

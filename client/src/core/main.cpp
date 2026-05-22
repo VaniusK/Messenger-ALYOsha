@@ -1,12 +1,16 @@
 #include <qqml.h>
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QUrl>
 #include <QtMessageHandler>
 #include "AuthManager.hpp"
 #include "ChatManager.hpp"
 #include "ConnectionManager.hpp"
+#include "LocalChatStorage.hpp"
+#include "MediaCacheManager.hpp"
+#include "MediaManager.hpp"
 #include "StateManager.hpp"
+#include "VoiceManager.hpp"
 
 void noMessageOutput(
     QtMsgType type,
@@ -16,18 +20,27 @@ void noMessageOutput(
 }
 
 int main(int argc, char *argv[]) {
-#ifdef QT_NO_DEBUG
-    qInstallMessageHandler(noMessageOutput);
-#endif
+    QApplication app(argc, argv);
 
-    QGuiApplication app(argc, argv);
+    QCoreApplication::setOrganizationName("AlyoshaTeam");
+    QCoreApplication::setOrganizationDomain("alyosha.su");
+    QCoreApplication::setApplicationName("Alyosha");
 
     auto *stateManager = new StateManager(&app);
     auto *connectionManager = new ConnectionManager(
         [stateManager]() { return stateManager->getToken(); }, &app
     );
     auto *authManager = new AuthManager(connectionManager, stateManager, &app);
-    auto *chatManager = new ChatManager(connectionManager, stateManager, &app);
+    auto *mediaCacheManager = new MediaCacheManager(connectionManager, &app);
+    auto *localChatStorage = new LocalChatStorage(&app);
+    auto *chatManager = new ChatManager(
+        connectionManager, stateManager, mediaCacheManager, localChatStorage,
+        &app
+    );
+    auto *mediaManager = new MediaManager(
+        connectionManager, stateManager, localChatStorage, chatManager, &app
+    );
+    auto *voiceManager = new VoiceManager(&app);
 
     QQmlApplicationEngine engine;
     qmlRegisterSingletonInstance("Messenger", 1, 0, "AppState", stateManager);
@@ -36,6 +49,11 @@ int main(int argc, char *argv[]) {
     );
     qmlRegisterSingletonInstance("Messenger", 1, 0, "Auth", authManager);
     qmlRegisterSingletonInstance("Messenger", 1, 0, "ChatLayer", chatManager);
+    qmlRegisterSingletonInstance("Messenger", 1, 0, "MediaLayer", mediaManager);
+    qmlRegisterSingletonInstance("Messenger", 1, 0, "VoiceLayer", voiceManager);
+    qmlRegisterSingletonInstance(
+        "Messenger", 1, 0, "MediaCacheLayer", mediaCacheManager
+    );
     const QUrl url(u"qrc:/messenger_client_uri/src/ui/main.qml"_qs);
     engine.load(url);
     return app.exec();
