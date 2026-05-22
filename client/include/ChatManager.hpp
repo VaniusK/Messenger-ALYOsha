@@ -39,7 +39,6 @@ public:
     );
     Q_INVOKABLE void cacheMessageMedia(QJsonObject &message);
     Q_INVOKABLE void clearCache();
-    Q_INVOKABLE void addMessageToCache(const QJsonObject &msg);
     Q_INVOKABLE void createGroupChat(
         const QString &name,
         const QString &description,
