@@ -154,10 +154,11 @@ void MediaManager::uploadFile(
                                         .object();
                                 QJsonObject msg = obj["message"].toObject();
                                 msg["is_me"] = true;
+                                m_chatStorage->addMessage(msg);
                                 emit uploadProgress(100);
                                 emit uploadFinished();
-                                m_chatStorage->addMessage(msg);
                                 emit messageSentSucces(msg);
+                                qDebug() << "Sent message with MediaManager";
                             }
                         }
                     );

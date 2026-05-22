@@ -167,7 +167,6 @@ void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
                     QString currentUserIdStr = QString::number(currentUserId);
 
                     msg["is_me"] = (senderIdStr == currentUserIdStr);
-                    qDebug() << "Got raw id of " << msg["id"].toInt();
                     if (!oldest_message.has_value() ||
                         oldest_message.value()["id"].toInt() >
                             msg["id"].toInt()) {
