@@ -479,7 +479,7 @@ Rectangle {
 
                         Text {
                             anchors.centerIn: parent
-                            text: (model.sender_name || "?").charAt(0).toUpperCase()
+                            text: senderNameStr ? senderNameStr.charAt(0).toUpperCase() : "?"
                             color: "white"; font.bold: true; font.pixelSize: 16
                         }
                     }
