@@ -37,8 +37,9 @@ int main(int argc, char *argv[]) {
         connectionManager, stateManager, mediaCacheManager, localChatStorage,
         &app
     );
-    auto *mediaManager =
-        new MediaManager(connectionManager, stateManager, &app);
+    auto *mediaManager = new MediaManager(
+        connectionManager, stateManager, localChatStorage, &app
+    );
     auto *voiceManager = new VoiceManager(&app);
 
     QQmlApplicationEngine engine;

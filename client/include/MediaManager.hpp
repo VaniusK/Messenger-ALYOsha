@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QString>
 #include "ConnectionManager.hpp"
+#include "LocalChatStorage.hpp"
 #include "StateManager.hpp"
 
 class MediaManager : public QObject {
@@ -11,6 +12,7 @@ public:
     explicit MediaManager(
         ConnectionManager *connection,
         StateManager *state,
+        LocalChatStorage *chatStorage,
         QObject *parent = nullptr
     );
 
@@ -42,4 +44,5 @@ signals:
 private:
     ConnectionManager *m_connection;
     StateManager *m_state;
+    LocalChatStorage *m_chatStorage;
 };
