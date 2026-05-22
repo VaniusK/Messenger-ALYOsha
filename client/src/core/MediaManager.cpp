@@ -153,10 +153,11 @@ void MediaManager::uploadFile(
                                     QJsonDocument::fromJson(msgReply->readAll())
                                         .object();
                                 QJsonObject msg = obj["message"].toObject();
+                                msg["is_me"] = true;
                                 emit uploadProgress(100);
                                 emit uploadFinished();
-                                emit messageSentSucces(msg);
                                 m_chatStorage->addMessage(msg);
+                                emit messageSentSucces(msg);
                             }
                         }
                     );
