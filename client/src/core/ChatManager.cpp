@@ -91,6 +91,7 @@ void ChatManager::searchUsers(const QString &query) {
 
 void ChatManager::fetchChats() {
     StateManager *sm = m_stateManager;
+    qDebug() << "[ChatManager] Fetching chats";
     if (!sm || sm->getUserId() <= 0) {
 #ifdef QT_DEBAG
         qDebug() << "[ChatManager] fetchChats skipped. Invalid state manager "
@@ -121,6 +122,7 @@ void ChatManager::fetchChats() {
             emit chatError("Fetch chats failed: " + reply->errorString());
         }
     });
+    qDebug() << "[ChatManager] Fetched chats";
 }
 
 void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {
@@ -343,6 +345,7 @@ void ChatManager::sendMessageWithAttachment(
                 );
                 return;
             }
+            qDebug() << "[ChatManager] Sent message with attachment";
 
             QJsonObject obj =
                 QJsonDocument::fromJson(reply->readAll()).object();
