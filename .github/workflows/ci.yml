@@ -107,6 +107,8 @@ jobs:
           CLIENT_BIN=$(find build/client -type f -name "client" -executable | head -n 1)
           if [ -z "$CLIENT_BIN" ]; then echo "Client binary not found!"; exit 1; fi
 
+          rm -f /home/runner/Qt/6.7.3/gcc_64/plugins/sqldrivers/libqsqlmimer.so
+
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             --executable "$CLIENT_BIN" \
@@ -332,3 +334,28 @@ jobs:
       
       - name: Cleanup
         run: docker compose --profile test down -v
+  deploy:
+    name: Deploy on staging server
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    steps:
+      - name: Execute deployment script via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_SERVER_HOST }}
+          username: ${{ secrets.STAGING_SERVER_USER }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          command_timeout: 60m
+          script: |
+            cd /opt/messenger/Messenger-ALYOsha/
+            
+            git fetch origin dev
+            git reset --hard origin/dev
+            
+            sed -i 's/api.localhost/api.alyosha-test.ru/g' server/nginx/nginx.conf
+            sed -i 's/localhost/alyosha-test.ru/g' server/nginx/nginx.conf
+
+            docker compose down
+            make run_server
+  

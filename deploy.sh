@@ -6,7 +6,7 @@ REMOTE="ivan@158.160.219.207"
 REMOTE_DIR="~/"
 
 echo "Building..."
-make run_docker
+make run_server
 
 echo "Saving..."
 docker save $IMAGE | gzip > /tmp/alesha.gz
