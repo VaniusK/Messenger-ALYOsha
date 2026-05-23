@@ -123,20 +123,20 @@ void ChatManager::fetchChats() {
             m_chatStorage->updateChatPreviews(previews);
             for (const QJsonValue &preview : previews) {
                 int64_t chat_id = preview["chat_id"].toInt();
-                auto last_saved_message =
+                auto last_saved_message_optional =
                     m_chatStorage->getLastChatMessage(chat_id);
-                if (!m_chatStorage->getLastChatMessage(chat_id).has_value()) {
+                if (last_saved_message_optional.has_value()) {
                     continue;
                 }
-                if (last_saved_message.value()["id"].toInt() !=
+                auto last_saved_message = last_saved_message_optional.value();
+                if (last_saved_message["id"].toInt() !=
                     preview["last_message"]["id"].toInt()) {
                     m_chatStorage->clearChat(chat_id);
                     qDebug() << "[ChatManager] last saved id is "
-                             << last_saved_message.value()["id"].toInt();
+                             << last_saved_message["id"].toInt();
                     qDebug() << "yet server sent "
                              << preview["last_message"]["id"].toInt();
                 }
-                qDebug() << "[ChatManager] Didn't clear chat " << chat_id;
             }
             emit chatsUpdated(m_chatStorage->getChatPreviews());
         } else {
