@@ -104,23 +104,31 @@ void ChatManager::fetchChats() {
     qDebug() << "[ChatManager] fetchChats called for user ID:"
              << sm->getUserId();
 #endif
+    if (m_chatStorage->is_outdated) {
+        QNetworkReply *reply = m_connection->get(
+            "/chats/user/" + QString::number(sm->getUserId())
+        );
 
-    QNetworkReply *reply =
-        m_connection->get("/chats/user/" + QString::number(sm->getUserId()));
-
-    connect(reply, &QNetworkReply::finished, [this, reply]() {
-        reply->deleteLater();
-        if (reply->error() == QNetworkReply::NoError) {
-            QByteArray responseData = reply->readAll();
+        connect(reply, &QNetworkReply::finished, [this, reply]() {
+            reply->deleteLater();
+            if (reply->error() == QNetworkReply::NoError) {
+                QByteArray responseData = reply->readAll();
 #ifdef QT_DEBAG
-            qDebug() << "[ChatManager] fetchChats RAW JSON: " << responseData;
+                qDebug() << "[ChatManager] fetchChats RAW JSON: "
+                         << responseData;
 #endif
-            QJsonDocument doc = QJsonDocument::fromJson(responseData);
-            emit chatsUpdated(doc.object()["chats"].toArray());
-        } else {
-            emit chatError("Fetch chats failed: " + reply->errorString());
-        }
-    });
+                QJsonArray previews = (QJsonDocument::fromJson(responseData))
+                                          .object()["chats"]
+                                          .toArray();
+                m_chatStorage->updateChatPreviews(previews);
+                emit chatsUpdated(m_chatStorage->getChatPreviews());
+            } else {
+                emit chatError("Fetch chats failed: " + reply->errorString());
+            }
+        });
+    } else {
+        emit chatsUpdated(m_chatStorage->getChatPreviews());
+    }
 }
 
 void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {

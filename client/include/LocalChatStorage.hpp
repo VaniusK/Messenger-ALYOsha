@@ -20,4 +20,8 @@ public:
     QJsonArray getMessagesByChat(int64_t chat_id);
     std::optional<QJsonObject> getOldestChatMessage(int64_t chat_id);
     void clear();
+    void updateChatPreviews(const QJsonArray &chats);
+    QJsonArray getChatPreviews();
+
+    bool is_outdated;
 };
