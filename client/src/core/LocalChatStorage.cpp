@@ -69,7 +69,38 @@ void LocalChatStorage::addMessage(QJsonObject message_object) {
     } else {
         qDebug() << "Message added to DB";
     }
-    // TODO: обновлять превью
+
+    QSqlQuery readPreviewQuery;
+    readPreviewQuery.prepare(
+        "SELECT json_data FROM chat_previews WHERE id = :id"
+    );
+    readPreviewQuery.bindValue(":id", message["chat_id"].toInt());
+
+    if (readPreviewQuery.exec() && readPreviewQuery.next()) {
+        QJsonDocument chat_preview = QJsonDocument::fromJson(
+            readPreviewQuery.value(0).toString().toUtf8()
+        );
+
+        QSqlQuery updatePreviewQuery;
+        updatePreviewQuery.prepare(
+            "UPDATE chat_previews SET json_data = :json_data WHERE id = :id"
+        );
+        updatePreviewQuery.bindValue(
+            ":json_data",
+            QString::fromUtf8(chat_preview.toJson(QJsonDocument::Compact))
+        );
+        updatePreviewQuery.bindValue(":id", message["chat_id"].toInt());
+
+        if (updatePreviewQuery.exec()) {
+            qDebug() << "Updated chat previews last message";
+        } else {
+            qDebug() << "Failed to update chat preview's last message: "
+                     << updatePreviewQuery.lastError().text();
+        }
+    } else {
+        qDebug() << "Failed to read chat preview for updating: "
+                 << readPreviewQuery.lastError().text();
+    }
 }
 
 QJsonArray LocalChatStorage::getMessagesByChat(int64_t chat_id) {
