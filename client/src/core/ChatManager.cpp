@@ -104,35 +104,32 @@ void ChatManager::fetchChats() {
     qDebug() << "[ChatManager] fetchChats called for user ID:"
              << sm->getUserId();
 #endif
-    if (m_chatStorage->is_outdated) {
-        QNetworkReply *reply = m_connection->get(
-            "/chats/user/" + QString::number(sm->getUserId())
-        );
+    emit chatsUpdated(m_chatStorage->getChatPreviews());
+    QNetworkReply *reply =
+        m_connection->get("/chats/user/" + QString::number(sm->getUserId()));
 
-        connect(reply, &QNetworkReply::finished, [this, reply]() {
-            reply->deleteLater();
-            if (reply->error() == QNetworkReply::NoError) {
-                QByteArray responseData = reply->readAll();
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray responseData = reply->readAll();
 #ifdef QT_DEBAG
-                qDebug() << "[ChatManager] fetchChats RAW JSON: "
-                         << responseData;
+            qDebug() << "[ChatManager] fetchChats RAW JSON: " << responseData;
 #endif
-                QJsonArray previews = (QJsonDocument::fromJson(responseData))
-                                          .object()["chats"]
-                                          .toArray();
-                qDebug() << "[ChatManager] Got previews with size "
-                         << previews.size();
+            QJsonArray previews = (QJsonDocument::fromJson(responseData))
+                                      .object()["chats"]
+                                      .toArray();
+            qDebug() << "[ChatManager] Got previews with size "
+                     << previews.size();
+            if (m_chatStorage->is_outdated) {
                 m_chatStorage->clear();
-                m_chatStorage->updateChatPreviews(previews);
-                emit chatsUpdated(m_chatStorage->getChatPreviews());
                 m_chatStorage->is_outdated = false;
-            } else {
-                emit chatError("Fetch chats failed: " + reply->errorString());
             }
-        });
-    } else {
-        emit chatsUpdated(m_chatStorage->getChatPreviews());
-    }
+            m_chatStorage->updateChatPreviews(previews);
+            emit chatsUpdated(m_chatStorage->getChatPreviews());
+        } else {
+            emit chatError("Fetch chats failed: " + reply->errorString());
+        }
+    });
 }
 
 void ChatManager::fetchChatHistory(const QString &chatId, int beforeId) {

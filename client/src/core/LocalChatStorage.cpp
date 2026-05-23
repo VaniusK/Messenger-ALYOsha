@@ -69,44 +69,12 @@ void LocalChatStorage::addMessage(QJsonObject message_object) {
     } else {
         qDebug() << "Message added to DB";
     }
-
-    QSqlQuery readPreviewQuery;
-    readPreviewQuery.prepare(
-        "SELECT json_data FROM chat_previews WHERE id = :id"
-    );
-    readPreviewQuery.bindValue(":id", message["chat_id"].toInt());
-
-    if (readPreviewQuery.exec() && readPreviewQuery.next()) {
-        QJsonDocument chat_preview = QJsonDocument::fromJson(
-            readPreviewQuery.value(0).toString().toUtf8()
-        );
-
-        QSqlQuery updatePreviewQuery;
-        updatePreviewQuery.prepare(
-            "UPDATE chat_previews SET json_data = :json_data WHERE id = :id"
-        );
-        updatePreviewQuery.bindValue(
-            ":json_data",
-            QString::fromUtf8(chat_preview.toJson(QJsonDocument::Compact))
-        );
-        updatePreviewQuery.bindValue(":id", message["chat_id"].toInt());
-
-        if (updatePreviewQuery.exec()) {
-            qDebug() << "Updated chat previews last message";
-        } else {
-            qDebug() << "Failed to update chat preview's last message: "
-                     << updatePreviewQuery.lastError().text();
-        }
-    } else {
-        qDebug() << "Failed to read chat preview for updating: "
-                 << readPreviewQuery.lastError().text();
-    }
 }
 
 QJsonArray LocalChatStorage::getMessagesByChat(int64_t chat_id) {
     QSqlQuery query;
     query.prepare(
-        "SELECT json_data from messages WHERE messages.chat_id = :chat_id "
+        "SELECT json_data FROM messages WHERE messages.chat_id = :chat_id "
         "ORDER BY messages.chat_id ASC"
     );
     query.bindValue(":chat_id", QVariant::fromValue(chat_id));
@@ -151,9 +119,7 @@ std::optional<QJsonObject> LocalChatStorage::getOldestChatMessage(
 void LocalChatStorage::clear() {
     QSqlQuery query;
     query.prepare("DELETE FROM messages");
-    QSqlQuery chat_previews_query;
-    chat_previews_query.prepare("DELETE FROM chat_previews");
-    if (!query.exec() or !chat_previews_query.exec()) {
+    if (!query.exec()) {
         qDebug() << "Error: Could't clear DB:" << query.lastError().text();
     } else {
         qDebug() << "Clearing DB";
@@ -161,6 +127,12 @@ void LocalChatStorage::clear() {
 }
 
 void LocalChatStorage::updateChatPreviews(const QJsonArray &chats) {
+    QSqlQuery clear_query;
+    clear_query.prepare("DELETE FROM chat_previews");
+    if (!clear_query.exec()) {
+        qDebug() << "Error: Could't clear Chat Previews DB:"
+                 << clear_query.lastError().text();
+    }
     QSqlQuery query;
     for (const QJsonValue &chat_value : chats) {
         QJsonDocument chat;
