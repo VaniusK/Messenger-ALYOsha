@@ -5,8 +5,7 @@
 #include <qstandardpaths.h>
 #include <stdexcept>
 
-LocalChatStorage::LocalChatStorage(QObject *parent)
-    : QObject(parent), is_outdated(true) {
+LocalChatStorage::LocalChatStorage(QObject *parent) : QObject(parent) {
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     auto data_location =
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
@@ -117,8 +116,29 @@ std::optional<QJsonObject> LocalChatStorage::getOldestChatMessage(
 }
 
 void LocalChatStorage::clear() {
+    QSqlQuery messages_query;
+    messages_query.prepare("DELETE FROM messages");
+    if (!messages_query.exec()) {
+        qDebug() << "Error: Could't clear DB messages:"
+                 << messages_query.lastError().text();
+    } else {
+        qDebug() << "Clearing DB messages";
+    }
+
+    QSqlQuery previews_query;
+    previews_query.prepare("DELETE FROM chat_previews");
+    if (!previews_query.exec()) {
+        qDebug() << "Error: Could't clear DB previews:"
+                 << previews_query.lastError().text();
+    } else {
+        qDebug() << "Clearing DB previews";
+    }
+}
+
+void LocalChatStorage::clearChat(int64_t chat_id) {
     QSqlQuery query;
-    query.prepare("DELETE FROM messages");
+    query.prepare("DELETE FROM messages WHERE messages.chat_id = :chat_id");
+    query.bindValue(":chat_id", QVariant::fromValue(chat_id));
     if (!query.exec()) {
         qDebug() << "Error: Could't clear DB:" << query.lastError().text();
     } else {

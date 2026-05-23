@@ -120,11 +120,22 @@ void ChatManager::fetchChats() {
                                       .toArray();
             qDebug() << "[ChatManager] Got previews with size "
                      << previews.size();
-            if (m_chatStorage->is_outdated) {
-                m_chatStorage->clear();
-                m_chatStorage->is_outdated = false;
-            }
             m_chatStorage->updateChatPreviews(previews);
+            for (const QJsonValue &preview : previews) {
+                int64_t chat_id = preview["chat_id"].toInt();
+                auto oldest_saved_message =
+                    m_chatStorage->getOldestChatMessage(chat_id);
+                if (!m_chatStorage->getOldestChatMessage(chat_id).has_value()) {
+                    continue;
+                }
+                if (oldest_saved_message.value()["id"].toInt() !=
+                    preview["last_message"]["id"].toInt()) {
+                    m_chatStorage->clearChat(chat_id);
+                    qDebug() << "[ChatManager] Cleared chat " << chat_id;
+                    continue;
+                }
+                qDebug() << "[ChatManager] Didn't clear chat " << chat_id;
+            }
             emit chatsUpdated(m_chatStorage->getChatPreviews());
         } else {
             emit chatError("Fetch chats failed: " + reply->errorString());
