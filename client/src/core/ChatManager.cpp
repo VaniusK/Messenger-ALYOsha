@@ -131,12 +131,10 @@ void ChatManager::fetchChats() {
                 if (last_saved_message.value()["id"].toInt() !=
                     preview["last_message"]["id"].toInt()) {
                     m_chatStorage->clearChat(chat_id);
-                    qDebug() << "[ChatManager] oldest saved id is "
+                    qDebug() << "[ChatManager] last saved id is "
                              << last_saved_message.value()["id"].toInt();
                     qDebug() << "yet server sent "
                              << preview["last_message"]["id"].toInt();
-                    qDebug() << "[ChatManager] Cleared chat " << chat_id;
-                    continue;
                 }
                 qDebug() << "[ChatManager] Didn't clear chat " << chat_id;
             }
