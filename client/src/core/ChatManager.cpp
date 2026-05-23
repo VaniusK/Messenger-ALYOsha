@@ -123,6 +123,7 @@ void ChatManager::fetchChats() {
                 m_chatStorage->clear();
                 m_chatStorage->updateChatPreviews(previews);
                 emit chatsUpdated(m_chatStorage->getChatPreviews());
+                m_chatStorage->is_outdated = false;
             } else {
                 emit chatError("Fetch chats failed: " + reply->errorString());
             }
