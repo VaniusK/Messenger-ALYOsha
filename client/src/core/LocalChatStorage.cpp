@@ -142,7 +142,7 @@ void LocalChatStorage::updateChatPreviews(const QJsonArray &chats) {
             "INSERT INTO chat_previews (id, json_data) VALUES (:id, "
             ":json_data)"
         );
-        query.bindValue(":id", chat["id"].toInt());
+        query.bindValue(":id", chat["chat_id"].toInt());
         query.bindValue(
             ":json_data", QString::fromUtf8(chat.toJson(QJsonDocument::Compact))
         );
