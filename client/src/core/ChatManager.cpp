@@ -104,7 +104,7 @@ void ChatManager::fetchChats() {
     qDebug() << "[ChatManager] fetchChats called for user ID:"
              << sm->getUserId();
 #endif
-
+    emit chatsUpdated(m_chatStorage->getChatPreviews());
     QNetworkReply *reply =
         m_connection->get("/chats/user/" + QString::number(sm->getUserId()));
 
@@ -115,8 +115,30 @@ void ChatManager::fetchChats() {
 #ifdef QT_DEBAG
             qDebug() << "[ChatManager] fetchChats RAW JSON: " << responseData;
 #endif
-            QJsonDocument doc = QJsonDocument::fromJson(responseData);
-            emit chatsUpdated(doc.object()["chats"].toArray());
+            QJsonArray previews = (QJsonDocument::fromJson(responseData))
+                                      .object()["chats"]
+                                      .toArray();
+            qDebug() << "[ChatManager] Got previews with size "
+                     << previews.size();
+            m_chatStorage->updateChatPreviews(previews);
+            for (const QJsonValue &preview : previews) {
+                int64_t chat_id = preview["chat_id"].toInt();
+                auto last_saved_message_optional =
+                    m_chatStorage->getLastChatMessage(chat_id);
+                if (last_saved_message_optional.has_value()) {
+                    continue;
+                }
+                auto last_saved_message = last_saved_message_optional.value();
+                if (last_saved_message["id"].toInt() !=
+                    preview["last_message"]["id"].toInt()) {
+                    m_chatStorage->clearChat(chat_id);
+                    qDebug() << "[ChatManager] last saved id is "
+                             << last_saved_message["id"].toInt();
+                    qDebug() << "yet server sent "
+                             << preview["last_message"]["id"].toInt();
+                }
+            }
+            emit chatsUpdated(m_chatStorage->getChatPreviews());
         } else {
             emit chatError("Fetch chats failed: " + reply->errorString());
         }
