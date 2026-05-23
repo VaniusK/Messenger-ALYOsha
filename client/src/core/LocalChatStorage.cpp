@@ -11,12 +11,11 @@ LocalChatStorage::LocalChatStorage(QObject *parent)
     auto data_location =
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
-    QDir data_dir(QDir::cleanPath(
-        QDir(data_location).path() + QDir::separator() + "chats.db"
-    ));
+    QDir data_dir(data_location);
+    data_dir.mkpath(".");
 
     // db.setDatabaseName(":memory:");
-    db.setDatabaseName(data_dir.path());
+    db.setDatabaseName(data_dir.filePath("chats.db"));
 
     if (!db.open()) {
         qDebug() << "Error: Could not open DB:" << db.lastError().text();
