@@ -120,6 +120,8 @@ void ChatManager::fetchChats() {
                 QJsonArray previews = (QJsonDocument::fromJson(responseData))
                                           .object()["chats"]
                                           .toArray();
+                qDebug() << "[ChatManager] Got previews with size "
+                         << previews.size();
                 m_chatStorage->clear();
                 m_chatStorage->updateChatPreviews(previews);
                 emit chatsUpdated(m_chatStorage->getChatPreviews());
