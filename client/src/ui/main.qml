@@ -10,6 +10,10 @@ Window {
     visible: true
     title: "Messenger Alyosha"
 
+    AppTheme {
+        id: appTheme 
+    }
+
     Loader {
         id: pageLoader
         anchors.fill: parent
