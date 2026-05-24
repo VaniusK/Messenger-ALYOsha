@@ -125,7 +125,7 @@ void ChatManager::fetchChats() {
                 int64_t chat_id = preview["chat_id"].toInt();
                 auto last_saved_message_optional =
                     m_chatStorage->getLastChatMessage(chat_id);
-                if (last_saved_message_optional.has_value()) {
+                if (!last_saved_message_optional.has_value()) {
                     continue;
                 }
                 auto last_saved_message = last_saved_message_optional.value();
