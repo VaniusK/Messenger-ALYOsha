@@ -5,7 +5,7 @@ import Messenger 1.0
 
 Rectangle {
     id: root
-    color: "#f1f2f5"
+    color: appTheme.bgMain
 
     Shortcut {
         sequence: "Escape"
@@ -42,8 +42,8 @@ Rectangle {
                 chatArea.activeChatDescription = chatDescription || ""
             }
 
-            onLogoutRequested: {
-                logoutDialog.open()
+            onSettingsRequested: {
+                settingsPopup.open()
             }
         }
 
@@ -54,105 +54,17 @@ Rectangle {
         }
     }
 
-    Dialog {
-        id: logoutDialog
-        anchors.centerIn: parent
-        width: 320
-        height: 140
-        modal: true
+    SettingsPopup {
+        id: settingsPopup
+        
+        onLogoutConfirmed: {
+            console.log("[Chat] exit to LogIn window")
+            ChatLayer.clearCache()
+            AppState.clearState()
 
-        padding: 0
-        margins: 0
-
-        background: Rectangle {
-            color: "#1c242f"
-            radius: 8
-        }
-
-        contentItem: ColumnLayout {
-            spacing: 0
-            anchors.fill: parent
-            anchors.margins: 20
-
-            Text {
-                text: "Вы действительно хотите выйти?"
-                color: "white"
-                font.pixelSize: 16
-                font.family: "Segoe UI"
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignTop
-                Layout.topMargin: 5
-                wrapMode: Text.Wrap
-            }
-
-            Item {
-                Layout.fillHeight: true
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignRight | Qt.AlignBottom
-                spacing: 10
-
-                Rectangle {
-                    width: 70
-                    height: 36
-                    radius: 8
-                    color: cancelMouseArea.containsMouse ? "#2b3644" : "transparent"
-
-                    Text {
-                        text: "Отмена"
-                        color: "#5eb5f7"
-                        font.pixelSize: 15
-                        font.bold: true
-                        anchors.centerIn: parent
-                    }
-
-                    MouseArea {
-                        id: cancelMouseArea
-                        anchors.fill: parent
-                        hoverEnabled: true 
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: logoutDialog.close()
-                    }
-                }
-
-                Rectangle {
-                    width: 70
-                    height: 36
-                    radius: 8
-                    color: logoutMouseArea.containsMouse ? "#3d2a2d" : "transparent"
-
-                    Text {
-                        text: "Выйти"
-                        color: "#f05b5b" 
-                        font.pixelSize: 15
-                        font.bold: true
-                        anchors.centerIn: parent
-                    }
-
-                    MouseArea {
-                        id: logoutMouseArea
-                        anchors.fill: parent
-                        hoverEnabled: true 
-                        cursorShape: Qt.PointingHandCursor
-                        
-                        onPressed: parent.color = "#33181a"
-                        onReleased: parent.color = logoutMouseArea.containsMouse ? "#3d2a2d" : "transparent"
-
-                        onClicked: {
-                            logoutDialog.close()
-                            console.log("[Chat] exit to LogIn window")
-                            ChatLayer.clearCache()
-                            AppState.clearState()
-
-                            var loader = root.parent
-                            if (loader) {
-                                loader.source = "sign_in.qml"
-                            }
-                        }
-                    }
-                }
+            var loader = root.parent
+            if (loader) {
+                loader.source = "sign_in.qml"
             }
         }
     }

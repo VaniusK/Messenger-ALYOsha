@@ -8,7 +8,7 @@ import Messenger 1.0
 
 Rectangle {
     id: chatAreaRoot
-    color: "#0e1621"
+    color: appTheme.bgMain
 
     property bool isChatActive: activeChatId !== ""
     property string activeChatId: ""
@@ -194,7 +194,7 @@ Rectangle {
         anchors.right: parent.right
         height: globalPlayingMsgId !== "" ? 45 : 0
         visible: height > 0
-        color: "#1c242f"
+        color: appTheme.bgPanel
         clip: true
         z: 10 
         
@@ -234,7 +234,7 @@ Rectangle {
             
             Text {
                 text: globalActiveVoiceAuthor + "  " + globalActiveVoiceDate
-                color: "white"
+                color: appTheme.textMain
                 font.pixelSize: 14
                 font.family: "Segoe UI"
                 font.bold: true
@@ -251,7 +251,7 @@ Rectangle {
 
             Rectangle {
                 width: 30; height: 30; radius: 15
-                color: closeHoverArea.containsMouse ? "#2b3644" : "transparent"
+                color: closeHoverArea.containsMouse ? appTheme.hoverColor : "transparent"
                 
                 Text {
                     anchors.centerIn: parent
@@ -293,12 +293,12 @@ Rectangle {
             width: Math.min(300, placeholderText.width + 40)
             height: 36
             radius: 18
-            color: "#1c242f"
+            color: appTheme.bgPanel
 
             Text {
                 id: placeholderText
                 text: "Выберите чат, чтобы начать общение"
-                color: "white"
+                color: appTheme.textMain
                 font.pixelSize: 14
                 font.family: "Segoe UI"
                 anchors.centerIn: parent
@@ -317,7 +317,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             height: 60
-            color: "#242f3d"
+            color: appTheme.bgHeader
 
             MouseArea {
                 anchors.fill: parent
@@ -368,8 +368,10 @@ Rectangle {
                         
                     Text {
                         text: activeChatName
+                        width: parent.width
+                        elide: Text.ElideRight
                         font.bold: true
-                        color: "white"
+                        color: appTheme.textMain
                         font.family: "Segoe UI"
                         font.pixelSize: 16
                         textFormat: Text.PlainText
@@ -515,7 +517,7 @@ Rectangle {
                         }
                         
                         radius: 12
-                        color: isMe ? "#2b5278" : "#18222d"
+                        color: isMe ? appTheme.myBubble : appTheme.otherBubble
 
                         Rectangle {
                             width: 12; height: 12; color: parent.color
@@ -539,7 +541,7 @@ Rectangle {
                                 anchors.left: isMe ? undefined : parent.left 
                             }
                             Rectangle { 
-                                width: 16; height: 16; radius: 8; color: chatAreaRoot.color
+                                width: 16; height: 16; radius: 8; color: appTheme.bgMain
                                 anchors.bottom: parent.bottom; anchors.bottomMargin: 6
                                 anchors.right: isMe ? parent.right : undefined
                                 anchors.left: isMe ? undefined : parent.left
@@ -668,7 +670,7 @@ Rectangle {
 
                             wrapMode: TextEdit.Wrap
                             textFormat: TextEdit.PlainText
-                            color: "white"
+                            color: isMe ? "white" : appTheme.textMain
                             font.pixelSize: 15
                             font.family: "Segoe UI"
                             readOnly: true 
@@ -709,7 +711,7 @@ Rectangle {
                                         
                                         Text {
                                             text: firstAttachment ? (firstAttachment.original_filename || firstAttachment.file_name || "Файл") : "Файл"
-                                            color: "white"
+                                            color: isMe ? "white" : appTheme.textMain
                                             font.pixelSize: 14
                                             font.family: "Segoe UI"
                                             elide: Text.ElideMiddle
@@ -725,7 +727,7 @@ Rectangle {
                                                 if (b < 1073741824) return (b / 1048576).toFixed(1) + " МБ"
                                                 return (b / 1073741824).toFixed(1) + " ГБ"
                                             }
-                                            color: isMe ? "#78aee3" : "#728392"
+                                            color: isMe ? Qt.rgba(1, 1, 1, 0.7) : appTheme.textHint
                                             font.pixelSize: 12
                                             font.family: "Segoe UI"
                                         }
@@ -749,7 +751,7 @@ Rectangle {
                             Text {
                                 visible: model.text && model.text.trim() !== ""
                                 text: model.text ? model.text.trim() : ""
-                                color: "white"
+                                color: isMe ? "white" : appTheme.textMain
                                 font.pixelSize: 14
                                 font.family: "Segoe UI"
                                 wrapMode: Text.Wrap
@@ -765,15 +767,16 @@ Rectangle {
                             Rectangle {
                                 width: 44; height: 44; radius: 22
                                 color: playMouseArea.pressed 
-                                    ? (isMe ? "#2b5278" : "#0e1621") 
-                                    : (isMe ? "#4a90d9" : "#2b5278")
+                                    ? (isMe ? "#e6e6e6" : Qt.lighter(appTheme.accent, 1.1)) 
+                                    : (isMe ? "white" : appTheme.accent)
                                 
-                                Image {
+                                IconImage {
                                     anchors.centerIn: parent
                                     width: 16; height: 16
                                     source: isPlayingThis 
                                         ? "qrc:/messenger_client_uri/assets/icons/pause.svg"
                                         : "qrc:/messenger_client_uri/assets/icons/play.svg"
+                                    color: isMe ? appTheme.accent : "white"
                                     sourceSize: Qt.size(16, 16)
                                 }
                                 
@@ -820,13 +823,13 @@ Rectangle {
                                         height: 3
                                         anchors.verticalCenter: parent.verticalCenter
                                         radius: 1.5
-                                        color: isMe ? "#78aee3" : "#4a5a6a"
+                                        color: isMe ? Qt.alpha(appTheme.textMain, 0.7) : appTheme.textHint
                                         
                                         Rectangle {
                                             width: parent.width * waveRow.progress
                                             height: parent.height
                                             radius: 1.5
-                                            color: "white"
+                                            color: isMe ? "white" : appTheme.textMain
                                         }
                                     }
                                     
@@ -870,7 +873,7 @@ Rectangle {
                                             
                                             return timeStr + sizeStr
                                         }
-                                        color: isMe ? "#78aee3" : "#728392"
+                                        color: isMe ? Qt.rgba(1, 1, 1, 0.7) : appTheme.textHint
                                         font.pixelSize: 11
                                         font.family: "Segoe UI"
                                     }
@@ -906,17 +909,18 @@ Rectangle {
                                     var h = d.getHours(); var m = d.getMinutes()
                                     return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m)
                                 }
-                                color: isMe ? "#78aee3" : "#728392"
+                                color: isMe ? Qt.rgba(1, 1, 1, 0.7) : appTheme.textHint
                                 font.pixelSize: 11
                                 font.family: "Segoe UI"
                                 Layout.alignment: Qt.AlignVCenter
                             }
 
-                            Image {
+                            IconImage {
                                 visible: isMe && chatAreaRoot.activeChatName !== "Избранное"
                                 Layout.alignment: Qt.AlignVCenter
                                 width: 14; height: 14
                                 sourceSize: Qt.size(14, 14)
+                                color: Qt.rgba(1, 1, 1, 0.7)
                                 source: (model.is_read) 
                                         ? "qrc:/messenger_client_uri/assets/icons/check_double.svg" 
                                         : "qrc:/messenger_client_uri/assets/icons/check_single.svg"
@@ -930,12 +934,12 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: Math.min(250, Math.max(60, messageInput.contentHeight + 20))
-            color: "#1c242f"
+            color: appTheme.bgPanel
 
             Rectangle {
                 width: parent.width
                 height: 1
-                color: "#151b23"
+                color: appTheme.bgMain
                 anchors.top: parent.top
             }
 
@@ -954,14 +958,15 @@ Rectangle {
                     color: "transparent"
                     visible: isChatActive && !VoiceLayer.isRecording
 
-                    Image {
-                        anchors.centerIn: parent
-                        width: 22; height: 22
-                        sourceSize: Qt.size(24, 24)
+                    IconImage {
                         source: clipArea.containsMouse 
                                 ? "qrc:/messenger_client_uri/assets/icons/clip_active.svg"
                                 : "qrc:/messenger_client_uri/assets/icons/clip.svg"
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                        color: clipArea.containsMouse ? appTheme.accent : appTheme.textHint
+                        width: 28
+                        height: 28
+                        anchors.centerIn: parent
+                        sourceSize: Qt.size(28, 28)
                     }
                     MouseArea {
                         id: clipArea
@@ -992,8 +997,7 @@ Rectangle {
                         TextEdit {
                             id: messageInput
                             width: parent.width
-                            height: contentHeight
-                            color: "white"
+                            color: appTheme.textMain
                             font.pixelSize: 16
                             font.family: "Segoe UI"
                             wrapMode: TextEdit.Wrap
@@ -1017,7 +1021,7 @@ Rectangle {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: "#1c242f"
+                        color: appTheme.bgPanel
                         visible: VoiceLayer.isRecording
                         z: 10
 
@@ -1045,7 +1049,7 @@ Rectangle {
                             
                             Text {
                                 text: VoiceLayer.recordingDuration
-                                color: "white"
+                                color: appTheme.textMain
                                 font.pixelSize: 16
                                 font.family: "Segoe UI"
                             }
@@ -1054,7 +1058,7 @@ Rectangle {
                             
                             Text {
                                 text: "Отмена"
-                                color: "#5eb5f7"
+                                color: appTheme.textMain
                                 font.pixelSize: 15
                                 font.family: "Segoe UI"
                                 
@@ -1211,7 +1215,7 @@ Rectangle {
                     width: 70
                     height: 36
                     radius: 8
-                    color: cancelMouseArea.containsMouse ? "#2b3644" : "transparent"
+                    color: cancelMouseArea.pressed ? Qt.alpha(appTheme.textMain, 0.1) : (cancelMouseArea.containsMouse ? Qt.alpha(appTheme.textMain, 0.05) : "transparent")
 
                     Text {
                         text: "Отмена"
@@ -1395,6 +1399,42 @@ Rectangle {
             }
         }
 
+        Shortcut {
+            sequence: "Left"
+            onActivated: {
+                fullVideoPlayer.position = Math.max(0, fullVideoPlayer.position - 10000);
+                fullScreenVideoPreview.showControls = true;
+                controlsTimer.restart();
+            }
+        }
+
+        Shortcut {
+            sequence: "Right"
+            onActivated: {
+                fullVideoPlayer.position = Math.min(fullVideoPlayer.duration, fullVideoPlayer.position + 10000);
+                fullScreenVideoPreview.showControls = true;
+                controlsTimer.restart();
+            }
+        }
+
+        Shortcut {
+            sequence: "Up"
+            onActivated: {
+                videoVolumeSlider.value = Math.min(1.0, videoVolumeSlider.value + 0.1);
+                fullScreenVideoPreview.showControls = true;
+                controlsTimer.restart();
+            }
+        }
+
+        Shortcut {
+            sequence: "Down"
+            onActivated: {
+                videoVolumeSlider.value = Math.max(0.0, videoVolumeSlider.value - 0.1);
+                fullScreenVideoPreview.showControls = true;
+                controlsTimer.restart();
+            }
+        }
+
         VideoOutput {
             id: fullVideoOut
             anchors.fill: parent
@@ -1403,7 +1443,7 @@ Rectangle {
 
         Timer {
             id: controlsTimer
-            interval: 3000
+            interval: 5000
             repeat: false
             onTriggered: {
                 if (fullVideoPlayer.playbackState === MediaPlayer.PlayingState) {
@@ -1469,53 +1509,61 @@ Rectangle {
                 anchors.margins: 20
                 spacing: 12
                 
-                RowLayout {
+                Item {
                     Layout.fillWidth: true
-                    spacing: 0
-
+                    Layout.preferredHeight: 54
+                    
                     RowLayout {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
                         spacing: 12
-                        Image {
+                        
+                        IconImage {
                             source: "qrc:/messenger_client_uri/assets/icons/volume.svg"
                             width: 24; height: 24; sourceSize: Qt.size(24, 24)
+                            color: "white"
                         }
                         Slider {
                             id: videoVolumeSlider
-                            Layout.preferredWidth: 120
+                            Layout.preferredWidth: 100
                             from: 0; to: 1.0; value: 0.8
                             background: Rectangle {
-                                implicitWidth: 120; implicitHeight: 4; radius: 2; color: "#30ffffff"
-                                Rectangle { width: videoVolumeSlider.visualPosition * parent.width; height: parent.height; color: "white"; radius: 2 }
+                                anchors.verticalCenter: parent.verticalCenter
+                                implicitWidth: 100; implicitHeight: 4; radius: 2; color: "#30ffffff"
+                                
+                                Rectangle { 
+                                    width: videoVolumeSlider.visualPosition * parent.width
+                                    height: parent.height
+                                    color: appTheme.accent
+                                    radius: 2 
+                                }
                             }
-                            handle: Rectangle {
-                                x: videoVolumeSlider.leftPadding + videoVolumeSlider.visualPosition * (videoVolumeSlider.availableWidth - width)
-                                y: videoVolumeSlider.topPadding + videoVolumeSlider.availableHeight / 2 - height / 2
-                                implicitWidth: 14; implicitHeight: 14; radius: 7; color: "white"
-                            }
+                            handle: Item {}
                         }
                     }
                     
-                    Item { Layout.fillWidth: true }
-
                     Rectangle {
-                        Layout.preferredWidth: 54; Layout.preferredHeight: 54
-                        radius: 27; color: "transparent"
-                        Image {
+                        anchors.centerIn: parent
+                        width: 54; height: 54; radius: 27
+                        color: playMouse.containsMouse ? "white" : "transparent"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        
+                        IconImage {
                             anchors.centerIn: parent
                             source: fullVideoPlayer.playbackState === MediaPlayer.PlayingState 
                                 ? "qrc:/messenger_client_uri/assets/icons/pause.svg" 
                                 : "qrc:/messenger_client_uri/assets/icons/play.svg"
                             width: 40; height: 40; sourceSize: Qt.size(40, 40)
+                            color: playMouse.containsMouse ? "black" : "white"
+                            Behavior on color { ColorAnimation { duration: 150 } }
                         }
+                        
                         MouseArea {
-                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            id: playMouse
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
                             onClicked: fullVideoPlayer.playbackState === MediaPlayer.PlayingState ? fullVideoPlayer.pause() : fullVideoPlayer.play()
                         }
                     }
-                    
-                    Item { Layout.fillWidth: true }
-
-                    Item { Layout.preferredWidth: 44; Layout.preferredHeight: 44 }
                 }
 
                 RowLayout {
@@ -1532,29 +1580,25 @@ Rectangle {
                         value: videoSlider.pressed ? videoSlider.value : fullVideoPlayer.position
                         live: true
 
-                        onMoved: {
-                            fullVideoPlayer.position = value
+                        onValueChanged: {
+                            if (pressed) {
+                                fullVideoPlayer.position = value
+                            }
                         }
 
                         background: Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
                             implicitHeight: 4
                             radius: 2
                             color: "#30ffffff"
                             Rectangle {
                                 width: videoSlider.visualPosition * parent.width
                                 height: parent.height
-                                color: "#5eb5f7"
+                                color: appTheme.accent
                                 radius: 2
                             }
                         }
-                        handle: Rectangle {
-                            x: videoSlider.leftPadding + videoSlider.visualPosition * (videoSlider.availableWidth - width)
-                            y: videoSlider.topPadding + videoSlider.availableHeight / 2 - height / 2
-                            implicitWidth: 16
-                            implicitHeight: 16
-                            radius: 8
-                            color: "white"
-                        }
+                        handle: Item {}
                     }
                     Text {
                         text: "-" + chatAreaRoot.formatGlobalTime(Math.max(0, fullVideoPlayer.duration - fullVideoPlayer.position))
@@ -1583,7 +1627,7 @@ Rectangle {
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
-        background: Rectangle { color: "#1c242f"; radius: 10 }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
 
         property var membersModel: []
         property string currentUserRole: "member"
@@ -1625,9 +1669,10 @@ Rectangle {
                 anchors.right: parent.right
                 anchors.margins: 15
                 
-                Image {
+                IconImage {
                     visible: groupInfoPopup.currentUserRole === "admin" || groupInfoPopup.currentUserRole === "owner"
                     source: "qrc:/messenger_client_uri/assets/icons/gear.svg"
+                    color: appTheme.textHint
                     width: 24
                     height: 24
                     sourceSize: Qt.size(24, 24)
@@ -1689,7 +1734,7 @@ Rectangle {
                     
                     Text {
                         text: activeChatName
-                        color: "white"
+                        color: appTheme.textMain
                         font.pixelSize: 20
                         font.bold: true
                         Layout.alignment: Qt.AlignHCenter
@@ -1699,7 +1744,7 @@ Rectangle {
                     Text {
                         visible: activeChatDescription !== ""
                         text: activeChatDescription
-                        color: "white"
+                        color: appTheme.textMain
                         font.pixelSize: 15
                         font.family: "Segoe UI"
                         wrapMode: Text.Wrap
@@ -1724,9 +1769,10 @@ Rectangle {
                     
                     Item { Layout.fillWidth: true }
                     
-                    Image {
+                    IconImage {
                         visible: groupInfoPopup.currentUserRole === "admin" || groupInfoPopup.currentUserRole === "owner"
                         source: "qrc:/messenger_client_uri/assets/icons/person_plus.svg"
+                        color: appTheme.textHint
                         width: 24
                         height: 24
                         sourceSize: Qt.size(24, 24)
@@ -1751,7 +1797,7 @@ Rectangle {
                     delegate: Rectangle {
                         width: parent.width
                         height: 50
-                        color: memberHover.containsMouse ? "#202b36" : "transparent"
+                        color: memberHover.containsMouse ? appTheme.hoverColor : "transparent"
                         
                         property string mName: {
                             if (modelData.display_name) return modelData.display_name
@@ -1784,7 +1830,7 @@ Rectangle {
                             
                             Text {
                                 text: parent.parent.mName
-                                color: "white"
+                                color: appTheme.textMain
                                 font.pixelSize: 15
                                 Layout.fillWidth: true
                                 font.family: "Segoe UI"
@@ -1832,7 +1878,7 @@ Rectangle {
                         Menu {
                             id: contextMenu
                             width: 220
-                            background: Rectangle { color: "#242f3d"; radius: 6; border.color: "#18222d"; border.width: 1 }
+                            background: Rectangle { color: appTheme.bgHeader; radius: 6; border.color: appTheme.bgMain; border.width: 1 }
 
                             // Кнопка "Передать права" (Видит только текущий владелец, и только на обычных мемберах или админах)
                             MenuItem {
@@ -1842,20 +1888,21 @@ Rectangle {
                                 contentItem: RowLayout {
                                     spacing: 10
                                     
-                                    Image {
+                                    IconImage {
                                         source: "qrc:/messenger_client_uri/assets/icons/owner_shield.svg"
+                                        color: appTheme.textHint
                                         width: 20; height: 20; sourceSize: Qt.size(20, 20) 
                                     }
 
                                     Text {
                                         text: "Передать права"
-                                        color: "white"
+                                        color: appTheme.textMain
                                         font.pixelSize: 14
                                         font.family: "Segoe UI"
                                         Layout.fillWidth: true 
                                     }
                                 }
-                                background: Rectangle { color: ownerItem.highlighted ? "#2b3644" : "transparent"; radius: 4 }
+                                background: Rectangle { color: ownerItem.highlighted ? appTheme.hoverColor : "transparent"; radius: 4 }
                                 onTriggered: ChatLayer.changeMemberRole(activeChatId, modelData.user_id, "owner")
                             }
 
@@ -1867,20 +1914,21 @@ Rectangle {
                                 contentItem: RowLayout {
                                     spacing: 10
                                     
-                                    Image {
+                                    IconImage {
                                         source: "qrc:/messenger_client_uri/assets/icons/admin_shield.svg"
+                                        color: appTheme.textHint
                                         width: 20; height: 20; sourceSize: Qt.size(20, 20) 
                                     }
 
                                     Text {
                                         text: modelData.role === "admin" ? "Разжаловать" : "Назначить админом"
-                                        color: "white"
+                                        color: appTheme.textMain
                                         font.pixelSize: 14
                                         font.family: "Segoe UI"
                                         Layout.fillWidth: true 
                                     }
                                 }
-                                background: Rectangle { color: adminItem.highlighted ? "#2b3644" : "transparent"; radius: 4 }
+                                background: Rectangle { color: adminItem.highlighted ? appTheme.hoverColor : "transparent"; radius: 4 }
                                 onTriggered: ChatLayer.changeMemberRole(activeChatId, modelData.user_id, modelData.role === "admin" ? "member" : "admin")
                             }
 
@@ -1891,8 +1939,9 @@ Rectangle {
                                 contentItem: RowLayout {
                                     spacing: 10
                                     
-                                    Image {
+                                    IconImage {
                                         source: "qrc:/messenger_client_uri/assets/icons/delete_user.svg"
+                                        color: "#ff4d4f"
                                         width: 20; height: 20; sourceSize: Qt.size(20, 20) 
                                     }
 
@@ -1904,7 +1953,7 @@ Rectangle {
                                         Layout.fillWidth: true 
                                     }
                                 }
-                                background: Rectangle { color: deleteItem.highlighted ? "#3d2a2d" : "transparent"; radius: 4 }
+                                background: Rectangle { color: deleteItem.highlighted ? appTheme.hoverColor : "transparent"; radius: 4 }
                                 onTriggered: ChatLayer.removeChatMember(activeChatId, modelData.user_id, true) // true = обновить список после удаления
                             }
                         }
@@ -1956,7 +2005,7 @@ Rectangle {
         dim: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
-        background: Rectangle { color: "#1c242f"; radius: 10 }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
         
         padding: 0 
 
@@ -2063,7 +2112,7 @@ Rectangle {
 
                 Text {
                     text: "Добавить участников"
-                    color: "white"
+                    color: appTheme.textMain
                     font.pixelSize: 18
                     font.bold: true
                     font.family: "Segoe UI" 
@@ -2083,7 +2132,7 @@ Rectangle {
             Rectangle {
                 Layout.fillWidth: true; Layout.margins: 15; Layout.topMargin: 0
                 height: 36
-                color: "#17212b"
+                color: appTheme.bgInput
                 radius: 18
 
                 TextInput {
@@ -2093,12 +2142,12 @@ Rectangle {
                     topPadding: 0; bottomPadding: 0
                     font.pixelSize: 14
                     font.family: "Segoe UI"
-                    color: "white"
+                    color: appTheme.textMain
                     clip: true
                     
                     Text {
                         text: "Поиск"
-                        color: "#8a96a3"
+                        color: appTheme.textHint
                         font.family: "Segoe UI"
                         visible: !parent.text
                         anchors.verticalCenter: parent.verticalCenter 
@@ -2144,7 +2193,7 @@ Rectangle {
                 delegate: Rectangle {
                     width: ListView.view ? ListView.view.width : 0
                     height: 60
-                    color: amHover.containsMouse ? "#202b36" : "transparent"
+                    color: amHover.containsMouse ? appTheme.hoverColor : "transparent"
 
                     RowLayout {
                         anchors.fill: parent; anchors.margins: 15; spacing: 15
@@ -2185,7 +2234,7 @@ Rectangle {
                             
                             Text {
                                 text: model.displayName
-                                color: "white"
+                                color: appTheme.textMain
                                 font.pixelSize: 15
                                 font.family: "Segoe UI"
                                 font.bold: true
@@ -2223,7 +2272,7 @@ Rectangle {
             Rectangle {
                 Layout.fillWidth: true
                 height: 60
-                color: "#1c242f"
+                color: appTheme.bgPanel
                 
                 Rectangle {
                     width: parent.width
@@ -2238,7 +2287,7 @@ Rectangle {
 
                     Rectangle {
                         width: 80; height: 36; radius: 6
-                        color: cancelAddHover.pressed ? "#305eb5f7" : (cancelAddHover.containsMouse ? "#155eb5f7" : "transparent")
+                        color: cancelAddHover.pressed ? Qt.alpha(appTheme.textMain, 0.1) : (cancelAddHover.containsMouse ? Qt.alpha(appTheme.textMain, 0.05) : "transparent")
                         Behavior on color { ColorAnimation { duration: 150 } }
                         
                         Text {
@@ -2262,7 +2311,7 @@ Rectangle {
                     Rectangle {
                         width: 100; height: 36; radius: 6
                         property bool hasUsers: addMemberPopup.selectedUsers.length > 0
-                        color: (addHover.pressed && hasUsers) ? "#305eb5f7" : ((addHover.containsMouse && hasUsers) ? "#155eb5f7" : "transparent")
+                        color: (addHover.pressed && hasUsers) ? Qt.alpha(appTheme.accent, 0.2) : ((addHover.containsMouse && hasUsers) ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
                         opacity: hasUsers ? 1.0 : 0.5
                         Behavior on color { ColorAnimation { duration: 150 } }
                         Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -2307,7 +2356,7 @@ Rectangle {
         dim: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
-        background: Rectangle { color: "#1c242f"; radius: 10 }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
 
         onOpened: {
             editNameField.text = activeChatName
@@ -2323,7 +2372,7 @@ Rectangle {
                 Layout.preferredHeight: 50
                 Text {
                     text: "Настройки группы"
-                    color: "white"
+                    color: appTheme.textMain
                     font.pixelSize: 18
                     font.bold: true
                     font.family: "Segoe UI"
@@ -2361,7 +2410,7 @@ Rectangle {
 
                         Text {
                             text: "Название группы"
-                            color: editNameField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                            color: editNameField.activeFocus ? appTheme.accent : appTheme.textHint
                             font.pixelSize: (editNameField.length > 0 || editNameField.activeFocus) ? 12 : 16
                             font.family: "Segoe UI"
                             Behavior on font.pixelSize { NumberAnimation { duration: 150 } }
@@ -2376,9 +2425,10 @@ Rectangle {
                             anchors.bottom: parent.bottom
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            color: "white"
+                            color: appTheme.textMain
                             font.pixelSize: 16
                             font.family: "Segoe UI"
+                            maximumLength: 29
                             clip: true
 
                             background: Item {
@@ -2386,7 +2436,7 @@ Rectangle {
                                     anchors.bottom: parent.bottom
                                     width: parent.width
                                     height: editNameField.activeFocus ? 2 : 1
-                                    color: editNameField.activeFocus ? "#5eb5f7" : "#39434f"
+                                    color: editNameField.activeFocus ? appTheme.accent : appTheme.textHint
                                     Behavior on height { NumberAnimation { duration: 100 } }
                                     Behavior on color { ColorAnimation { duration: 150 } }
                                 }
@@ -2396,41 +2446,73 @@ Rectangle {
                     
                     Item {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 80
+                        Layout.preferredHeight: 100
                         Layout.topMargin: 10
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.IBeamCursor
+                            onClicked: editDescField.forceActiveFocus()
+                        }
 
                         Text {
                             text: "Описание (необязательно)"
-                            color: editDescField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                            color: editDescField.activeFocus ? appTheme.accent : appTheme.textHint
                             font.pixelSize: (editDescField.text.length > 0 || editDescField.activeFocus) ? 12 : 16
                             font.family: "Segoe UI"
                             Behavior on font.pixelSize { NumberAnimation { duration: 150 } }
-                            Behavior on anchors.bottomMargin { NumberAnimation { duration: 150 } }
+                            Behavior on anchors.topMargin { NumberAnimation { duration: 150 } }
                             anchors.left: parent.left
-                            anchors.bottom: descFlickable.top
-                            anchors.bottomMargin: (editDescField.text.length > 0 || editDescField.activeFocus) ? 2 : -28
+                            anchors.top: parent.top
+                            anchors.topMargin: (editDescField.text.length > 0 || editDescField.activeFocus) ? 0 : 20
+                            
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.IBeamCursor
+                                onClicked: editDescField.forceActiveFocus()
+                            }
                         }
 
                         Flickable {
                             id: descFlickable
+                            anchors.top: parent.top
+                            anchors.topMargin: 24
                             anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 8
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            height: 60
                             clip: true
                             contentWidth: width
                             contentHeight: editDescField.contentHeight
                             boundsBehavior: Flickable.StopAtBounds
 
+                            ScrollBar.vertical: ScrollBar {
+                                width: 4
+                                policy: descFlickable.contentHeight > descFlickable.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+                            }
+
                             TextEdit {
                                 id: editDescField
                                 width: parent.width
-                                color: "white"
+                                color: appTheme.textMain
                                 font.pixelSize: 16
                                 font.family: "Segoe UI"
                                 wrapMode: TextEdit.Wrap
                                 onTextChanged: {
-                                    if (text.length > 400) text = text.substring(0, 400)
+                                    if (length > 400) {
+                                        var cursor = cursorPosition;
+                                        text = text.substring(0, 400)
+                                        cursorPosition = Math.min(cursor, 400)
+                                    }
+                                }
+                                onCursorRectangleChanged: {
+                                    var flick = descFlickable
+                                    var rect = cursorRectangle
+                                    if (rect.y < flick.contentY) {
+                                        flick.contentY = rect.y
+                                    } else if (rect.y + rect.height > flick.contentY + flick.height) {
+                                        flick.contentY = rect.y + rect.height - flick.height
+                                    }
                                 }
                             }
                         }
@@ -2439,7 +2521,7 @@ Rectangle {
                             anchors.bottom: parent.bottom
                             width: parent.width
                             height: editDescField.activeFocus ? 2 : 1
-                            color: editDescField.activeFocus ? "#5eb5f7" : "#39434f"
+                            color: editDescField.activeFocus ? appTheme.accent : appTheme.textHint
                             Behavior on height { NumberAnimation { duration: 100 } }
                             Behavior on color { ColorAnimation { duration: 150 } }
                         }
@@ -2460,7 +2542,7 @@ Rectangle {
                     width: 80
                     height: 36
                     radius: 6
-                    color: (cancelSettingsHover.pressed) ? "#305eb5f7" : ((cancelSettingsHover.containsMouse) ? "#155eb5f7" : "transparent")
+                    color: (cancelSettingsHover.pressed) ? Qt.alpha(appTheme.accent, 0.2) : ((cancelSettingsHover.containsMouse) ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
                     Behavior on color { ColorAnimation { duration: 150 } }
                     
                     Text {
@@ -2486,7 +2568,7 @@ Rectangle {
                     height: 36
                     radius: 6
                     property bool isValid: editNameField.text.trim() !== ""
-                    color: (saveSettingsHover.pressed && isValid) ? "#305eb5f7" : ((saveSettingsHover.containsMouse && isValid) ? "#155eb5f7" : "transparent")
+                    color: (saveSettingsHover.pressed && isValid) ? Qt.alpha(appTheme.accent, 0.2) : ((saveSettingsHover.containsMouse && isValid) ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
                     opacity: isValid ? 1.0 : 0.5
                     Behavior on color { ColorAnimation { duration: 150 } }
                     Behavior on opacity { NumberAnimation { duration: 150 } }
