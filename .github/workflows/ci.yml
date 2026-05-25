@@ -358,5 +358,4 @@ jobs:
 
             docker compose down --remove-orphans
             make run_server
-            docker system prune -a -f
   
