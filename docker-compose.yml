@@ -17,6 +17,14 @@ services:
       - "8080:8080"
     depends_on:
       - db
+  #     - redis
+  
+  # redis:
+  #   image: redis:7-alpine
+  #   container-name: messenger-alyosha-redis
+  #   ports:
+  #     -"127.0.0.1:6379:6379"
+  #   command: redis-server --save "" --appendonly no
   
   nginx:
     image: nginx:alpine
