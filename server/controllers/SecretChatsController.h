@@ -35,5 +35,5 @@ public:
     Task<HttpResponsePtr> chatInit(const HttpRequestPtr req);
     Task<HttpResponsePtr> chatAccept(const HttpRequestPtr req);
     Task<HttpResponsePtr> sendMessage(const HttpRequestPtr req);
-}
+};
 }  // namespace api::v1
