@@ -357,5 +357,5 @@ jobs:
             sed -i 's/localhost/alyosha-test.ru/g' server/nginx/nginx.conf
 
             docker compose down --remove-orphans
-            make run_server
+            docker compose --profile prod up -d --build --force-recreate
   
