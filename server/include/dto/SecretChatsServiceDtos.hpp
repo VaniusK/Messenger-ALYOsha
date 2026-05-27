@@ -21,7 +21,10 @@ struct ChatInitRequestDto : RequestDto {
           initialUserPublicKey(std::move(initialUserPublicKey_)) {
     }
 
-    ChatInitRequestDto(drogon::HttpRequestPtr req, std::shared_ptr<Json::Value> request_json) {
+    ChatInitRequestDto(
+        drogon::HttpRequestPtr req,
+        std::shared_ptr<Json::Value> request_json
+    ) {
         source_user_id = req->getAttributes()->get<int64_t>("user_id");
         target_user_id = (*request_json)["target_user_id"].asInt64();
         initialUserPublicKey = (*request_json)["public_key"].asString();
@@ -31,9 +34,11 @@ struct ChatInitRequestDto : RequestDto {
 struct ChatInitResponseDto : ResponseDto {
     ChatInitResponseDto() = default;
 
-    Json::Value toJson(){
+    Json::Value toJson() {
         Json::Value response_json;
-        response_json["message"] = "Secret chat initialization request successfully sent to target user";
+        response_json["message"] =
+            "Secret chat initialization request successfully sent to target "
+            "user";
         return response_json;
     }
 };
@@ -53,7 +58,10 @@ struct ChatAcceptRequestDto : RequestDto {
           acceptorUserPublicKey(std::move(acceptorUserPublicKey_)) {
     }
 
-    ChatAcceptRequestDto(drogon::HttpRequestPtr req, std::shared_ptr<Json::Value> request_json) {
+    ChatAcceptRequestDto(
+        drogon::HttpRequestPtr req,
+        std::shared_ptr<Json::Value> request_json
+    ) {
         source_user_id = req->getAttributes()->get<int64_t>("user_id");
         target_user_id = (*request_json)["target_user_id"].asInt64();
         acceptorUserPublicKey = (*request_json)["public_key"].asString();
@@ -63,9 +71,10 @@ struct ChatAcceptRequestDto : RequestDto {
 struct ChatAcceptResponseDto : ResponseDto {
     ChatAcceptResponseDto() = default;
 
-    Json::Value toJson(){
+    Json::Value toJson() {
         Json::Value response_json;
-        response_json["message"] = "Secret chat initialization request successfully accepted";
+        response_json["message"] =
+            "Secret chat initialization request successfully accepted";
         return response_json;
     }
 };

@@ -7,12 +7,12 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include "enums/WebsocketsMessagesTypes.h"
 
 namespace messenger::repositories {
 struct HandshakeSignal {
     int64_t sender_id;
     int64_t acceptor_id;
+    int32_t message_type;
     std::string public_key;
 };
 
@@ -26,16 +26,17 @@ struct EncryptedMessage {
 class SecretChatsRepositoryInterface {
 public:
     virtual ~SecretChatsRepositoryInterface() = default;
-    virtual drogon::Task<bool> saveHandshakeSignal(
+    virtual drogon::Task<void> saveHandshakeSignal(
         int64_t sender_id,
         int64_t acceptor_id,
+        int32_t type,
         std::string pub_key
     ) = 0;
     virtual drogon::Task<std::vector<HandshakeSignal>> popHandshakeSignals(
         int64_t acceptor_id
     ) = 0;
 
-    virtual drogon::Task<bool> saveEncryptedMessage(
+    virtual drogon::Task<void> saveEncryptedMessage(
         int64_t sender_id,
         int64_t acceptor_id,
         int32_t message_type,
@@ -48,16 +49,17 @@ public:
 
 class SecretChatsRepository : public SecretChatsRepositoryInterface {
 public:
-    drogon::Task<bool> saveHandshakeSignal(
+    drogon::Task<void> saveHandshakeSignal(
         int64_t sender_id,
         int64_t acceptor_id,
+        int32_t type,
         std::string pub_key
     ) override;
     drogon::Task<std::vector<HandshakeSignal>> popHandshakeSignals(
         int64_t acceptor_id
     ) override;
 
-    drogon::Task<bool> saveEncryptedMessage(
+    drogon::Task<void> saveEncryptedMessage(
         int64_t sender_id,
         int64_t acceptor_id,
         int32_t message_type,
