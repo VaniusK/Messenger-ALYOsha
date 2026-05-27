@@ -31,6 +31,8 @@ public:
         const std::string &message_type,
         const std::vector<AttachmentFileInfo> &files_info
     ) = 0;
+    virtual std::optional<UploadPresignedResult> generateSecretChatUploadUrl(
+    ) = 0;
     virtual std::optional<std::string> generateDownloadUrl(
         const std::string &attachment_key,
         const std::string &original_filename
@@ -54,9 +56,10 @@ public:
         const std::string &message_type,
         const std::vector<AttachmentFileInfo> &files_info
     ) override;
+    std::optional<UploadPresignedResult> generateSecretChatUploadUrl() override;
     std::optional<std::string> generateDownloadUrl(
         const std::string &attachment_key,
-        const std::string &original_filename
+        const std::string &original_filename = ""
     ) override;
 
     std::string getExtension(const std::string &filename) override;

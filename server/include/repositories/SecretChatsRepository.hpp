@@ -45,6 +45,7 @@ public:
     virtual drogon::Task<std::vector<EncryptedMessage>> popEncryptedMessages(
         int64_t acceptor_id
     ) = 0;
+    virtual drogon::Task<void> removeStaleRecords() = 0;
 };
 
 class SecretChatsRepository : public SecretChatsRepositoryInterface {
@@ -68,6 +69,7 @@ public:
     drogon::Task<std::vector<EncryptedMessage>> popEncryptedMessages(
         int64_t acceptor_id
     ) override;
+    drogon::Task<void> removeStaleRecords() override;
 
 private:
     drogon::orm::DbClientPtr getDbClient() {

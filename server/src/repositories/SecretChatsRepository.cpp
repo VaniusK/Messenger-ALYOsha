@@ -159,4 +159,22 @@ SecretChatsRepository::popEncryptedMessages(int64_t acceptor_id) {
         );
     }
 }
+
+drogon::Task<void> SecretChatsRepository::removeStaleRecords() {
+    auto db_client = getDbClient();
+    try {
+        co_await db_client->execSqlCoro(
+            "DELETE FROM e2e.handshakes_pool WHERE created_at < NOW() - "
+            "INTERVAL '30 days'"
+        );
+        co_await db_client->execSqlCoro(
+            "DELETE FROM e2e.messages_pool WHERE created_at < NOW() - INTERVAL "
+            "'30 days'"
+        );
+        LOG_INFO << "Successfullu cleaned stale E2E records";
+    } catch (const drogon::orm::DrogonDbException &e) {
+        LOG_ERROR << "DB error during stale records cleanup: "
+                  << e.base().what();
+    }
+}
 }  // namespace messenger::repositories
