@@ -7,6 +7,7 @@
 #include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
 #include "repositories/UserRepository.hpp"
+#include "services/ClientNotifier.hpp"
 #include "services/S3Service.hpp"
 
 using namespace drogon;
@@ -81,12 +82,19 @@ public:
         s3_service_ = s3_service;
     }
 
+    void setClientNotifier(
+        std::shared_ptr<ClientNotifierInterface> client_notifier
+    ) {
+        this->client_notifier = client_notifier;
+    }
+
 private:
     std::shared_ptr<messenger::repositories::UserRepositoryInterface> user_repo;
     std::shared_ptr<messenger::repositories::ChatRepositoryInterface> chat_repo;
     std::shared_ptr<messenger::repositories::AttachmentRepositoryInterface>
         attachment_repo;
     std::shared_ptr<S3ServiceInterface> s3_service_;
+    std::shared_ptr<ClientNotifierInterface> client_notifier;
     Task<bool> checkChatAccess(int64_t user_id, int64_t chat_id);
     bool validateFileType(
         const std::string &message_type,

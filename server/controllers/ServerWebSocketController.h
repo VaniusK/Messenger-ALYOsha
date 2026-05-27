@@ -19,7 +19,7 @@ class ServerWebSocketController : public drogon::WebSocketController<ServerWebSo
     void handleNewConnection(const HttpRequestPtr &,
                                      const WebSocketConnectionPtr&) override;
     void handleConnectionClosed(const WebSocketConnectionPtr&) override;
-    static void notifyUser(int64_t reciever_id, const std::string &payload);
+    static bool notifyUser(int64_t reciever_id, const std::string &payload);
     WS_PATH_LIST_BEGIN
     WS_PATH_ADD("/ws/chat", "api::v1::AuthFilter");
     WS_PATH_LIST_END

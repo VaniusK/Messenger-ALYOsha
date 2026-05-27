@@ -10,9 +10,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "controllers/ServerWebSocketController.h"
 #include "dto/AttachmentData.hpp"
 #include "dto/ChatServiceDtos.hpp"
+#include "include/enums/WebsocketsMessagesTypes.h"
 #include "include/repositories/ChatRepository.hpp"
 #include "jwt-cpp/jwt.h"
 #include "jwt-cpp/traits/kazuho-picojson/defaults.h"
@@ -345,13 +345,15 @@ Task<SendMessageResponseDto> ChatService::sendMessage(
     );
 
     Json::Value websocket_message_json;
-    websocket_message_json["event_type"] = "NEW_MESSAGE";
+    websocket_message_json["message_type"] =
+        static_cast<uint16_t>(api::v1::WebsocketMessageType::COMMON_NEW_MESSAGE
+        );
     websocket_message_json["data"] = response_dto.toJson();
     std::vector<messenger::repositories::ChatMember> chat_members =
         co_await chat_repo->getMembers(chat_id);
     for (const auto &chat_member : chat_members) {
         if (chat_member.getValueOfUserId() != user_id) {
-            ServerWebSocketController::notifyUser(
+            client_notifier->notifyClient(
                 chat_member.getValueOfUserId(),
                 websocket_message_json.toStyledString()
             );

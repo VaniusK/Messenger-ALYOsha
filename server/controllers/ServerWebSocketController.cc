@@ -36,7 +36,7 @@ void ServerWebSocketController::handleConnectionClosed(const WebSocketConnection
     LOG_INFO << "User " << user_id << " disconnected";
 }
 
-void ServerWebSocketController::notifyUser(int64_t reciever_id, const std::string &payload){
+bool ServerWebSocketController::notifyUser(int64_t reciever_id, const std::string &payload){
     drogon::WebSocketConnectionPtr recieverWsConnPtr;
     {
         std::shared_lock<std::shared_mutex> lock(clients_mutex_);
@@ -48,7 +48,9 @@ void ServerWebSocketController::notifyUser(int64_t reciever_id, const std::strin
     if (recieverWsConnPtr){
         recieverWsConnPtr->send(payload);
         LOG_INFO << "Message sent to user " << reciever_id;
+        return true;
     } else {
         LOG_INFO << "User " << reciever_id << " is not connected";
+        return false;
     }
 }
