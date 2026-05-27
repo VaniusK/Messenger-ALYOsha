@@ -32,8 +32,14 @@ public:
         "api::v1::AuthFilter"
     );
     METHOD_LIST_END
-    Task<HttpResponsePtr> chatInit(const HttpRequestPtr req);
-    Task<HttpResponsePtr> chatAccept(const HttpRequestPtr req);
-    Task<HttpResponsePtr> sendMessage(const HttpRequestPtr req);
+    Task<HttpResponsePtr> chatInit(const HttpRequestPtr req) {
+        co_return HttpResponse::newHttpResponse();
+    }
+    Task<HttpResponsePtr> chatAccept(const HttpRequestPtr req) {
+        co_return HttpResponse::newHttpResponse();
+    };
+    Task<HttpResponsePtr> sendMessage(const HttpRequestPtr req) {
+        co_return HttpResponse::newHttpResponse();
+    };
 };
 }  // namespace api::v1

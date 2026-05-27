@@ -72,7 +72,8 @@ aux_source_directory(models MODEL_SRC) # get all files from models
 target_include_directories(${PROJECT_NAME} PRIVATE ${bcrypt_SOURCE_DIR}/include) # include bcrypt headers
 target_include_directories(${PROJECT_NAME}
                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/include) # include project headers
+                                   ${CMAKE_CURRENT_SOURCE_DIR}/include
+                                   ../common/include) # include project headers
 target_sources(${PROJECT_NAME} 
                 PRIVATE
                ${SRC_SRC}
