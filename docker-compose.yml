@@ -58,7 +58,9 @@ services:
       - build
 
   test-server:
-    build: ./server
+    build: 
+      context: .
+      dockerfile: server/Dockerfile
     command: ["./server_tests"]
     env_file: .env
     depends_on:

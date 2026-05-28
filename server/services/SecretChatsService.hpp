@@ -38,7 +38,6 @@ public:
     drogon::Task<std::vector<std::string>> syncOfflineData(int64_t user_id);
 
 private:
-    std::shared_ptr<ClientNotifierInterface> client_notifier;
     std::shared_ptr<messenger::repositories::SecretChatsRepositoryInterface>
         secret_chats_repo;
     std::shared_ptr<S3ServiceInterface> s3_service;

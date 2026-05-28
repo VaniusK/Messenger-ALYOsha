@@ -351,6 +351,8 @@ Task<SendMessageResponseDto> ChatService::sendMessage(
     websocket_message_json["data"] = response_dto.toJson();
     std::vector<messenger::repositories::ChatMember> chat_members =
         co_await chat_repo->getMembers(chat_id);
+    auto client_notifier =
+        drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
     for (const auto &chat_member : chat_members) {
         if (chat_member.getValueOfUserId() != user_id) {
             client_notifier->notifyClient(

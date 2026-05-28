@@ -4,17 +4,11 @@
 #include <drogon/utils/coroutine.h>
 #include <jwt-cpp/jwt.h>
 #include <exception>
-#include <mutex>
-#include <shared_mutex>
 #include <vector>
 #include "controllers/SecretChatsController.h"
 #include "services/ClientNotifier.hpp"
 
 using namespace api::v1;
-
-std::unordered_map<int64_t, WebSocketConnectionPtr>
-    ServerWebSocketController::clients_;
-std::shared_mutex ServerWebSocketController::clients_mutex_;
 
 void ServerWebSocketController::handleNewMessage(
     const WebSocketConnectionPtr &wsConnPtr,
@@ -47,7 +41,7 @@ void ServerWebSocketController::handleNewConnection(
             LOG_ERROR << "Failed to sync " << e.what();
             notifier->finishSync(user_id, {});
         }
-    })
+    });
 }
 
 void ServerWebSocketController::handleConnectionClosed(

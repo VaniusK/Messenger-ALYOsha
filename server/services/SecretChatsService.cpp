@@ -20,7 +20,6 @@ void SecretChatsService::initAndStart(const Json::Value &config) {
     );
     secret_chats_repo =
         std::make_shared<messenger::repositories::SecretChatsRepository>();
-    client_notifier = std::make_shared<WebsocketClientNotifier>();
 
     LOG_INFO
         << "Starting SecretChatService background tasks (Cleanup timer: 24h)";
@@ -54,6 +53,8 @@ drogon::Task<SecretChatInitResponseDto> SecretChatsService::chatInit(
         request_dto.source_user_id, request_dto.initialUserPublicKey,
         "public_key"
     );
+    auto client_notifier =
+        drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
     if (!client_notifier->notifyClient(
             request_dto.target_user_id, ws_message_json.toStyledString()
         )) {
@@ -75,6 +76,8 @@ drogon::Task<SecretChatAcceptResponseDto> SecretChatsService::chatAccept(
         "public_key"
     );
 
+    auto client_notifier =
+        drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
     if (!client_notifier->notifyClient(
             request_dto.target_user_id, ws_message_json.toStyledString()
         )) {
@@ -96,6 +99,8 @@ drogon::Task<SendSecretMessageResponseDto> SecretChatsService::sendMessage(
         "encrypted_payload"
     );
 
+    auto client_notifier =
+        drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
     if (!client_notifier->notifyClient(
             request_dto.target_user_id, ws_message_json.toStyledString()
         )) {
@@ -117,6 +122,8 @@ drogon::Task<ReadSecretMessageResponseDto> SecretChatsService::readMessage(
         "encrypted_payload"
     );
 
+    auto client_notifier =
+        drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
     if (!client_notifier->notifyClient(
             request_dto.target_user_id, ws_message_json.toStyledString()
         )) {

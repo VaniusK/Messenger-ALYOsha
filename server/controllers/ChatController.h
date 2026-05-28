@@ -174,7 +174,6 @@ public:
                 std::getenv("S3_SHOULD_USE_HTTPS") == std::string("true")
             )
         );
-        chat_service.setClientNotifier(std::make_shared<WebsocketClientNotifier>());
     }
 
     void setRepo(
