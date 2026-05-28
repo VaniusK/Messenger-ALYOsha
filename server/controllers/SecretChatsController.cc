@@ -24,7 +24,8 @@ Task<HttpResponsePtr> SecretChatsController::chatInit(
     messenger::dto::SecretChatInitRequestDto request_dto(req, request_json);
 
     try {
-        auto response_dto = co_await secret_chats_service.chatInit(std::move(request_dto));
+        auto secret_chats_service = drogon::app().getPlugin<api::v1::SecretChatsService>();
+        auto response_dto = co_await secret_chats_service->chatInit(std::move(request_dto));
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_201(response_json)
     }
@@ -61,7 +62,8 @@ Task<HttpResponsePtr> SecretChatsController::chatAccept(
     messenger::dto::SecretChatAcceptRequestDto request_dto(req, request_json);
 
     try {
-        auto response_dto = co_await secret_chats_service.chatAccept(std::move(request_dto));
+        auto secret_chats_service = drogon::app().getPlugin<api::v1::SecretChatsService>();
+        auto response_dto = co_await secret_chats_service->chatAccept(std::move(request_dto));
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_201(response_json)
     }
@@ -94,7 +96,8 @@ Task<HttpResponsePtr> SecretChatsController::sendMessage(
     messenger::dto::SendSecretMessageRequestDto request_dto(req, request_json);
 
     try {
-        auto response_dto = co_await secret_chats_service.sendMessage(std::move(request_dto));
+        auto secret_chats_service = drogon::app().getPlugin<api::v1::SecretChatsService>();
+        auto response_dto = co_await secret_chats_service->sendMessage(std::move(request_dto));
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_201(response_json)
     }
@@ -125,7 +128,8 @@ Task<HttpResponsePtr> SecretChatsController::readMessage(const HttpRequestPtr re
     messenger::dto::ReadSecretMessageRequestDto request_dto(req, request_json);
 
     try {
-        auto response_dto = co_await secret_chats_service.readMessage(std::move(request_dto));
+        auto secret_chats_service = drogon::app().getPlugin<api::v1::SecretChatsService>();
+        auto response_dto = co_await secret_chats_service->readMessage(std::move(request_dto));
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_201(response_json)
     }
@@ -167,7 +171,8 @@ Task<HttpResponsePtr> SecretChatsController::getAttachmentLink(const HttpRequest
     messenger::dto::GetSecretUploadUrlsRequestDto request_dto(count);
 
     try {
-        auto response_dto = co_await secret_chats_service.getAttachmentLinks(std::move(request_dto));
+        auto secret_chats_service = drogon::app().getPlugin<api::v1::SecretChatsService>();
+        auto response_dto = co_await secret_chats_service->getAttachmentLinks(std::move(request_dto));
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json);
     }
@@ -198,7 +203,8 @@ Task<HttpResponsePtr> SecretChatsController::getDownloadAttachmentLink(const Htt
     GetSecretDownloadUrlRequestDto request_dto(request_json);
 
     try {
-        auto response_dto = co_await secret_chats_service.getDownloadAttachmentLinks(std::move(request_dto));
+        auto secret_chats_service = drogon::app().getPlugin<api::v1::SecretChatsService>();
+        auto response_dto = co_await secret_chats_service->getDownloadAttachmentLinks(std::move(request_dto));
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_200(response_json)
     }

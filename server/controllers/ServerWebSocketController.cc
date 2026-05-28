@@ -1,56 +1,59 @@
 #include "ServerWebSocketController.h"
+#include <drogon/HttpAppFramework.h>
 #include <drogon/WebSocketConnection.h>
+#include <drogon/utils/coroutine.h>
 #include <jwt-cpp/jwt.h>
+#include <exception>
 #include <mutex>
 #include <shared_mutex>
+#include <vector>
+#include "controllers/SecretChatsController.h"
+#include "services/ClientNotifier.hpp"
 
 using namespace api::v1;
 
-std::unordered_map<int64_t, WebSocketConnectionPtr> ServerWebSocketController::clients_;
+std::unordered_map<int64_t, WebSocketConnectionPtr>
+    ServerWebSocketController::clients_;
 std::shared_mutex ServerWebSocketController::clients_mutex_;
 
-void ServerWebSocketController::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, std::string &&message, const WebSocketMessageType &type)
-{
+void ServerWebSocketController::handleNewMessage(
+    const WebSocketConnectionPtr &wsConnPtr,
+    std::string &&message,
+    const WebSocketMessageType &type
+) {
     wsConnPtr->send("Otsosi pidoras");
 }
 
-void ServerWebSocketController::handleNewConnection(const HttpRequestPtr &req, const WebSocketConnectionPtr& wsConnPtr)
-{
+void ServerWebSocketController::handleNewConnection(
+    const HttpRequestPtr &req,
+    const WebSocketConnectionPtr &wsConnPtr
+) {
     int64_t user_id = req->getAttributes()->get<int64_t>("user_id");
     wsConnPtr->setContext(std::make_shared<int64_t>(user_id));
-    {
-        std::unique_lock<std::shared_mutex> lock(clients_mutex_);
-        clients_[user_id] = wsConnPtr;
-    }
-    wsConnPtr->send("Successfully connected");
-    LOG_INFO << "User " << user_id << " connected";
-}
 
-void ServerWebSocketController::handleConnectionClosed(const WebSocketConnectionPtr& wsConnPtr)
-{
-    int64_t user_id = (*wsConnPtr->getContext<int64_t>());
-    {
-        std::unique_lock<std::shared_mutex> lock(clients_mutex_);
-        clients_.erase(user_id);
-    }
-    LOG_INFO << "User " << user_id << " disconnected";
-}
+    auto notifier = drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
+    auto service = drogon::app().getPlugin<api::v1::SecretChatsService>();
 
-bool ServerWebSocketController::notifyUser(int64_t reciever_id, const std::string &payload){
-    drogon::WebSocketConnectionPtr recieverWsConnPtr;
-    {
-        std::shared_lock<std::shared_mutex> lock(clients_mutex_);
-        auto it = clients_.find(reciever_id);
-        if (it != clients_.end()){
-            recieverWsConnPtr = it->second;
+    notifier->addConnection(user_id, wsConnPtr);
+    LOG_INFO << "User " << user_id << " connected and put in synced mode";
+
+    drogon::async_run([notifier, service, user_id]() -> drogon::Task<void> {
+        try {
+            auto offline_messages = co_await service->syncOfflineData(user_id);
+            notifier->finishSync(user_id, offline_messages);
+            LOG_INFO << "Offline data synced and buffer flushed for user " << user_id;
         }
-    }
-    if (recieverWsConnPtr){
-        recieverWsConnPtr->send(payload);
-        LOG_INFO << "Message sent to user " << reciever_id;
-        return true;
-    } else {
-        LOG_INFO << "User " << reciever_id << " is not connected";
-        return false;
-    }
+        catch (const std::exception &e) {
+            LOG_ERROR << "Failed to sync " << e.what();
+            notifier->finishSync(user_id, {});
+        }
+    })
+}
+
+void ServerWebSocketController::handleConnectionClosed(
+    const WebSocketConnectionPtr &wsConnPtr
+) {
+    int64_t user_id = (*wsConnPtr->getContext<int64_t>());
+    auto notifier = drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
+    notifier->removeConnection(user_id);
 }

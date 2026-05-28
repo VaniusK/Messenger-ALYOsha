@@ -1,5 +1,8 @@
+#include <drogon/plugins/Plugin.h>
 #include <drogon/utils/coroutine.h>
+#include <json/value.h>
 #include <memory>
+#include <vector>
 #include "dto/SecretChatsServiceDtos.hpp"
 #include "repositories/SecretChatsRepository.hpp"
 #include "services/ClientNotifier.hpp"
@@ -9,8 +12,11 @@ using namespace messenger::dto;
 
 namespace api::v1 {
 
-class SecretChatsService {
+class SecretChatsService : public drogon::Plugin<SecretChatsService> {
 public:
+    void initAndStart(const Json::Value &config) override;
+    void shutdown() override;
+
     drogon::Task<SecretChatInitResponseDto> chatInit(
         SecretChatInitRequestDto request_dto
     );
@@ -29,25 +35,7 @@ public:
     drogon::Task<GetSecretDownloadUrlResponseDto> getDownloadAttachmentLinks(
         GetSecretDownloadUrlRequestDto request_dto
     );
-
-    void setClientNotifier(
-        std::shared_ptr<ClientNotifierInterface> client_notifier
-    ) {
-        this->client_notifier = client_notifier;
-    }
-
-    void setSecretChatRepo(
-        std::shared_ptr<messenger::repositories::SecretChatsRepositoryInterface>
-            secret_chats_repo
-    ) {
-        this->secret_chats_repo = secret_chats_repo;
-    }
-
-    void setS3Service(std::shared_ptr<S3ServiceInterface> s3_service_) {
-        s3_service = s3_service_;
-    }
-
-    void startBackGroundTasks();
+    drogon::Task<std::vector<std::string>> syncOfflineData(int64_t user_id);
 
 private:
     std::shared_ptr<ClientNotifierInterface> client_notifier;

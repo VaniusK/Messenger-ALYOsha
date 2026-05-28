@@ -11,6 +11,36 @@
 
 namespace api::v1 {
 
+void SecretChatsService::initAndStart(const Json::Value &config) {
+    LOG_INFO << "Initializing SecretChatsService Plugin...";
+    s3_service = std::make_shared<S3Service>(
+        std::getenv("S3_ACCESS_KEY"), std::getenv("S3_SECRET_KEY"),
+        std::getenv("S3_BASE_URL"), std::getenv("S3_PRIVATE_BUCKETNAME"),
+        std::getenv("S3_SHOULD_USE_HTTPS") == std::string("true")
+    );
+    secret_chats_repo =
+        std::make_shared<messenger::repositories::SecretChatsRepository>();
+    client_notifier = std::make_shared<WebsocketClientNotifier>();
+
+    LOG_INFO
+        << "Starting SecretChatService background tasks (Cleanup timer: 24h)";
+
+    drogon::app().getLoop()->runEvery(std::chrono::hours(24), [this]() {
+        drogon::async_run([this]() -> drogon::Task<void> {
+            try {
+                LOG_INFO << "Running sheduled cleanup for E2E chats...";
+                co_await secret_chats_repo->removeStaleRecords();
+            } catch (const std::exception &e) {
+                LOG_ERROR << "Exception during sheduled cleanup: " << e.what();
+            }
+        });
+    });
+}
+
+void SecretChatsService::shutdown() {
+    LOG_INFO << "Shutting down SecretChatsService plugin...";
+}
+
 drogon::Task<SecretChatInitResponseDto> SecretChatsService::chatInit(
     SecretChatInitRequestDto request_dto
 ) {
@@ -135,24 +165,27 @@ SecretChatsService::getDownloadAttachmentLinks(
     co_return GetSecretDownloadUrlResponseDto(std::move(urls));
 }
 
-void SecretChatsService::startBackGroundTasks() {
-    if (!secret_chats_repo) {
-        LOG_ERROR << "secret_chats_repo is not initialised";
-        return;
+drogon::Task<std::vector<std::string>> SecretChatsService::syncOfflineData(
+    int64_t user_id
+) {
+    std::vector<std::string> offline_data;
+    auto handshakes = co_await secret_chats_repo->popHandshakeSignals(user_id);
+    for (const auto &hs : handshakes) {
+        offline_data.push_back(buildWebsocketJson(
+                                   hs.message_type, hs.sender_id, hs.public_key,
+                                   "public_key"
+        )
+                                   .toStyledString());
+    }
+    auto messages = co_await secret_chats_repo->popEncryptedMessages(user_id);
+    for (const auto &msg : messages) {
+        offline_data.push_back(buildWebsocketJson(
+                                   msg.message_type, msg.sender_id, msg.payload,
+                                   "encrypted_payload"
+        )
+                                   .toStyledString());
     }
 
-    LOG_INFO
-        << "Starting SecretChatService background tasks (Cleanup timer: 24h)";
-
-    drogon::app().getLoop()->runEvery(std::chrono::hours(24), [this]() {
-        drogon::async_run([this]() -> drogon::Task<void> {
-            try {
-                LOG_INFO << "Running sheduled cleanup for E2E chats...";
-                co_await secret_chats_repo->removeStaleRecords();
-            } catch (const std::exception &e) {
-                LOG_ERROR << "Exception during sheduled cleanup: " << e.what();
-            }
-        });
-    });
+    co_return offline_data;
 }
 }  // namespace api::v1

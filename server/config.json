@@ -280,6 +280,18 @@
                 // "custom_time_format": "",
                 // "use_real_ip": false
             }
+        },
+        {
+            "name": "api::v1::WebsocketClientNotifier",
+            "dependencies": [],
+            "config": {}
+        },
+        {
+            "name": "api::v1::SecretChatsService",
+            "dependencies": [
+                "api::v1::WebsocketClientNotifier"
+            ],
+            "config": {}
         }
     ],
     //custom_config: custom configuration for users. This object can be get by the app().getCustomConfig() method. 
