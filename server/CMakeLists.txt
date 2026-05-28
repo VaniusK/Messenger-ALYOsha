@@ -132,8 +132,10 @@ if(BUILD_TESTS)
     aux_source_directory(filters FILTER_SRC) # get all files from filters
     aux_source_directory(models MODEL_SRC) # get all files from models
 
+    set(COMMON_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../common")
+
     target_include_directories(server_tests PRIVATE ${bcrypt_SOURCE_DIR}/include) # include bcrypt headers
-    target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/tests) # include project headers
+    target_include_directories(server_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/tests ${COMMON_DIR}) # include project headers
     target_sources(server_tests PRIVATE ${REPO_SRC} ${UTILS_SRC} ${SERVICES_SRC} ${CTL_SRC} ${FILTER_SRC} ${MODEL_SRC})
     
     if(ENABLE_COVERAGE)

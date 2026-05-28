@@ -28,6 +28,10 @@ Task<HttpResponsePtr> SecretChatsController::chatInit(
         response_json = response_dto.toJson();
         RETURN_RESPONSE_CODE_201(response_json)
     }
+    catch (messenger::exceptions::BadRequestException &e) {
+        response_json["message"] = e.what();
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
     catch (messenger::exceptions::NotFoundException &e){
         response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_404(response_json)
@@ -113,7 +117,7 @@ Task<HttpResponsePtr> SecretChatsController::readMessage(const HttpRequestPtr re
     Json::Value response_json;
     auto request_json = req->getJsonObject();
     if (utils::find_missed_fields(
-            response_json, request_json, {"target_user_id", "message_id"}
+            response_json, request_json, {"target_user_id", "encrypted_payload"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }

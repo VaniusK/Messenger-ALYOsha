@@ -10,7 +10,9 @@ services:
         - ./server/sql:/docker-entrypoint-initdb.d
 
   server:
-    build: ./server
+    build: 
+      context: .
+      dockerfile: server/Dockerfile
     env_file:
       - .env
     ports:

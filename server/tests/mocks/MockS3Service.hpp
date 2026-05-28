@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gmock/gmock.h>
+#include "gmock/gmock.h"
 #include "services/S3Service.hpp"
 
 using namespace api::v1;
@@ -11,6 +12,12 @@ public:
         std::optional<std::vector<UploadPresignedResult>>,
         generateUploadUrl,
         (int64_t, const std::string &, const std::vector<AttachmentFileInfo> &),
+        (override)
+    );
+    MOCK_METHOD(
+        std::optional<UploadPresignedResult>,
+        generateSecretChatUploadUrl,
+        (),
         (override)
     );
     MOCK_METHOD(

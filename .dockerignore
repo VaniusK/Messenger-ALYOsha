@@ -3,6 +3,9 @@
 .github
 .vscode
 build
+**/build
+**/CMakeCache.txt
+**/CMakeFiles
 artifacts
 *.md
 LICENSE

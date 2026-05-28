@@ -14,6 +14,11 @@ namespace api::v1 {
 drogon::Task<SecretChatInitResponseDto> SecretChatsService::chatInit(
     SecretChatInitRequestDto request_dto
 ) {
+    if (request_dto.source_user_id == request_dto.target_user_id) {
+        throw messenger::exceptions::BadRequestException(
+            "Can't create secret chat with yourself."
+        );
+    }
     Json::Value ws_message_json = buildWebsocketJson(
         static_cast<int32_t>(WebsocketMessageType::SECRET_CHAT_REQUEST),
         request_dto.source_user_id, request_dto.initialUserPublicKey,

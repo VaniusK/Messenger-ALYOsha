@@ -12,7 +12,7 @@
 using namespace drogon;
 
 namespace api::v1 {
-class SecretChatsController : HttpController<SecretChatsController> {
+class SecretChatsController : public drogon::HttpController<SecretChatsController> {
 public:
     METHOD_LIST_BEGIN
     ADD_METHOD_TO(

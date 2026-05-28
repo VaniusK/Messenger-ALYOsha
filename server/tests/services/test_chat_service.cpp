@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "jwt-cpp/jwt.h"
 #include "services/ChatService.hpp"
+#include "services/ClientNotifier.hpp"
 #include "services/S3Service.hpp"
 #include "tests/mocks/MockAttachmentRepository.hpp"
 #include "tests/mocks/MockChatRepository.hpp"
@@ -68,6 +69,9 @@ protected:
         chat_service->setAttachmentRepo(mock_attachment_repo);
         chat_service->setS3Service(mock_s3_service);
         chat_service->setUserRepo(mock_user_repo);
+        chat_service->setClientNotifier(
+            std::make_shared<WebsocketClientNotifier>()
+        );
     }
 
     void TearDown() override {
