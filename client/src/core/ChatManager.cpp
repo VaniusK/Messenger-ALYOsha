@@ -104,7 +104,10 @@ void ChatManager::fetchChats() {
     qDebug() << "[ChatManager] fetchChats called for user ID:"
              << sm->getUserId();
 #endif
-    emit chatsUpdated(m_chatStorage->getChatPreviews());
+
+    QJsonArray currentChats = m_chatStorage->getChatPreviews();
+    emit chatsUpdated(currentChats);
+
     QNetworkReply *reply =
         m_connection->get("/chats/user/" + QString::number(sm->getUserId()));
 
@@ -138,7 +141,14 @@ void ChatManager::fetchChats() {
                              << preview["last_message"]["id"].toInt();
                 }
             }
-            emit chatsUpdated(m_chatStorage->getChatPreviews());
+
+            QJsonArray combinedChats = m_chatStorage->getChatPreviews();
+            // TODO LOCAL DB
+            // получить вектор секретных чатов, конвертируем в QJsonObject и
+            // combinedChats.append(secretChat) QML сам сортирует по времени
+            // last_message
+
+            emit chatsUpdated(combinedChats);
         } else {
             emit chatError("Fetch chats failed: " + reply->errorString());
         }
@@ -307,8 +317,16 @@ void ChatManager::onWebSocketDisconnected() {
 void ChatManager::onWebSocketTextMessageReceived(const QString &message) {
     qDebug() << "[ChatManager] WS message:" << message;
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+
     if (doc["event_type"] == "NEW_MESSAGE") {
         QJsonObject msg = doc["data"]["message"].toObject();
+
+        // secret
+        if (msg["type"].toString() == "secret_payload" ||
+            msg["chat_id"].isString()) {
+            handleIncomingSecretPayload(msg);
+            return;
+        }
 
         QJsonValue senderValue = msg["sender_id"];
         QString senderIdStr =
@@ -527,4 +545,55 @@ void ChatManager::fetchChatInfo(const QString &chatId) {
             qDebug() << "Fetch chat info error:" << reply->errorString();
         }
     });
+}
+
+void ChatManager::createSecretChat(
+    qint64 targetUserId,
+    const QString &targetUserName
+) {
+    qDebug() << "[SecretChat] Создание секретного чата с юзером:"
+             << targetUserId;
+    // TODO LOCAL DB
+
+    QString newSecretChatId = "sec_test_" + QString::number(targetUserId);
+    emit directChatOpened(newSecretChatId, targetUserName);
+    fetchChats();
+}
+
+void ChatManager::fetchSecretChatHistory(const QString &chatId, int beforeId) {
+    qDebug() << "[SecretChat] Запрос истории для:" << chatId
+             << "до:" << beforeId;
+    // TODO LOCAL DB
+
+    QJsonArray emptyHistory;
+
+    if (beforeId > 0) {
+        emit chatsHistoryPrepended(emptyHistory);
+    } else {
+        emit chatsHistoryLoaded(emptyHistory);
+    }
+}
+
+void ChatManager::sendSecretMessage(
+    const QString &chatId,
+    const QString &text
+) {
+    qDebug() << "[SecretChat] Отправка сообщения " << chatId << ":" << text;
+    // TODO LOCAL DB
+}
+
+void ChatManager::handleIncomingSecretPayload(const QJsonObject &payload) {
+    // TODO LOCAL DB
+}
+
+void ChatManager::uploadSecretFile(
+    const QString &chatId,
+    const QString &filePath,
+    bool asFile,
+    const QString &caption,
+    const QString &msgType
+) {
+    qDebug() << "[SecretChat] Отправка файла в" << chatId << ":" << filePath;
+
+    // TODO LOCAL DB
 }

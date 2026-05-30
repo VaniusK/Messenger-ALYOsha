@@ -58,6 +58,20 @@ public:
         const QString &newRole
     );
     Q_INVOKABLE void fetchChatInfo(const QString &chatId);
+    Q_INVOKABLE void
+    createSecretChat(qint64 targetUserId, const QString &targetUserName);
+    Q_INVOKABLE void
+    fetchSecretChatHistory(const QString &chatId, int beforeId = 0);
+    Q_INVOKABLE void
+    sendSecretMessage(const QString &chatId, const QString &text);
+    Q_INVOKABLE void uploadSecretFile(
+        const QString &chatId,
+        const QString &filePath,
+        bool asFile,
+        const QString &caption,
+        const QString &msgtype
+    );
+    Q_INVOKABLE void deleteSecretChat(const QString &chatId);
 
 signals:
     void usersFound(const QJsonArray &users);
@@ -88,4 +102,5 @@ private:
     MediaCacheManager *m_mediaCache;
     LocalChatStorage *m_chatStorage;
     QWebSocket *m_webSocket;
+    void handleIncomingSecretPayload(const QJsonObject &payload);
 };
