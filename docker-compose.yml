@@ -70,6 +70,7 @@ services:
     build:
       context: ./client
       target: test-runner
+    env_file: .env
     depends_on:
       db:
         condition: service_started
