@@ -33,8 +33,7 @@ protected:
         mockConn = std::make_shared<MockConnectionManager>();
         stateManager = std::make_unique<StateManager>();
         mediaCacheManager = std::make_unique<MediaCacheManager>(mockConn.get());
-        localChatStorage =
-            std::make_unique<LocalChatStorage>(true, mockConn.get());
+        localChatStorage = std::make_unique<LocalChatStorage>(true, "default");
         chatManager = std::make_unique<ChatManager>(
             mockConn.get(), stateManager.get(), mediaCacheManager.get(),
             localChatStorage.get()
