@@ -66,6 +66,19 @@ services:
       S3_SECRET_KEY: minioadmin
       S3_SHOULD_USE_HTTPS: false
   
+  test-client:
+    build:
+      context: ./client
+      target: test-runner
+    depends_on:
+      db:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      - server
+    profiles:
+      - test
+  
   test-server-coverage:
     build:
       context: ./server

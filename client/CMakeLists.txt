@@ -104,6 +104,7 @@ if(BUILD_TESTS)
     tests/mocks/FakeNetworkReply.hpp
     tests/test_auth_manager.cpp
     tests/test_chat_manager.cpp
+    tests/test_integration.cpp
     )
 
     target_include_directories(client_tests PRIVATE include)

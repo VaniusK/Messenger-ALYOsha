@@ -27,3 +27,13 @@ COPY . .
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
 RUN cmake --build build --parallel
 CMD ["cp", "/usr/src/client/build/client", "/output/client"]
+
+FROM base AS test-build
+WORKDIR /usr/src/client
+COPY . .
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
+RUN cmake --build build --parallel --target client_tests
+
+FROM base AS test-runner
+COPY --from=test-build /usr/src/client/build/client_tests /usr/local/bin/
+CMD ["client_tests"]
