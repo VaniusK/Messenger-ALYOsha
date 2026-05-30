@@ -76,6 +76,23 @@ jobs:
             -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --parallel
+      
+      - uses: actions/checkout@v4
+      - name: Create test .env
+        run: |
+          echo "POSTGRES_USER=test_user" >> .env
+          echo "POSTGRES_PASSWORD=test_password" >> .env
+          echo "POSTGRES_DB=test_db" >> .env
+          echo "POSTGRES_HOST=db" >> .env
+          echo "JWT_KEY=cool_key_sosite" >> .env
+          echo "SERVER_WINDOW_FOR_REQUESTS_SECONDS=10" >> .env
+          echo "SERVER_MAX_REQUESTS_PER_WINDOW=1000000" >> .env
+          echo "SERVER_IP_LIST_CLEANING_SECONDS_COOLDOWN=60" >> .env
+          echo "S3_BASE_URL=minio:9000" >> .env
+          echo "S3_PRIVATE_BUCKETNAME=messenger-alyosha" >> .env
+          echo "S3_ACCESS_KEY=minioadmin" >> .env
+          echo "S3_SECRET_KEY=minioadmin" >> .env
+          echo "S3_SHOULD_USE_HTTPS=false" >> .env
 
       - name: Test client
         run: docker compose --profile test run test-client
