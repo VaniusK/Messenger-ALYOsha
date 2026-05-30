@@ -12,6 +12,8 @@ class ConnectionManager : public QObject {
 public:
     explicit ConnectionManager(
         std::function<QString()> tokenProvider,
+        QString baseUrl,
+        QString wsUrl,
         QObject *parent = nullptr
     );
 
@@ -28,6 +30,6 @@ public:
 private:
     QNetworkAccessManager *m_networkManager;
     std::function<QString()> m_tokenProvider;
-    QString m_baseUrl = "https://api.alyosha-test.ru/v1";
-    QString m_wsUrl = "wss://api.alyosha-test.ru/ws/chat";
+    QString m_baseUrl;
+    QString m_wsUrl;
 };
