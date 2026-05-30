@@ -5,8 +5,8 @@ import Messenger 1.0
 
 Rectangle {
     id: sidebarRoot
-    color: "#1c242f"
-    border.color: "#0e1621"
+    color: appTheme.bgPanel
+    border.color: appTheme.bgMain
     border.width: 1
 
     property var chatDataList: []
@@ -20,7 +20,7 @@ Rectangle {
         searchInput.focus = false
     }
 
-    signal logoutRequested()
+    signal settingsRequested()
     signal chatSelected(string chatId, string chatName, string chatType, string chatDescription)
 
     Connections {
@@ -103,7 +103,7 @@ Rectangle {
         id: searchHeader
         width: parent.width
         height: 110
-        color: "#1c242f"
+        color: appTheme.bgPanel
         anchors.top: parent.top
 
         ColumnLayout {
@@ -117,7 +117,7 @@ Rectangle {
 
                 Text {
                     text: "Чаты"
-                    color: "white"
+                    color: appTheme.textMain
                     font.pixelSize: 18
                     font.bold: true
                     font.family: "Segoe UI"
@@ -130,19 +130,19 @@ Rectangle {
                     Layout.preferredHeight: 32
                     Layout.preferredWidth: newGroupContent.width + 24
                     radius: 16
-                    color: createGroupArea.containsMouse ? "#6dbcf8" : "#5eb5f7"
+                    color: createGroupArea.containsMouse ? Qt.lighter(appTheme.accent, 1.1) : appTheme.accent
 
                     RowLayout {
                         id: newGroupContent
                         anchors.centerIn: parent
                         spacing: 6
                         Image { 
-                            source: "qrc:/messenger_client_uri/assets/icons/person_plus.svg" 
+                            source: "qrc:/messenger_client_uri/assets/icons/create_group.svg" 
                             width: 16; height: 16; sourceSize: Qt.size(16, 16) 
                         }
                         Text { 
                             text: "Новая группа"
-                            color: "white"
+                            color: appTheme.textMain
                             font.pixelSize: 13
                             font.bold: true
                             font.family: "Segoe UI" 
@@ -158,27 +158,38 @@ Rectangle {
                     }
                 }
 
-                // КНОПКА ВЫХОДА
+                // КНОПКА НАСТРОЕК
                 Rectangle {
-                    Layout.preferredWidth: 32
                     Layout.preferredHeight: 32
+                    Layout.preferredWidth: settingsContent.width + 24
                     radius: 16
-                    color: logoutBtnMouseArea.containsMouse ? "rgba(255, 77, 77, 0.1)" : "transparent"
+                    color: settingsBtnArea.containsMouse ? Qt.lighter(appTheme.accent, 1.1) : appTheme.accent
 
-                    Text {
-                        text: "✕"
-                        color: "#ff4d4f"
-                        font.pixelSize: 16
-                        font.bold: true
+                    RowLayout {
+                        id: settingsContent
                         anchors.centerIn: parent
+                        spacing: 6
+
+                        Image { 
+                            source: "qrc:/messenger_client_uri/assets/icons/gear.svg" 
+                            width: 16; height: 16; sourceSize: Qt.size(16, 16) 
+                        }
+
+                        Text { 
+                            text: "Настройки"
+                            color: appTheme.textMain
+                            font.pixelSize: 13
+                            font.bold: true
+                            font.family: "Segoe UI" 
+                        }
                     }
 
                     MouseArea {
-                        id: logoutBtnMouseArea
+                        id: settingsBtnArea
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: sidebarRoot.logoutRequested()
+                        onClicked: sidebarRoot.settingsRequested()
                     }
                 }
             }
@@ -187,7 +198,7 @@ Rectangle {
             Rectangle {
                 Layout.fillWidth: true
                 height: 36
-                color: "#242f3d"
+                color: appTheme.bgInput
                 radius: 18
 
                 Timer {
@@ -207,12 +218,12 @@ Rectangle {
                     bottomPadding: 0
                     font.pixelSize: 14
                     font.family: "Segoe UI"
-                    color: "white"
+                    color: appTheme.textMain
                     clip: true
 
                     Text {
                         text: "Поиск"
-                        color: "#8a96a3"
+                        color: appTheme.textHint
                         font.family: "Segoe UI"
                         visible: !parent.text
                         anchors.verticalCenter: parent.verticalCenter
@@ -238,7 +249,7 @@ Rectangle {
 
     Text {
         text: "Нет результатов..."
-        color: "#8a96a3"
+        color: appTheme.textHint
         font.pixelSize: 15
         font.family: "Segoe UI"
         anchors.centerIn: chatList
@@ -262,7 +273,7 @@ Rectangle {
             property var itemData: modelData ? modelData : {}
             property bool isActive: !sidebarRoot.isSearching && String(itemData.chat_id) === sidebarRoot.activeChatId
             property bool isSelf: isSearching && String(itemData.id) === String(AppState.userId)
-            color: isActive ? "#2b5278" : (chatMouseArea.containsMouse ? "#202b36" : "#1c242f")
+            color: isActive ? appTheme.bgActiveItem : (chatMouseArea.containsMouse ? appTheme.hoverColor : "transparent")
 
             MouseArea {
                 id: chatMouseArea
@@ -339,7 +350,7 @@ Rectangle {
                                 ? (itemData.display_name ?? itemData.handle ?? "")
                                 : (itemData.type === "saved" ? "Избранное" : (itemData.title ?? ""))
                             font.bold: true
-                            color: "white"
+                            color: chatItem.isActive ? "white" : appTheme.textMain
                             font.family: "Segoe UI"
                             font.pixelSize: 15
                             elide: Text.ElideRight
@@ -368,7 +379,7 @@ Rectangle {
                                 var mins = d.getMinutes();
                                 return (hrs < 10 ? "0" : "") + hrs + ":" + (mins < 10 ? "0" : "") + mins;
                             }
-                            color: "#8a96a3"
+                            color: chatItem.isActive ? "white" : appTheme.textHint
                             font.pixelSize: 12
                             font.family: "Segoe UI"
                             anchors.right: parent.right
@@ -440,7 +451,7 @@ Rectangle {
                         Text {
                             visible: parent.senderNameStr !== ""
                             text: parent.senderNameStr
-                            color: "#5eb5f7"
+                            color: chatItem.isActive ? "white" : appTheme.accent
                             font.pixelSize: 14
                             font.family: "Segoe UI"
 
@@ -452,7 +463,7 @@ Rectangle {
                         Text {
                             visible: parent.mediaPrefix !== ""
                             text: parent.mediaPrefix
-                            color: "#5eb5f7"
+                            color: chatItem.isActive ? "white" : appTheme.accent
                             font.pixelSize: 14
                             font.family: "Segoe UI"
                         }
@@ -461,7 +472,7 @@ Rectangle {
                         Text {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
-                            color: "#8a96a3"
+                            color: chatItem.isActive ? "white" : appTheme.textHint
                             font.pixelSize: 14
                             font.family: "Segoe UI"
                             

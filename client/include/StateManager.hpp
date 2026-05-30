@@ -10,6 +10,9 @@ class StateManager : public QObject {
     Q_PROPERTY(QString currentUserHandle READ getCurrentUserHandle WRITE
                    setCurrentUserHandle NOTIFY currentUserHandleChanged)
     Q_PROPERTY(int userId READ getUserId WRITE setUserId NOTIFY userIdChanged)
+    Q_PROPERTY(QString theme READ getTheme WRITE setTheme NOTIFY themeChanged)
+    Q_PROPERTY(QString accentColor READ getAccentColor WRITE setAccentColor
+                   NOTIFY accentColorChanged)
 
 public:
     explicit StateManager(QObject *parent = nullptr);
@@ -33,14 +36,24 @@ public:
     bool getRememberMe() const;
     void setRememberMe(bool rememberMe);
 
+    QString getTheme() const;
+    void setTheme(const QString &theme);
+
+    QString getAccentColor() const;
+    void setAccentColor(const QString &color);
+
 signals:
     void tokenChanged();
     void currentUserHandleChanged();
     void userIdChanged();
+    void themeChanged();
+    void accentColorChanged();
 
 private:
     QString m_token;
     QString m_currentUserHandle;
     int m_userId = -1;
     bool m_rememberMe = true;
+    QString m_theme;
+    QString m_accentColor;
 };

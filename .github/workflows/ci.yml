@@ -341,7 +341,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     steps:
       - name: Execute deployment script via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ${{ secrets.STAGING_SERVER_USER }}
@@ -356,6 +356,6 @@ jobs:
             sed -i 's/api.localhost/api.alyosha-test.ru/g' server/nginx/nginx.conf
             sed -i 's/localhost/alyosha-test.ru/g' server/nginx/nginx.conf
 
-            docker compose down
-            make run_server
+            docker compose down --remove-orphans
+            docker compose --profile prod up -d --build --force-recreate
   
