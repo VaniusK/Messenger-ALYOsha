@@ -80,7 +80,8 @@ services:
   
   test-server-coverage:
     build:
-      context: ./server
+      context: .
+      dockerfile: server/Dockerfile
       target: coverage
       args:
         ENABLE_COVERAGE: "ON"
