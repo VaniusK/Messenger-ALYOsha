@@ -18,6 +18,8 @@ protected:
     std::unique_ptr<QCoreApplication> app;
     std::shared_ptr<MockConnectionManager> mockConn;
     std::unique_ptr<StateManager> stateManager;
+    std::unique_ptr<MediaCacheManager> mediaCacheManager;
+    std::unique_ptr<LocalChatStorage> localChatStorage;
     std::unique_ptr<ChatManager> chatManager;
 
     void SetUp() override {
@@ -30,8 +32,13 @@ protected:
 
         mockConn = std::make_shared<MockConnectionManager>();
         stateManager = std::make_unique<StateManager>();
-        chatManager =
-            std::make_unique<ChatManager>(mockConn.get(), stateManager.get());
+        mediaCacheManager = std::make_unique<MediaCacheManager>(mockConn.get());
+        localChatStorage =
+            std::make_unique<LocalChatStorage>(true, mockConn.get());
+        chatManager = std::make_unique<ChatManager>(
+            mockConn.get(), stateManager.get(), mediaCacheManager.get(),
+            localChatStorage.get()
+        );
     }
 };
 

@@ -1,3 +1,4 @@
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -10,19 +11,19 @@ using ::testing::Return;
 
 class TestUserFixture : public ::testing::Test {
 protected:
-    std::unique_ptr<QCoreApplication> app;
+    std::unique_ptr<QCoreApplication> m_app;
 
     void SetUp() override {
         if (!QCoreApplication::instance()) {
             static int argc = 1;
             static char name[] = "test";
             static char *argv[] = {name, nullptr};
-            app = std::make_unique<QCoreApplication>(argc, argv);
+            m_app = std::make_unique<QCoreApplication>(argc, argv);
         }
     }
 };
 
 TEST_F(TestUserFixture, BasicMessaging) {
-    auto user_1 = TestUser("user1", "User", "12345678");
-    auto user_2 = TestUser("user2", "User", "12345678");
+    auto user_1 = TestUser("user1", "User", "12345678", m_app.get());
+    auto user_2 = TestUser("user2", "User", "12345678", m_app.get());
 }
