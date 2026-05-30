@@ -7,9 +7,15 @@
 #include <MediaCacheManager.hpp>
 #include <StateManager.hpp>
 
-class TestUser {
+class TestUser : public QObject {
+    Q_OBJECT
 public:
-    TestUser(QString handle, QString displayName, QString password);
+    TestUser(
+        QString handle,
+        QString displayName,
+        QString password,
+        QObject *parent
+    );
 
 private:
     StateManager *m_stateManager;
