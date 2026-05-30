@@ -155,7 +155,7 @@ Task<HttpResponsePtr> UserController::loginUser(HttpRequestPtr req) {
         RETURN_RESPONSE_CODE_401(response_json)
     }
     catch (messenger::exceptions::InternalServerErrorException &e) {
-        response_json["messsage"] = e.what();
+        response_json["message"] = e.what();
         RETURN_RESPONSE_CODE_500(response_json)
     }
     catch (std::exception &e) {

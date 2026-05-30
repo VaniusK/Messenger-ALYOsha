@@ -12,4 +12,4 @@ run_server_tests:
 	docker compose -f 'docker-compose.yml' up --build 'test-server' 
 
 run_server:
-	docker compose -f 'docker-compose.yml' up -d --build 'nginx' 
+	docker compose --profile prod up -d --build --force-recreate

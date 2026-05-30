@@ -10,13 +10,23 @@ services:
         - ./server/sql:/docker-entrypoint-initdb.d
 
   server:
-    build: ./server
+    build: 
+      context: .
+      dockerfile: server/Dockerfile
     env_file:
       - .env
     ports:
       - "8080:8080"
     depends_on:
       - db
+  #     - redis
+  
+  # redis:
+  #   image: redis:7-alpine
+  #   container-name: messenger-alyosha-redis
+  #   ports:
+  #     -"127.0.0.1:6379:6379"
+  #   command: redis-server --save "" --appendonly no
   
   nginx:
     image: nginx:alpine
@@ -48,7 +58,9 @@ services:
       - build
 
   test-server:
-    build: ./server
+    build: 
+      context: .
+      dockerfile: server/Dockerfile
     command: ["./server_tests"]
     env_file: .env
     depends_on:
@@ -68,7 +80,8 @@ services:
   
   test-server-coverage:
     build:
-      context: ./server
+      context: .
+      dockerfile: server/Dockerfile
       target: coverage
       args:
         ENABLE_COVERAGE: "ON"
