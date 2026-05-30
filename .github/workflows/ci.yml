@@ -78,7 +78,7 @@ jobs:
           cmake --build build/client --parallel
 
       - name: Test client
-        run: ctest --test-dir build/client --output-on-failure
+        run: docker compose --profile test run test-client
 
       - name: Download linuxdeploy
         run: |
