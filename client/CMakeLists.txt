@@ -123,9 +123,8 @@ if(BUILD_TESTS)
     GTest::gtest_main
     GTest::gmock
     Qt6::Core
-    Qt6::Network
-    Qt6::WebSockets
     Qt6::Test
+    Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg
     )
     
     include(GoogleTest)
