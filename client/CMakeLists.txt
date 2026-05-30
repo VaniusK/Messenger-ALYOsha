@@ -92,14 +92,23 @@ if(BUILD_TESTS)
     enable_testing()
     
     add_executable(client_tests 
-    src/core/StateManager.cpp
-    include/StateManager.hpp
+    src/core/main.cpp
     src/core/AuthManager.cpp
     include/AuthManager.hpp
-    src/core/ConnectionManager.cpp
-    include/ConnectionManager.hpp
+    src/core/StateManager.cpp
+    include/StateManager.hpp
     src/core/ChatManager.cpp
     include/ChatManager.hpp
+    src/core/ConnectionManager.cpp
+    include/ConnectionManager.hpp
+    src/core/MediaManager.cpp
+    include/MediaManager.hpp
+    src/core/VoiceManager.cpp
+    include/VoiceManager.hpp
+    src/core/MediaCacheManager.cpp
+    include/MediaCacheManager.hpp
+    src/core/LocalChatStorage.cpp
+    include/LocalChatStorage.hpp
     tests/test_state_manager.cpp
     tests/mocks/FakeNetworkReply.hpp
     tests/test_auth_manager.cpp
