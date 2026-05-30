@@ -353,12 +353,14 @@ Task<SendMessageResponseDto> ChatService::sendMessage(
         co_await chat_repo->getMembers(chat_id);
     auto client_notifier =
         drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
-    for (const auto &chat_member : chat_members) {
-        if (chat_member.getValueOfUserId() != user_id) {
-            client_notifier->notifyClient(
-                chat_member.getValueOfUserId(),
-                websocket_message_json.toStyledString()
-            );
+    if (client_notifier) {
+        for (const auto &chat_member : chat_members) {
+            if (chat_member.getValueOfUserId() != user_id) {
+                client_notifier->notifyClient(
+                    chat_member.getValueOfUserId(),
+                    websocket_message_json.toStyledString()
+                );
+            }
         }
     }
 
