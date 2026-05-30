@@ -315,12 +315,11 @@ jobs:
           ls -la artifacts/
           test -f artifacts/client || (echo "Client binary not found!" && exit 1)
       
+      - name: Run client tests
+        run: docker compose --profile test run test-client
 
       - name: Run server tests
         run: docker compose --profile test run test-server
-      
-      - name: Run client tests
-        run: docker compose --profile test run test-client
       
       - name: Generate server tests coverage report
         run: docker compose --profile test run test-server-coverage
