@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
     ca-certificates \
     openssl \
+    libsodium-dev \
     && rm -rf /var/lib/apt/lists/*
     
 WORKDIR /usr/src/client

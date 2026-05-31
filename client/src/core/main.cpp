@@ -3,9 +3,11 @@
 #include <QQmlApplicationEngine>
 #include <QUrl>
 #include <QtMessageHandler>
+#include <iostream>
 #include "AuthManager.hpp"
 #include "ChatManager.hpp"
 #include "ConnectionManager.hpp"
+#include "CryptoManager.hpp"
 #include "LocalChatStorage.hpp"
 #include "MediaCacheManager.hpp"
 #include "MediaManager.hpp"
@@ -41,6 +43,13 @@ int main(int argc, char *argv[]) {
         connectionManager, stateManager, localChatStorage, chatManager, &app
     );
     auto *voiceManager = new VoiceManager(&app);
+
+    if (!client::crypto::CryptoManager::init(
+        )) {  // Maybe it can be prettier with qDebug. I don't know on which
+              // stage it's initialized
+        std::cerr << "Error while initializing CryptoManager. Terminate...";
+        return 1;
+    }
 
     QQmlApplicationEngine engine;
     qmlRegisterSingletonInstance("Messenger", 1, 0, "AppState", stateManager);

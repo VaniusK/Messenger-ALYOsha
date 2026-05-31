@@ -32,6 +32,8 @@ qt_add_executable(client #WIN32
     include/MediaCacheManager.hpp
     src/core/LocalChatStorage.cpp
     include/LocalChatStorage.hpp
+    src/core/CryptoManager.cpp
+    include/CryptoManager.hpp
 )
 
 qt_add_qml_module(client
@@ -79,6 +81,9 @@ qt_add_qml_module(client
 target_include_directories(client PRIVATE include)
 target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)
 
+find_library(SODIUM_LIB sodium REQUIRED)
+target_link_libraries(client PRIVATE ${SODIUM_LIB})
+
 # Tests (optional, Qt Test or GTest)
 option(BUILD_TESTS "Build tests" OFF)
 if(BUILD_TESTS)
@@ -106,6 +111,8 @@ if(BUILD_TESTS)
     tests/mocks/FakeNetworkReply.hpp
     tests/test_auth_manager.cpp
     tests/test_chat_manager.cpp
+    src/core/CryptoManager.cpp
+    include/CryptoManager.hpp
     )
 
     target_include_directories(client_tests PRIVATE include)
@@ -117,6 +124,9 @@ if(BUILD_TESTS)
     Qt6::WebSockets
     Qt6::Test
     )
+
+    find_library(SODIUM_LIB sodium REQUIRED)
+    target_link_libraries(client PRIVATE ${SODIUM_LIB})
     
     include(GoogleTest)
     gtest_discover_tests(client_tests)

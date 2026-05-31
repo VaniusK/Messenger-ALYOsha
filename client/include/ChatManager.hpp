@@ -71,7 +71,7 @@ public:
         const QString &caption,
         const QString &msgtype
     );
-    Q_INVOKABLE void deleteSecretChat(const QString &chatId);
+    // Q_INVOKABLE void deleteSecretChat(const QString &chatId);
 
 signals:
     void usersFound(const QJsonArray &users);
