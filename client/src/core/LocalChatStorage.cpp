@@ -50,7 +50,7 @@ LocalChatStorage::LocalChatStorage(
     QSqlQuery chat_previews_query(QSqlDatabase::database(m_connectionName));
     chat_previews_query.exec(CHAT_PREVIEWS_SCHEMA);
 
-    QSqlQuery indexQuery;
+    QSqlQuery indexQuery(QSqlDatabase::database(m_connectionName));
     indexQuery.prepare("CREATE INDEX idx_field ON messages(chat_id);");
     indexQuery.exec();
 }
