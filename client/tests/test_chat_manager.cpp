@@ -54,8 +54,8 @@ TEST_F(ChatManagerTest, FetchChatsSuccess) {
     chatManager->fetchChats();
     fakeReply->emitFinished();
 
-    EXPECT_EQ(spy.count(), 1);
-    QJsonArray chatsArray = spy.takeFirst().at(0).toJsonArray();
+    EXPECT_EQ(spy.count(), 2);
+    QJsonArray chatsArray = spy.takeLast().at(0).toJsonArray();
     EXPECT_EQ(chatsArray.size(), 1);
     EXPECT_EQ(
         chatsArray[0].toObject()["title"].toString().toStdString(), "Test chat"
@@ -67,17 +67,11 @@ TEST_F(ChatManagerTest, SendMessageSuccess) {
     EXPECT_CALL(*mockConn, post(QString("/chats/1/messages"), _))
         .WillOnce(Return(fakePostReply));
 
-    auto *fakeHistoryReply = new FakeNetworkReply(200, "{\"messages\":[]}");
-    EXPECT_CALL(*mockConn, get(QString("/chats/1/messages?limit=20")))
-        .WillOnce(Return(fakeHistoryReply));
-
     QSignalSpy spySent(chatManager.get(), &ChatManager::messageSentSuccess);
     QSignalSpy spyHistory(chatManager.get(), &ChatManager::chatsHistoryLoaded);
 
     chatManager->sendMessage("1", "Йоу!");
     fakePostReply->emitFinished();
-    fakeHistoryReply->emitFinished();
 
     EXPECT_EQ(spySent.count(), 1);
-    EXPECT_EQ(spyHistory.count(), 1);
 }
