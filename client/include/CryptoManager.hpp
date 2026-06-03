@@ -16,6 +16,9 @@ enum class CryptoError {
     DecryptionFailed,
     EncryptionFailed,
     KeyComputationFailed,
+    FileOpenError,
+    StreamInitFailed,
+    StreamCorrupted,
     None
 };
 
@@ -37,10 +40,21 @@ struct DecryptResult {
     CryptoError error;
 };
 
+struct EncryptFileResult {
+    bool success;
+    CryptoError error;
+};
+
+struct DecryptFileResult {
+    bool success;
+    CryptoError error;
+};
+
 class CryptoManager {
 public:
     static bool init();
     static KeyPair generateKeyPair();
+    static QByteArray generateFileKey();
 
     static SharedSecretResult computeSharedSecret(
         const QByteArray &my_private_key,
@@ -54,6 +68,17 @@ public:
     static DecryptResult decryptMessage(
         const QByteArray &base64_envelope,
         const QByteArray &shared_secret
+    );
+
+    static EncryptFileResult encryptFile(
+        const QString &input_path,
+        const QString &output_path,
+        const QByteArray &file_key
+    );
+    static DecryptFileResult decryptFile(
+        const QString &input_path,
+        const QString &output_path,
+        const QByteArray &file_key
     );
 };
 

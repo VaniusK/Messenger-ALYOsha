@@ -1,8 +1,10 @@
 #include "include/CryptoManager.hpp"
 #include <sodium.h>
 #include <sodium/crypto_box.h>
+#include <sodium/crypto_secretstream_xchacha20poly1305.h>
 #include <sodium/randombytes.h>
 #include <QDebug>
+#include <QFile>
 #include <QtGlobal>
 
 namespace client::crypto {
@@ -118,6 +120,148 @@ DecryptResult CryptoManager::decryptMessage(
     }
 
     return {true, plain_text, CryptoError::None};
+}
+
+const qint64 CHUNK_SIZE = 65536;
+
+QByteArray CryptoManager::generateFileKey() {
+    QByteArray key;
+    key.resize(crypto_secretstream_xchacha20poly1305_KEYBYTES);
+    crypto_secretstream_xchacha20poly1305_keygen(
+        reinterpret_cast<unsigned char *>(key.data())
+    );
+    return key;
+}
+
+EncryptFileResult CryptoManager::encryptFile(
+    const QString &input_path,
+    const QString &output_path,
+    const QByteArray &file_key
+) {
+    if (file_key.size() != crypto_secretstream_xchacha20poly1305_KEYBYTES) {
+        qWarning() << "[Crypto] File Encrypt failed: Invalid file key size";
+        return {false, CryptoError::InvalidKeySize};
+    }
+
+    QFile in_file(input_path);
+    QFile out_file(output_path);
+    if (!in_file.open(QIODevice::ReadOnly) ||
+        !out_file.open(QIODevice::WriteOnly)) {
+        qWarning() << "[Crypto] File Encrypt failed: Cannot open I/O files";
+        return {false, CryptoError::FileOpenError};
+    }
+
+    unsigned char header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
+    crypto_secretstream_xchacha20poly1305_state st;
+
+    if (crypto_secretstream_xchacha20poly1305_init_push(
+            &st, header,
+            reinterpret_cast<const unsigned char *>(file_key.constData())
+        ) != 0) {
+        qWarning() << "[Crypto] File Encrypt failed: Stream init error";
+        return {false, CryptoError::StreamInitFailed};
+    }
+
+    out_file.write(reinterpret_cast<char *>(header), sizeof(header));
+
+    while (!in_file.atEnd()) {
+        QByteArray chunk = in_file.read(CHUNK_SIZE);
+        unsigned char tag =
+            in_file.atEnd() ? crypto_secretstream_xchacha20poly1305_TAG_FINAL
+                            : 0;
+
+        QByteArray cipher_chunk;
+        cipher_chunk.resize(
+            chunk.size() + crypto_secretstream_xchacha20poly1305_ABYTES
+        );
+
+        unsigned long long out_len;
+        if (crypto_secretstream_xchacha20poly1305_push(
+                &st, reinterpret_cast<unsigned char *>(cipher_chunk.data()),
+                &out_len,
+                reinterpret_cast<const unsigned char *>(chunk.constData()),
+                chunk.size(), nullptr, 0, tag
+            ) != 0) {
+            qWarning() << "[Crypto] File Encrypt failed: Error pushing chunk";
+            return {false, CryptoError::EncryptionFailed};
+        }
+
+        out_file.write(cipher_chunk.constData(), out_len);
+    }
+
+    return {true, CryptoError::None};
+}
+
+DecryptFileResult CryptoManager::decryptFile(
+    const QString &input_path,
+    const QString &output_path,
+    const QByteArray &file_key
+) {
+    if (file_key.size() != crypto_secretstream_xchacha20poly1305_KEYBYTES) {
+        qWarning() << "[Crypto] File Decrypt failed: Invalid file key size";
+        return {false, CryptoError::InvalidKeySize};
+    }
+
+    QFile in_file(input_path);
+    QFile out_file(output_path);
+
+    if (!in_file.open(QIODevice::ReadOnly) ||
+        !out_file.open(QIODevice::WriteOnly)) {
+        qWarning() << "[Crypto] File Decrypt failed: Cannot open I/O files";
+        return {false, CryptoError::FileOpenError};
+    }
+
+    unsigned char header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
+    if (in_file.read(reinterpret_cast<char *>(header), sizeof(header)) !=
+        sizeof(header)) {
+        qWarning() << "[Crypto] File Decrypt failed: File too short for header";
+        return {false, CryptoError::InvalidPayloadSize};
+    }
+
+    crypto_secretstream_xchacha20poly1305_state st;
+    if (crypto_secretstream_xchacha20poly1305_init_pull(
+            &st, header,
+            reinterpret_cast<const unsigned char *>(file_key.constData())
+        ) != 0) {
+        qWarning() << "[Crypto] File Decrypt failed: Invalid header or key";
+        return {false, CryptoError::StreamInitFailed};
+    }
+
+    const qint64 ENCRYPTED_CHUNK_SIZE =
+        CHUNK_SIZE + crypto_secretstream_xchacha20poly1305_ABYTES;
+
+    while (!in_file.atEnd()) {
+        QByteArray cipher_chunk = in_file.read(ENCRYPTED_CHUNK_SIZE);
+        QByteArray plain_chunk;
+        plain_chunk.resize(
+            cipher_chunk.size() - crypto_secretstream_xchacha20poly1305_ABYTES
+        );
+
+        unsigned long long out_len;
+        unsigned char tag;
+
+        if (crypto_secretstream_xchacha20poly1305_pull(
+                &st, reinterpret_cast<unsigned char *>(plain_chunk.data()),
+                &out_len, &tag,
+                reinterpret_cast<const unsigned char *>(cipher_chunk.constData()
+                ),
+                cipher_chunk.size(), nullptr, 0
+            ) != 0) {
+            qWarning() << "[Crypto] File Decrypt failed: MAC mismatch on chunk "
+                          "(Corrupted)";
+            out_file.remove();  // Уничтожаем битый файл, чтобы не отдавать
+                                // юзеру мусор
+            return {false, CryptoError::StreamCorrupted};
+        }
+
+        out_file.write(plain_chunk.constData(), out_len);
+
+        if (tag == crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
+            break;
+        }
+    }
+
+    return {true, CryptoError::None};
 }
 
 }  // namespace client::crypto
