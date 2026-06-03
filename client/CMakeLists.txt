@@ -92,7 +92,6 @@ if(BUILD_TESTS)
     enable_testing()
     
     add_executable(client_tests 
-    src/core/main.cpp
     src/core/AuthManager.cpp
     include/AuthManager.hpp
     src/core/StateManager.cpp
