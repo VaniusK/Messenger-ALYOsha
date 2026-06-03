@@ -36,5 +36,6 @@ RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
 RUN cmake --build build --parallel --target client_tests
 
 FROM base AS test-runner
+ENV QT_QPA_PLATFORM=offscreen
 COPY --from=test-build /usr/src/client/build/client_tests /usr/local/bin/
 CMD ["client_tests"]
