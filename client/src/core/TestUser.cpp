@@ -19,7 +19,7 @@ TestUser::TestUser(
     m_authManager =
         new AuthManager(m_connectionManager, m_stateManager, parent);
     m_mediaCacheManager = new MediaCacheManager(m_connectionManager, parent);
-    m_localChatStorage = new LocalChatStorage(true, "default", parent);
+    m_localChatStorage = new LocalChatStorage(true, handle, parent);
     m_chatManager = new ChatManager(
         m_connectionManager, m_stateManager, m_mediaCacheManager,
         m_localChatStorage, parent
