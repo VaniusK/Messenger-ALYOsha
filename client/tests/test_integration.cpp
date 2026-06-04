@@ -27,6 +27,9 @@ TEST_F(TestUserFixture, BasicMessaging) {
     auto user_1 = TestUser("user1", "User", "12345678", m_app.get());
     auto user_2 = TestUser("user2", "User", "12345678", m_app.get());
 
+    qDebug() << user_2.getId() << " user 2 id";
+    qDebug() << user_2.getDisplayName() << " user 2 display name";
+
     user_1.openDirectChatSync(user_2.getId(), user_2.getDisplayName());
     user_1.sendMessageSync(QString::number(user_1.getOpenedChatId()), "Hi");
     user_1.sendMessageSync(QString::number(user_1.getOpenedChatId()), "Hello");

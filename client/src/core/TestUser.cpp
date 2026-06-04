@@ -17,7 +17,7 @@ TestUser::TestUser(
     m_stateManager = new StateManager(parent);
     m_connectionManager = new ConnectionManager(
         [this]() { return m_stateManager->getToken(); },
-        "http://127.0.1:8080/v1", "ws://127.0.1:8080/ws/chat", parent
+        "http://server:8080/v1", "ws://server:8080/ws/chat", parent
     );
     m_authManager =
         new AuthManager(m_connectionManager, m_stateManager, parent);

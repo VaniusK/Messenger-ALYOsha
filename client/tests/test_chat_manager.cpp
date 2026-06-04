@@ -63,7 +63,8 @@ TEST_F(ChatManagerTest, FetchChatsSuccess) {
 }
 
 TEST_F(ChatManagerTest, SendMessageSuccess) {
-    auto *fakePostReply = new FakeNetworkReply(200, "{}");
+    auto *fakePostReply =
+        new FakeNetworkReply(200, "{\"message\": {\"text\": \"hi\"}}");
     EXPECT_CALL(*mockConn, post(QString("/chats/1/messages"), _))
         .WillOnce(Return(fakePostReply));
 
