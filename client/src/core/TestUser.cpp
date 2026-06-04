@@ -1,5 +1,6 @@
 #include <qsignalspy.h>
 #include <TestUser.hpp>
+#include "AuthManager.hpp"
 #include "ChatManager.hpp"
 #include "StateManager.hpp"
 
@@ -49,10 +50,12 @@ int64_t TestUser::getOpenedChatId() {
 
 void TestUser::registerSelf() {
     m_authManager->registerUser(m_handle, m_displayName, m_password);
+    waitForSignal(m_authManager, &AuthManager::registerSuccess, 1000);
 }
 
 void TestUser::login() {
     m_authManager->loginUser(m_handle, m_password);
+    waitForSignal(m_authManager, &AuthManager::loginSuccess, 1000);
 }
 
 void TestUser::fetchChatsSync(int timeout_ms) {
