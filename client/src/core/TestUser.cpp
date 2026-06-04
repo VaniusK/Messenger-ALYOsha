@@ -51,6 +51,7 @@ int64_t TestUser::getOpenedChatId() {
 void TestUser::registerSelf() {
     m_authManager->registerUser(m_handle, m_displayName, m_password);
     waitForSignal(m_authManager, &AuthManager::registerSuccess, 1000);
+    waitForSignal(m_authManager, &AuthManager::userIdFetched, 1000);
 }
 
 void TestUser::login() {
