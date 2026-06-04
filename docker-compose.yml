@@ -41,7 +41,9 @@ services:
       - prod
     
   client-build:
-    build: ./client
+    build:
+      context: ./client
+      target: base
     volumes:
       - ./artifacts:/output
     profiles:
