@@ -26,4 +26,16 @@ protected:
 TEST_F(TestUserFixture, BasicMessaging) {
     auto user_1 = TestUser("user1", "User", "12345678", m_app.get());
     auto user_2 = TestUser("user2", "User", "12345678", m_app.get());
+
+    user_1.openDirectChatSync(user_2.getId(), user_2.getDisplayName());
+    user_1.sendMessageSync(QString::number(user_1.getOpenedChatId()), "Hi");
+    user_1.sendMessageSync(QString::number(user_1.getOpenedChatId()), "Hello");
+    user_1.sendMessageSync(
+        QString::number(user_1.getOpenedChatId()), "Talk to me"
+    );
+
+    user_2.openDirectChatSync(user_1.getId(), user_1.getDisplayName());
+    user_2.openDirectChatSync(user_1.getId(), user_1.getDisplayName(), 10);
+    user_2.openDirectChatSync(user_1.getId(), user_1.getDisplayName(), 10);
+    user_2.openDirectChatSync(user_1.getId(), user_1.getDisplayName(), 10);
 }
