@@ -53,7 +53,7 @@ private:
     std::unique_ptr<QSignalSpy>
     waitForSignal(T *obj, Func signal, int timeout_ms) {
         auto spy = std::make_unique<QSignalSpy>(obj, signal);
-        if (!spy.wait(timeout_ms)) {
+        if (!spy->wait(timeout_ms)) {
             throw std::runtime_error("Test request timeouted");
         }
         return spy;
