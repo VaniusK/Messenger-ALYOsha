@@ -1,4 +1,6 @@
+#include <qsignalspy.h>
 #include <TestUser.hpp>
+#include "ChatManager.hpp"
 #include "StateManager.hpp"
 
 TestUser::TestUser(
@@ -29,10 +31,53 @@ TestUser::TestUser(
     login();
 }
 
+QString TestUser::getHandle() {
+    return m_handle;
+}
+
+QString TestUser::getDisplayName() {
+    return m_displayName;
+}
+
+int64_t TestUser::getId() {
+    return m_stateManager->getUserId();
+}
+
+int64_t TestUser::getOpenedChatId() {
+    return m_openedChatId;
+}
+
 void TestUser::registerSelf() {
     m_authManager->registerUser(m_handle, m_displayName, m_password);
 }
 
 void TestUser::login() {
     m_authManager->loginUser(m_handle, m_password);
+}
+
+void TestUser::fetchChatsSync(int timeout_ms) {
+    m_chatManager->fetchChats();
+    waitForSignal(m_chatManager, &ChatManager::chatsUpdated, timeout_ms / 2);
+    waitForSignal(m_chatManager, &ChatManager::chatsUpdated, timeout_ms / 2);
+}
+
+void TestUser::openDirectChatSync(
+    int64_t targetUserId,
+    const QString &targetUserName,
+    int timeout_ms
+) {
+    m_chatManager->openDirectChat(targetUserId, targetUserName);
+    auto spy = waitForSignal(
+        m_chatManager, &ChatManager::directChatOpened, timeout_ms
+    );
+    m_openedChatId = spy->takeLast().at(0).toULongLong();
+}
+
+void TestUser::sendMessageSync(
+    const QString &chatId,
+    const QString &text,
+    int timeout_ms
+) {
+    m_chatManager->sendMessage(chatId, text);
+    waitForSignal(m_chatManager, &ChatManager::messageSentSuccess, timeout_ms);
 }
