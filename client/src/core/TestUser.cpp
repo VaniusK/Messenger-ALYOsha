@@ -15,10 +15,10 @@ TestUser::TestUser(
       m_password(password),
       QObject(parent) {
     m_stateManager = new StateManager(parent);
-    m_connectionManager = new ConnectionManager(
-        [this]() { return m_stateManager->getToken(); },
-        "http://server:8080/v1", "ws://server:8080/ws/chat", parent
-    );
+    QString baseUrl =
+        qEnvironmentVariable("API_BASE_URL", "http://server:8080/v1");
+    QString wsUrl =
+        qEnvironmentVariable("API_WS_URL", "ws://server:8080/ws/chat");
     m_authManager =
         new AuthManager(m_connectionManager, m_stateManager, parent);
     m_mediaCacheManager = new MediaCacheManager(m_connectionManager, parent);
