@@ -6,6 +6,8 @@
 #include <QSignalSpy>
 #include <TestUser.hpp>
 #include <chrono>
+#include <cstdlib>
+#include <ctime>
 
 using ::testing::_;
 using ::testing::Return;
@@ -25,8 +27,15 @@ protected:
 };
 
 TEST_F(TestUserFixture, BasicMessaging) {
-    auto user_1 = TestUser("user1", "User", "12345678", m_app.get());
-    auto user_2 = TestUser("user2", "User", "12345678", m_app.get());
+    srand(static_cast<unsigned int>(time(nullptr)));
+    auto user_1 = TestUser(
+        "user" + QString::number(rand()), "User", "12345678", m_app.get()
+    );
+    auto user_2 = TestUser(
+        "user" + QString::number(rand()), "User", "12345678", m_app.get()
+    );
+
+    qDebug() << "user handles:" << user_1.getHandle() << user_2.getHandle();
 
     qDebug() << "user_1 sending messages";
 
