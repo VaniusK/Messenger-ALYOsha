@@ -89,8 +89,8 @@ services:
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_SHOULD_USE_HTTPS: false
-      API_BASE_URL: https://api.alyosha.su/v1
-      API_WS_URL: wss://api.alyosha.su/ws/chat
+      API_BASE_URL: http://server:8080/v1
+      API_WS_URL: ws://server:8080/ws/chat
   
   test-server-coverage:
     build:
