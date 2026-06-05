@@ -92,6 +92,7 @@ services:
       API_BASE_URL: http://server:8080/v1
       API_WS_URL: ws://server:8080/ws/chat
       SHOULD_RUN_LOAD_TEST: true
+      QT_LOGGING_RULES: "*.debug=false"
   
   test-server-coverage:
     build:

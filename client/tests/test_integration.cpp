@@ -77,9 +77,7 @@ TEST_F(TestUserFixture, BasicMessaging) {
 
 TEST_F(TestUserFixture, LoadTesting) {
     bool should_run_load_test =
-        qEnvironmentVariable(
-            "SHOULD_RUN_LOAD_TEST", "ws://server:8080/ws/chat"
-        ) == "true";
+        qEnvironmentVariable("SHOULD_RUN_LOAD_TEST", "false") == "true";
     if (!should_run_load_test) {
         return;
     }
@@ -148,6 +146,6 @@ TEST_F(TestUserFixture, LoadTesting) {
            elapsed.elapsed() < 30000) {
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
     }
-    qDebug() << "Processed" << sentMessages << "sent messages and" << readChat
-             << "read chats in" << elapsed.elapsed() << "ms";
+    qInfo() << "Processed" << sentMessages << "sent messages and" << readChat
+            << "read chats in" << elapsed.elapsed() << "ms";
 }
