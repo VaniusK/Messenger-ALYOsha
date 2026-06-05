@@ -30,7 +30,8 @@ public:
         int64_t sender_id,
         int64_t acceptor_id,
         int32_t type,
-        std::string pub_key
+        std::string pub_key,
+        std::string chat_id
     ) = 0;
     virtual drogon::Task<std::vector<HandshakeSignal>> popHandshakeSignals(
         int64_t acceptor_id
@@ -54,7 +55,8 @@ public:
         int64_t sender_id,
         int64_t acceptor_id,
         int32_t type,
-        std::string pub_key
+        std::string pub_key,
+        std::string chat_id
     ) override;
     drogon::Task<std::vector<HandshakeSignal>> popHandshakeSignals(
         int64_t acceptor_id

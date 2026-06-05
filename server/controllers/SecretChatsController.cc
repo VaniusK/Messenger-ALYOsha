@@ -16,7 +16,7 @@ Task<HttpResponsePtr> SecretChatsController::chatInit(
     Json::Value response_json;
     auto request_json = req->getJsonObject();
     if (utils::find_missed_fields(
-            response_json, request_json, {"target_user_id", "public_key"}
+            response_json, request_json, {"target_user_id", "public_key", "chat_id"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
@@ -54,7 +54,7 @@ Task<HttpResponsePtr> SecretChatsController::chatAccept(
     Json::Value response_json;
     auto request_json = req->getJsonObject();
     if (utils::find_missed_fields(
-            response_json, request_json, {"target_user_id", "public_key"}
+            response_json, request_json, {"target_user_id", "public_key", "chat_id"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
