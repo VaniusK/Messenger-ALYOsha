@@ -87,6 +87,7 @@ void TestUser::sendMessageSync(
 }
 
 void TestUser::fetchChatHistorySync(int64_t chatId, int timeout_ms) {
+    QSignalSpy spy(m_chatManager, &ChatManager::chatsHistoryLoaded);
     m_chatManager->fetchChatHistory(QString::number(chatId), 0);
-    waitForSignal(m_chatManager, &ChatManager::chatsHistoryLoaded, timeout_ms);
+    spy.wait(timeout_ms);
 }
