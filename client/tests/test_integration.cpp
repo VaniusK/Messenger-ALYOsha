@@ -1,5 +1,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <qdatetime.h>
 #include <QCoreApplication>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -95,7 +96,7 @@ TEST_F(TestUserFixture, LoadTesting) {
     std::atomic<int> sentMessagesSuccesses{0};
     std::atomic<int> readChat{0};
     std::atomic<int> readChatSuccesses{0};
-    const int totalActions = 1000;
+    const int totalActions = 10000;
     std::vector<std::vector<int64_t>> directChatIds(
         totalUsers, std::vector<int64_t>(totalUsers)
     );
@@ -108,16 +109,38 @@ TEST_F(TestUserFixture, LoadTesting) {
             directChatIds[j][i] = user1->getOpenedChatId();
         }
     }
+    std::vector<int64_t> actionEndTime;
+    std::mutex actionTimeMutex;
     for (int i = 0; i < totalUsers; i++) {
         auto &user = users[i];
         QObject::connect(
             user->getChatManager(), &ChatManager::messageSentSuccess,
-            [&, this]() { sentMessagesSuccesses++; }
+            [&, this]() {
+                std::lock_guard<std::mutex> lock(actionTimeMutex);
+                actionEndTime.push_back(
+                    std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::high_resolution_clock::now()
+                            .time_since_epoch()
+                    )
+                        .count()
+                );
+                sentMessagesSuccesses++;
+            }
         );
 
         QObject::connect(
             user->getChatManager(), &ChatManager::chatsHistoryLoaded,
-            [&, this]() { readChatSuccesses++; }
+            [&, this]() {
+                std::lock_guard<std::mutex> lock(actionTimeMutex);
+                actionEndTime.push_back(
+                    std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::high_resolution_clock::now()
+                            .time_since_epoch()
+                    )
+                        .count()
+                );
+                readChatSuccesses++;
+            }
         );
     }
 
@@ -147,6 +170,40 @@ TEST_F(TestUserFixture, LoadTesting) {
            elapsed.elapsed() < 30000) {
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
     }
+
+    std::vector<double> timePerAction;
+    double throughput = 0;
+    double avg_latency_ms = 0;
+    double total_time = 0;
+    double P50 = 0;
+    double P95 = 0;
+    double P99 = 0;
+
+    for (int i = 1; i < totalActions; i++) {
+        if (actionEndTime[i] == 0) {
+            continue;
+        }
+        double delta = actionEndTime[i] - actionEndTime[i - 1];
+        if (delta == 0) {
+            continue;
+        }
+        timePerAction.push_back(delta);
+    }
+    sort(timePerAction.begin(), timePerAction.end());
+    for (double delta : timePerAction) {
+        total_time += delta;
+    }
+    avg_latency_ms =
+        total_time / (sentMessagesSuccesses + readChatSuccesses) / (double)1000;
+    throughput = 1000 / avg_latency_ms;
+    P50 = timePerAction[timePerAction.size() / 100 * 50];
+    P95 = timePerAction[timePerAction.size() / 100 * 95];
+    P99 = timePerAction[timePerAction.size() / 100 * 99];
     qInfo() << "Processed" << sentMessages << "sent messages and" << readChat
             << "read chats in" << elapsed.elapsed() << "ms";
+    qInfo() << "Througput" << throughput;
+    qInfo() << "Avegare latency(ms)" << avg_latency_ms;
+    qInfo() << "P50" << P50;
+    qInfo() << "P95" << P95;
+    qInfo() << "P99" << P99;
 }
