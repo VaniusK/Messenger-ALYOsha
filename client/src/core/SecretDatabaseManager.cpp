@@ -46,6 +46,12 @@ inline constexpr const char *SCHEMA_MESSAGES = R"(
         is_read INTEGER DEFAULT 0,
         FOREIGN KEY(chat_id) REFERENCES secret_chats(id) ON DELETE CASCADE
     );
+
+    CREATE INDEX IF NOT EXISTS idx_messages_chat_time 
+    ON secret_messages (chat_id, sent_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_messages_unread 
+    ON secret_messages (chat_id, is_read, sender_id);
 )";
 
 inline constexpr const char *SCHEMA_ATTACHMENTS = R"(
@@ -495,6 +501,60 @@ bool SecretDatabaseManager::markChatAsRead(
         return true;
     }
     return false;
+}
+
+bool SecretDatabaseManager::deleteChat(const QString &chat_id) {
+    auto db = getDatabase();
+    QSqlQuery query(db);
+    query.prepare("DELETE FROM secret_chats WHERE id = :chat_id");
+    query.bindValue(":chat_id", chat_id);
+
+    if (!query.exec()) {
+        qCritical() << "[SecretDB] Failed to delete chat:"
+                    << query.lastError().text();
+        return false;
+    }
+
+    if (query.numRowsAffected() == 0) {
+        qWarning() << "[SecretDB] Chat with ID" << chat_id
+                   << "was not found for deletion.";
+        return false;
+    }
+
+    // TODO: emit
+    return true;
+}
+
+bool SecretDatabaseManager::updateChatStatus(
+    const QString &chat_id,
+    const QString &status,
+    const QByteArray &shared_secret
+) {
+    auto db = getDatabase();
+    QSqlQuery query(db);
+    query.prepare(
+        "UPDATE secret_chats SET status = :status, shared_secret = "
+        ":shared_secret WHERE chat_id = :chat_id"
+    );
+    query.bindValue(":status", status);
+    query.bindValue(":shared_secret", shared_secret);
+    query.bindValue(":chat_id", chat_id);
+
+    if (!query.exec()) {
+        qCritical() << "[SecretDB] Failed to update chat status:"
+                    << query.lastError().text();
+        return false;
+    }
+
+    if (query.numRowsAffected() == 0) {
+        qWarning() << "[SecretDB] Chat with ID" << chat_id
+                   << "was not found. Status update skipped.";
+        return false;
+    }
+
+    qDebug() << "[SecretDB] Chat" << chat_id << "status successfully updated to"
+             << status;
+    return true;
 }
 
 }  // namespace client::db

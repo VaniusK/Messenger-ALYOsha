@@ -5,7 +5,6 @@
 #include <vector>
 #include "dto/SecretChatsServiceDtos.hpp"
 #include "repositories/SecretChatsRepository.hpp"
-#include "services/ClientNotifier.hpp"
 #include "services/S3Service.hpp"
 
 using namespace messenger::dto;

@@ -58,6 +58,12 @@ public:
         const std::optional<QString> &local_path,
         const QByteArray &file_key
     );
+    bool deleteChat(const QString &chat_id);
+    bool updateChatStatus(
+        const QString &chat_id,
+        const QString &status,
+        const QByteArray &shared_secret
+    );
 
     Q_INVOKABLE QString getChatsJson(qint64 current_user_id);
     Q_INVOKABLE QString getMessagesJson(

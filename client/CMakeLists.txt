@@ -34,6 +34,11 @@ qt_add_executable(client #WIN32
     include/LocalChatStorage.hpp
     src/core/CryptoManager.cpp
     include/CryptoManager.hpp
+    src/core/SecretChatManager.cpp
+    include/SecretChatManager.hpp
+    src/core/SecretDatabaseManager.cpp
+    include/SecretDatabaseManager.hpp
+    ../common/include/enums/WebsocketsMessagesTypes.h
 )
 
 qt_add_qml_module(client
@@ -79,6 +84,10 @@ qt_add_qml_module(client
         assets/icons/person_lock.svg
 )
 target_include_directories(client PRIVATE include)
+target_include_directories(client PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/enums
+)
 target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)
 
 find_library(SODIUM_LIB sodium REQUIRED)
@@ -113,9 +122,18 @@ if(BUILD_TESTS)
     tests/test_chat_manager.cpp
     src/core/CryptoManager.cpp
     include/CryptoManager.hpp
+    src/core/SecretChatManager.cpp
+    include/SecretChatManager.hpp
+    src/core/SecretDatabaseManager.cpp
+    include/SecretDatabaseManager.hpp
+    ../common/include/enums/WebsocketsMessagesTypes.h
     )
 
     target_include_directories(client_tests PRIVATE include)
+    target_include_directories(client PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/enums
+    )
     target_link_libraries(client_tests PRIVATE
     GTest::gtest_main
     GTest::gmock

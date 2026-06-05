@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
     auto *voiceManager = new VoiceManager(&app);
     auto *secretDatabaseManager = new client::db::SecretDatabaseManager(&app);
     auto *secretChatManager = new client::core::SecretChatManager(
-        secretDatabaseManager, stateManager, &app
+        secretDatabaseManager, stateManager, connectionManager, &app
     );
 
     if (!client::crypto::CryptoManager::init(
@@ -77,6 +77,10 @@ int main(int argc, char *argv[]) {
     QObject::connect(
         stateManager, &StateManager::stateCleared, secretChatManager,
         &client::core::SecretChatManager::logout
+    );
+    QObject::connect(
+        chatManager, &ChatManager::incomingSecretPayload, secretChatManager,
+        &client::core::SecretChatManager::processIncomingSecretPayload
     );
 
     const QUrl url(u"qrc:/messenger_client_uri/src/ui/main.qml"_qs);

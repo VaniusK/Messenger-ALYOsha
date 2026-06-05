@@ -23,8 +23,11 @@ RUN apt-get update && apt-get install -y \
     libsodium-dev \
     && rm -rf /var/lib/apt/lists/*
     
+WORKDIR /usr/src
+COPY common/ /usr/src/common
+COPY client/ /usr/src/client
+
 WORKDIR /usr/src/client
-COPY . .
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
 RUN cmake --build build --parallel
 CMD ["cp", "/usr/src/client/build/client", "/output/client"]

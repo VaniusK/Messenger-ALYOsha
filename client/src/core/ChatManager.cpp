@@ -5,6 +5,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QUrlQuery>
+#include "WebsocketsMessagesTypes.h"
 
 ChatManager::ChatManager(
     ConnectionManager *connection,
@@ -316,31 +317,53 @@ void ChatManager::onWebSocketDisconnected() {
 
 void ChatManager::onWebSocketTextMessageReceived(const QString &message) {
     qDebug() << "[ChatManager] WS message:" << message;
-    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8(), &parseError);
 
-    // TODO : change event_type checking for new enum
-
-    if (doc["event_type"] == "NEW_MESSAGE") {
-        QJsonObject msg = doc["data"]["message"].toObject();
-
-        // secret
-        if (msg["type"].toString() == "secret_payload" ||
-            msg["chat_id"].isString()) {
-            handleIncomingSecretPayload(msg);
-            return;
-        }
-
-        QJsonValue senderValue = msg["sender_id"];
-        QString senderIdStr =
-            senderValue.isString()
-                ? senderValue.toString()
-                : QString::number(senderValue.toVariant().toLongLong());
-        QString currentUserIdStr = QString::number(m_stateManager->getUserId());
-
-        msg.insert("is_me", (senderIdStr == currentUserIdStr));
-        m_chatStorage->addMessage(msg);
+    if (parseError.error != QJsonParseError::NoError) {
+        qWarning() << "[ChatManager] Failed to parse incoming WebSocket JSON:"
+                   << parseError.errorString();
+        return;
     }
-    emit incomingWebSocketMessage(doc.object());
+
+    QJsonObject jsonObj = doc.object();
+    int typeInt = jsonObj["message_type"].toInt();
+    auto messageType = static_cast<api::v1::WebsocketMessageType>(typeInt);
+
+    switch (messageType) {
+        case api::v1::WebsocketMessageType::COMMON_NEW_MESSAGE: {
+            QJsonObject msg = doc["data"]["message"].toObject();
+
+            QJsonValue senderValue = msg["sender_id"];
+            QString senderIdStr =
+                senderValue.isString()
+                    ? senderValue.toString()
+                    : QString::number(senderValue.toVariant().toLongLong());
+            QString currentUserIdStr =
+                QString::number(m_stateManager->getUserId());
+
+            msg.insert("is_me", (senderIdStr == currentUserIdStr));
+            m_chatStorage->addMessage(msg);
+            emit incomingWebSocketMessage(doc.object());
+            break;
+        }
+        case api::v1::WebsocketMessageType::COMMON_MESSAGE_READ:
+            // TODO
+            break;
+        case api::v1::WebsocketMessageType::SECRET_CHAT_REQUEST:
+        case api::v1::WebsocketMessageType::SECRET_CHAT_ACCEPT:
+        case api::v1::WebsocketMessageType::SECRET_NEW_MESSAGE:
+        case api::v1::WebsocketMessageType::SECRET_MESSAGE_READ:
+        case api::v1::WebsocketMessageType::SECRET_CHAT_DELETE:
+            emit incomingSecretPayload(jsonObj);
+            break;
+
+        default:
+            qWarning(
+            ) << "[ChatManager] WARNING: Unhandled WebSocket message type:"
+              << typeInt;
+            break;
+    }
 }
 
 void ChatManager::clearCache() {

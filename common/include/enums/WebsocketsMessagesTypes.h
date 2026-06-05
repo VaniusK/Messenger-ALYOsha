@@ -2,17 +2,21 @@
 
 #include <cstdint>
 
-#ifndef Q_NAMESPACE
-#define Q_NAMESPACE
-#define Q_ENUM_NS(x)
-#define QML_NAMED_ELEMENT(x)
+#ifdef QT_CORE_LIB
+    #include <QObject>
+    #include <qqmlregistration.h>
+#else
+    #ifndef Q_NAMESPACE
+        #define Q_NAMESPACE
+        #define Q_ENUM_NS(x)
+        #define QML_NAMED_ELEMENT(x)
+    #endif
 #endif
 
 namespace api::v1 {
+Q_NAMESPACE
+QML_NAMED_ELEMENT(ApiEnums)
 enum class WebsocketMessageType : uint16_t {
-
-    Q_NAMESPACE
-    QML_NAMED_ELEMENT(ApiEnums)
 
     UNKNOWN = 0,
 
@@ -22,8 +26,9 @@ enum class WebsocketMessageType : uint16_t {
     SECRET_CHAT_REQUEST = 200,
     SECRET_CHAT_ACCEPT = 201,
     SECRET_NEW_MESSAGE = 202,
-    SECRET_MESSAGE_READ = 203
+    SECRET_MESSAGE_READ = 203,
+    SECRET_CHAT_DELETE = 204
 
-    Q_ENUM_NS(WebsocketMessageType)
 };
-}
+Q_ENUM_NS(WebsocketMessageType)
+}  // namespace api::v1

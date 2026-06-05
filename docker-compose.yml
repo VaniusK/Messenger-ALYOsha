@@ -51,7 +51,9 @@ services:
       - prod
     
   client-build:
-    build: ./client
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
     volumes:
       - ./artifacts:/output
     profiles:

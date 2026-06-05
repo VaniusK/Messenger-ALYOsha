@@ -8,6 +8,7 @@
 #include "ConnectionManager.hpp"
 #include "LocalChatStorage.hpp"
 #include "MediaCacheManager.hpp"
+#include "SecretChatManager.hpp"
 #include "StateManager.hpp"
 
 class ChatManager : public QObject {
@@ -89,6 +90,7 @@ signals:
     void chatMemberAdded(const QJsonObject &member);
     void actionSuccess(const QString &message);
     void chatInfoLoaded(const QJsonObject &chat);
+    void incomingSecretPayload(const QJsonObject &envelope);
 
 private slots:
     void onWebSocketConnected();

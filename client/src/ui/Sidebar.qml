@@ -52,7 +52,7 @@ Rectangle {
         }
 
         function onIncomingWebSocketMessage(data) {
-            if (data.event_type === "NEW_MESSAGE") {
+            if (data.message_type === ApiEnums.COMMON_NEW_MESSAGE) {
                 ChatLayer.fetchChats()
             }
         }

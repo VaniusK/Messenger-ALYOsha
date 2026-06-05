@@ -7,6 +7,7 @@
 #include <vector>
 #include "dto/SecretChatsServiceDtos.hpp"
 #include "include/enums/WebsocketsMessagesTypes.h"
+#include "services/ClientNotifier.hpp"
 #include "utils/server_exceptions.hpp"
 
 namespace api::v1 {

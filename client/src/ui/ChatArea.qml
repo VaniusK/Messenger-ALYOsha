@@ -157,7 +157,7 @@ Rectangle {
         }
 
         function onIncomingWebSocketMessage(data) {
-            if (data.event_type === "NEW_MESSAGE" && data.data && data.data.message) {
+            if (data.message_type === ApiEnums.COMMON_NEW_MESSAGE && data.data && data.data.message) {
                 var msg = data.data.message
                 if (String(msg.chat_id) === String(activeChatId)) {
                     msg.is_me = (String(msg.sender_id) === String(AppState.userId))
