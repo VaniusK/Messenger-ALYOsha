@@ -89,5 +89,7 @@ void TestUser::sendMessageSync(
 void TestUser::fetchChatHistorySync(int64_t chatId, int timeout_ms) {
     QSignalSpy spy(m_chatManager, &ChatManager::chatsHistoryLoaded);
     m_chatManager->fetchChatHistory(QString::number(chatId), 0);
-    spy.wait(timeout_ms);
+    if (spy.count() == 0 and !spy.wait(timeout_ms)) {
+        std::runtime_error("Test request timed out");
+    }
 }
