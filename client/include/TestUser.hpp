@@ -25,6 +25,7 @@ public:
     int64_t getOpenedChatId();
 
     void fetchChatsSync(int timeout_ms = 1000);
+    void fetchChatHistorySync(int64_t chatId, int timeout_ms = 1000);
     void openDirectChatSync(
         int64_t targetUserId,
         const QString &targetUserName,
@@ -32,7 +33,7 @@ public:
     );
 
     void sendMessageSync(
-        const QString &chatId,
+        const int64_t chatId,
         const QString &text,
         int timeout_ms = 1000
     );

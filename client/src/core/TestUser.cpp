@@ -78,10 +78,15 @@ void TestUser::openDirectChatSync(
 }
 
 void TestUser::sendMessageSync(
-    const QString &chatId,
+    const int64_t chatId,
     const QString &text,
     int timeout_ms
 ) {
-    m_chatManager->sendMessage(chatId, text);
+    m_chatManager->sendMessage(QString::number(chatId), text);
     waitForSignal(m_chatManager, &ChatManager::messageSentSuccess, timeout_ms);
+}
+
+void TestUser::fetchChatHistorySync(int64_t chatId, int timeout_ms) {
+    m_chatManager->fetchChatHistory(QString::number(chatId), 0);
+    waitForSignal(m_chatManager, &ChatManager::chatsHistoryLoaded, timeout_ms);
 }

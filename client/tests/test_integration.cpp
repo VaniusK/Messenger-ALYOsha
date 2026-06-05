@@ -31,19 +31,17 @@ TEST_F(TestUserFixture, BasicMessaging) {
     qDebug() << "user_1 sending messages";
 
     user_1.openDirectChatSync(user_2.getId(), user_2.getDisplayName());
-    user_1.sendMessageSync(QString::number(user_1.getOpenedChatId()), "Hi");
-    user_1.sendMessageSync(QString::number(user_1.getOpenedChatId()), "Hello");
-    user_1.sendMessageSync(
-        QString::number(user_1.getOpenedChatId()), "Talk to me"
-    );
+    user_1.sendMessageSync(user_1.getOpenedChatId(), "Hi");
+    user_1.sendMessageSync(user_1.getOpenedChatId(), "Hello");
+    user_1.sendMessageSync(user_1.getOpenedChatId(), "Talk to me");
 
-    qDebug() << "user_2 fetching chat history - subsequent calls are fast "
-                "because of cache";
+    qDebug() << "user_2 fetching chat history - subsequent calls should be "
+                "fast because of cache";
     auto fetch_chat_start_time = std::chrono::high_resolution_clock::now();
-    user_2.openDirectChatSync(user_1.getId(), user_1.getDisplayName());
+    user_2.fetchChatHistorySync(user_1.getOpenedChatId());
     auto fetch_chat_end_time = std::chrono::high_resolution_clock::now();
     int fetch_chat_duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
             fetch_chat_end_time - fetch_chat_start_time
         )
             .count();
@@ -52,22 +50,22 @@ TEST_F(TestUserFixture, BasicMessaging) {
 
     auto cached_fetch_chat_start_time =
         std::chrono::high_resolution_clock::now();
-    user_2.openDirectChatSync(
-        user_1.getId(), user_1.getDisplayName(), fetch_chat_duration / 2
+    user_2.fetchChatHistorySync(
+        user_1.getOpenedChatId(), fetch_chat_duration / 2
     );
     auto cached_fetch_chat_end_time = std::chrono::high_resolution_clock::now();
     int cached_fetch_chat_duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
             cached_fetch_chat_end_time - cached_fetch_chat_start_time
         )
             .count();
 
     qDebug() << "Cached: " << cached_fetch_chat_duration << "ms";
 
-    user_2.openDirectChatSync(
-        user_1.getId(), user_1.getDisplayName(), fetch_chat_duration / 2
+    user_2.fetchChatHistorySync(
+        user_1.getOpenedChatId(), fetch_chat_duration / 2
     );
-    user_2.openDirectChatSync(
-        user_1.getId(), user_1.getDisplayName(), fetch_chat_duration / 2
+    user_2.fetchChatHistorySync(
+        user_1.getOpenedChatId(), fetch_chat_duration / 2
     );
 }
