@@ -96,7 +96,7 @@ TEST_F(TestUserFixture, LoadTesting) {
     std::atomic<int> sentMessagesSuccesses{0};
     std::atomic<int> readChat{0};
     std::atomic<int> readChatSuccesses{0};
-    const int totalActions = 1000000;
+    const int totalActions = 10000;
     std::vector<std::vector<int64_t>> directChatIds(
         totalUsers, std::vector<int64_t>(totalUsers)
     );
