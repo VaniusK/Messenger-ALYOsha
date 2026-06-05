@@ -1,4 +1,8 @@
 #include "StateManager.hpp"
+#include <qdir.h>
+#include <qobject.h>
+#include <qstandardpaths.h>
+#include <QDir>
 
 StateManager::StateManager(QObject *parent) : QObject(parent) {
     m_token = "";
@@ -49,7 +53,13 @@ void StateManager::clearState() {
     setToken("");
     setCurrentUserHandle("");
     setUserId(-1);
+    m_userDirPath.clear();
+    m_tempDirPath.clear();
+    m_secretAttachmentsDirPath.clear();
+    m_secretDbPath.clear();
     saveSession();
+
+    emit stateCleared();
 }
 
 bool StateManager::isLoggedIn() const {
@@ -110,4 +120,21 @@ void StateManager::setAccentColor(const QString &color) {
         emit accentColorChanged();
         saveSession();
     }
+}
+
+void StateManager::initUserEnvironment() {
+    QString app_data_path =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir baseDir(app_data_path);
+
+    m_userDirPath = baseDir.filePath(QString("user_%1").arg(m_userId));
+    QDir userDir(m_userDirPath);
+
+    m_tempDirPath = userDir.filePath("temp");
+    m_secretAttachmentsDirPath = userDir.filePath("secret_attachments");
+    m_secretDbPath = userDir.filePath("database/secret.db");
+
+    userDir.mkpath("temp");
+    userDir.mkpath("secret_attachments");
+    userDir.mkpath("database");
 }

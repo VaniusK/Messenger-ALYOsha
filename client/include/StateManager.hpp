@@ -42,12 +42,36 @@ public:
     QString getAccentColor() const;
     void setAccentColor(const QString &color);
 
+    // Methods for local user's files. It would be better if we will use this
+    // paths also for common chats cache. One db for all users is quite bugful
+    // decision.
+
+    QString getUserDirectory() const {
+        return m_userDirPath;
+    }
+
+    QString getTempDirectory() const {
+        return m_tempDirPath;
+    }
+
+    QString getSecretAttachmentsDirectory() const {
+        return m_secretAttachmentsDirPath;
+    }
+
+    QString getSecretDatabasePath() const {
+        return m_secretDbPath;
+    }
+
+    void initUserEnvironment();
+
 signals:
     void tokenChanged();
     void currentUserHandleChanged();
     void userIdChanged();
     void themeChanged();
     void accentColorChanged();
+
+    void stateCleared();
 
 private:
     QString m_token;
@@ -56,4 +80,9 @@ private:
     bool m_rememberMe = true;
     QString m_theme;
     QString m_accentColor;
+
+    QString m_userDirPath;
+    QString m_tempDirPath;
+    QString m_secretAttachmentsDirPath;
+    QString m_secretDbPath;
 };

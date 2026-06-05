@@ -92,6 +92,7 @@ void AuthManager::fetchUserId(const QString &handle) {
             int userId = idValue.isString() ? idValue.toString().toInt()
                                             : idValue.toInt();
             m_stateManager->setUserId(userId);
+            m_stateManager->initUserEnvironment();
             emit userIdFetched(userId);
         }
     });

@@ -318,6 +318,8 @@ void ChatManager::onWebSocketTextMessageReceived(const QString &message) {
     qDebug() << "[ChatManager] WS message:" << message;
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
 
+    // TODO : change event_type checking for new enum
+
     if (doc["event_type"] == "NEW_MESSAGE") {
         QJsonObject msg = doc["data"]["message"].toObject();
 
