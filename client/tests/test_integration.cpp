@@ -143,8 +143,9 @@ TEST_F(TestUserFixture, LoadTesting) {
     }
     QElapsedTimer elapsed;
     elapsed.start();
-    while (sentMessagesSuccesses < sentMessages &&
-           readChatSuccesses < readChat && elapsed.elapsed() < 30000) {
+    while ((sentMessagesSuccesses < sentMessages || readChatSuccesses < readChat
+           ) &&
+           elapsed.elapsed() < 30000) {
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
     }
     qDebug() << "Processed" << sentMessages << "sent messages and" << readChat
