@@ -52,6 +52,10 @@ int64_t TestUser::getOpenedChatId() {
     return m_openedChatId;
 }
 
+ChatManager *TestUser::getChatManager() {
+    return m_chatManager;
+}
+
 void TestUser::registerSelf() {
     m_authManager->registerUser(m_handle, m_displayName, m_password);
     waitForSignal(m_authManager, &AuthManager::registerSuccess, 1000);
@@ -96,4 +100,12 @@ void TestUser::fetchChatHistorySync(int64_t chatId, int timeout_ms) {
     if (spy.count() == 0 and !spy.wait(timeout_ms)) {
         std::runtime_error("Test request timed out");
     }
+}
+
+void TestUser::sendMessageAsync(const int64_t chatId, const QString &text) {
+    m_chatManager->sendMessage(QString::number(chatId), text);
+}
+
+void TestUser::fetchChatHistoryAsync(int64_t chatId) {
+    m_chatManager->fetchChatHistory(QString::number(chatId), 0);
 }

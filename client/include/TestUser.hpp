@@ -23,9 +23,11 @@ public:
     QString getDisplayName();
     int64_t getId();
     int64_t getOpenedChatId();
+    ChatManager *getChatManager();
 
     void fetchChatsSync(int timeout_ms = 1000);
     void fetchChatHistorySync(int64_t chatId, int timeout_ms = 1000);
+    void fetchChatHistoryAsync(int64_t chatId);
     void openDirectChatSync(
         int64_t targetUserId,
         const QString &targetUserName,
@@ -37,6 +39,8 @@ public:
         const QString &text,
         int timeout_ms = 1000
     );
+
+    void sendMessageAsync(const int64_t chatId, const QString &text);
 
 private:
     StateManager *m_stateManager;
