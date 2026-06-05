@@ -50,7 +50,9 @@ TEST_F(TestUserFixture, BasicMessaging) {
 
     auto cached_fetch_chat_start_time =
         std::chrono::high_resolution_clock::now();
-    user_2.fetchChatHistorySync(user_1.getOpenedChatId());
+    user_2.fetchChatHistorySync(
+        user_1.getOpenedChatId(), fetch_chat_duration / 2
+    );
     auto cached_fetch_chat_end_time = std::chrono::high_resolution_clock::now();
     int cached_fetch_chat_duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(
