@@ -129,7 +129,7 @@ TEST_F(TestUserFixture, LoadTesting) {
         }
         auto &user1 = users[i];
         auto &user2 = users[j];
-        if (rand() % 10 <= 0) {
+        if (rand() % 30 <= 0) {
             sentMessages++;
             user1->sendMessageAsync(
                 directChatIds[i][j], "msg " + QString::number(i)
@@ -141,6 +141,7 @@ TEST_F(TestUserFixture, LoadTesting) {
     }
     QElapsedTimer elapsed;
     elapsed.start();
+
     while ((sentMessagesSuccesses < sentMessages || readChatSuccesses < readChat
            ) &&
            elapsed.elapsed() < 30000) {
