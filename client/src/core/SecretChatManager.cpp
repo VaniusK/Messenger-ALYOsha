@@ -57,7 +57,7 @@ bool SecretChatManager::initSession() {
     }
 
     qDebug() << "[SecretChatManager] Session successfully initialized.";
-    // TODO maybe emit for qml
+    emit secretChatsUpdated();
     return true;
 }
 
@@ -95,13 +95,10 @@ void SecretChatManager::clearSecretCache() {
 
     if (attachmentsDir.removeRecursively()) {
         attachmentsDir.mkpath(".");
-
         qDebug(
         ) << "[SecretChatManager] Cache successfully cleared. Freed bytes:"
           << freedBytes;
-
-        // TODO emit
-
+        emit secretChatsUpdated();
     } else {
         qCritical() << "[SecretChatManager] Failed to remove cache directory!";
         // TODO emit
@@ -359,8 +356,7 @@ Q_INVOKABLE void SecretChatManager::markChatAsRead(const QString &chat_id) {
     if (!m_dbManager->markChatAsRead(chat_id, m_stateManager->getUserId())) {
         qCritical() << "[SecretChatManager] Failed to mark chat as read.";
     }
-
-    QJsonObject payload;
+    emit secretChatsUpdated();
 }
 
 Q_INVOKABLE void SecretChatManager::deleteSecretChat(const QString &chat_id) {
@@ -368,8 +364,7 @@ Q_INVOKABLE void SecretChatManager::deleteSecretChat(const QString &chat_id) {
         qCritical() << "[SecretChatManager] Failed to delete chat.";
         return;
     }
-
-    QJsonObject payload;
+    emit secretChatsUpdated();
 }
 
 void SecretChatManager::processIncomingSecretPayload(const QJsonObject &envelope

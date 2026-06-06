@@ -1,5 +1,7 @@
 #pragma once
 
+#include <qglobal.h>
+#include <qjsonobject.h>
 #include <qtmetamacros.h>
 #include <QJsonArray>
 #include <QObject>
@@ -41,16 +43,18 @@ public:
         const QString &text,
         const QString &type,
         const QJsonArray &attachments = QJsonArray()
-    );                                                          // to impl
-    Q_INVOKABLE void markChatAsRead(const QString &chat_id);    // to impl
-    Q_INVOKABLE void deleteSecretChat(const QString &chat_id);  // to impl
+    );
+    Q_INVOKABLE void markChatAsRead(const QString &chat_id);
+    Q_INVOKABLE void deleteSecretChat(const QString &chat_id);
 
     Q_INVOKABLE void clearSecretCache();
 public slots:
     void processIncomingSecretPayload(const QJsonObject &envelope);
 signals:
-    // TODO: signal that cache cleared with size of cleared cache
-    // TODO: signal for errors
+    void secretChatsUpdated();
+    void secretChatCreated(const QString &chatId, const QString &title);
+    void secretMessageReceived(const QJsonObject &message);
+    void secretChatError(const QString &errorMsg);
 
 private:
     client::db::SecretDatabaseManager *m_dbManager;
@@ -64,6 +68,7 @@ private:
         const QByteArray &other_public_key,
         const QString &chat_id
     );
+    void handleIncomingSecretMessage(const QJsonObject &envelope);
 
     QByteArray m_publicKey;
     QByteArray m_privateKey;

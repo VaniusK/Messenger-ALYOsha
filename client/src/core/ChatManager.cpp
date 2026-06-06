@@ -572,19 +572,6 @@ void ChatManager::fetchChatInfo(const QString &chatId) {
     });
 }
 
-void ChatManager::createSecretChat(
-    qint64 targetUserId,
-    const QString &targetUserName
-) {
-    qDebug() << "[SecretChat] Создание секретного чата с юзером:"
-             << targetUserId;
-    // TODO LOCAL DB
-
-    QString newSecretChatId = "sec_test_" + QString::number(targetUserId);
-    emit directChatOpened(newSecretChatId, targetUserName);
-    fetchChats();
-}
-
 void ChatManager::fetchSecretChatHistory(const QString &chatId, int beforeId) {
     qDebug() << "[SecretChat] Запрос истории для:" << chatId
              << "до:" << beforeId;
@@ -597,28 +584,4 @@ void ChatManager::fetchSecretChatHistory(const QString &chatId, int beforeId) {
     } else {
         emit chatsHistoryLoaded(emptyHistory);
     }
-}
-
-void ChatManager::sendSecretMessage(
-    const QString &chatId,
-    const QString &text
-) {
-    qDebug() << "[SecretChat] Отправка сообщения " << chatId << ":" << text;
-    // TODO LOCAL DB
-}
-
-void ChatManager::handleIncomingSecretPayload(const QJsonObject &payload) {
-    // TODO LOCAL DB
-}
-
-void ChatManager::uploadSecretFile(
-    const QString &chatId,
-    const QString &filePath,
-    bool asFile,
-    const QString &caption,
-    const QString &msgType
-) {
-    qDebug() << "[SecretChat] Отправка файла в" << chatId << ":" << filePath;
-
-    // TODO LOCAL DB
 }
