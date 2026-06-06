@@ -37,7 +37,7 @@ int main() {
     dbConfig.isFast = false;
     drogon::app().addDbClient(dbConfig);
     drogon::app().setThreadNum(64);
-    LOG_INFO << "Starting server on port 5555";
+    LOG_INFO << "Starting server";
     drogon::app().run();
     return 0;
 }

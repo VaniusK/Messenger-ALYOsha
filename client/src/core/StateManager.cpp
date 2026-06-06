@@ -137,4 +137,5 @@ void StateManager::initUserEnvironment() {
     userDir.mkpath("temp");
     userDir.mkpath("secret_attachments");
     userDir.mkpath("database");
+    qDebug() << "[StateManager] Successfully initialized user environment.";
 }
