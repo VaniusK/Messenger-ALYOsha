@@ -9,7 +9,8 @@ drogon::Task<void> SecretChatsRepository::saveHandshakeSignal(
     int64_t sender_id,
     int64_t acceptor_id,
     int32_t type,
-    std::string pub_key
+    std::string pub_key,
+    std::string chat_id
 ) {
     auto db_client = getDbClient();
     std::exception_ptr eptr;
@@ -37,12 +38,12 @@ drogon::Task<void> SecretChatsRepository::saveHandshakeSignal(
     // Inserting signal
     try {
         std::string insert_query =
-            R"(INSERT INTO e2e.handshakes_pool (sender_id, acceptor_id, message_type, public_key)
-            VALUES ($1, $2, $3, $4)
+            R"(INSERT INTO e2e.handshakes_pool (sender_id, acceptor_id, message_type, chat_id, public_key)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (sender_id, acceptor_id)
             DO UPDATE SET public_key = EXCLUDED.public_key, message_type = EXCLUDED.message_type, created_at = NOW();)";
         co_await db_client->execSqlCoro(
-            insert_query, sender_id, acceptor_id, type, pub_key
+            insert_query, sender_id, acceptor_id, type, chat_id, pub_key
         );
         co_return;
     } catch (drogon::orm::DrogonDbException &e) {

@@ -51,3 +51,4 @@ void ServerWebSocketController::handleConnectionClosed(
     auto notifier = drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
     notifier->removeConnection(user_id);
 }
+

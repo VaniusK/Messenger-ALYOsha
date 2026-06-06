@@ -23,6 +23,9 @@ public:
     drogon::Task<SecretChatAcceptResponseDto> chatAccept(
         SecretChatAcceptRequestDto request_dto
     );
+    drogon::Task<DeleteSecretChatResponseDto> deleteChat(
+        DeleteSecretChatRequestDto request_dto
+    );
     drogon::Task<SendSecretMessageResponseDto> sendMessage(
         SendSecretMessageRequestDto request_dto
     );

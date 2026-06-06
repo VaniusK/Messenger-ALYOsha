@@ -53,6 +53,7 @@ drogon::Task<SecretChatInitResponseDto> SecretChatsService::chatInit(
         request_dto.source_user_id, request_dto.initialUserPublicKey,
         "public_key"
     );
+    ws_message_json["chat_id"] = request_dto.chat_id;
     auto client_notifier =
         drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
     if (!client_notifier->notifyClient(
@@ -61,7 +62,7 @@ drogon::Task<SecretChatInitResponseDto> SecretChatsService::chatInit(
         co_await secret_chats_repo->saveHandshakeSignal(
             request_dto.source_user_id, request_dto.target_user_id,
             static_cast<int32_t>(WebsocketMessageType::SECRET_CHAT_REQUEST),
-            request_dto.initialUserPublicKey
+            request_dto.initialUserPublicKey, request_dto.chat_id
         );
     }
     co_return SecretChatInitResponseDto();
@@ -75,6 +76,7 @@ drogon::Task<SecretChatAcceptResponseDto> SecretChatsService::chatAccept(
         request_dto.source_user_id, request_dto.acceptorUserPublicKey,
         "public_key"
     );
+    ws_message_json["chat_id"] = request_dto.chat_id;
 
     auto client_notifier =
         drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
@@ -84,10 +86,33 @@ drogon::Task<SecretChatAcceptResponseDto> SecretChatsService::chatAccept(
         co_await secret_chats_repo->saveHandshakeSignal(
             request_dto.source_user_id, request_dto.target_user_id,
             static_cast<int32_t>(WebsocketMessageType::SECRET_CHAT_ACCEPT),
-            request_dto.acceptorUserPublicKey
+            request_dto.acceptorUserPublicKey, request_dto.chat_id
         );
     }
     co_return SecretChatAcceptResponseDto();
+}
+
+drogon::Task<DeleteSecretChatResponseDto> SecretChatsService::deleteChat(
+    DeleteSecretChatRequestDto request_dto
+) {
+    Json::Value ws_message_json;
+    ws_message_json["chat_id"] = request_dto.chat_id;
+    ws_message_json["sender_id"] = request_dto.source_user_id;
+    ws_message_json["message_type"] =
+        static_cast<int32_t>(WebsocketMessageType::SECRET_CHAT_DELETE);
+
+    auto client_notifier =
+        drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
+    if (!client_notifier->notifyClient(
+            request_dto.target_user_id, ws_message_json.toStyledString()
+        )) {
+        co_await secret_chats_repo->saveHandshakeSignal(
+            request_dto.source_user_id, request_dto.target_user_id,
+            static_cast<int32_t>(WebsocketMessageType::SECRET_CHAT_DELETE), "",
+            request_dto.chat_id
+        );
+    }
+    co_return DeleteSecretChatResponseDto();
 }
 
 drogon::Task<SendSecretMessageResponseDto> SecretChatsService::sendMessage(

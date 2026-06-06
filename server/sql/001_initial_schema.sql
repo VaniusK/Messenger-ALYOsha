@@ -108,6 +108,7 @@ CREATE TABLE e2e.handshakes_pool (
     sender_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     acceptor_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     message_type INT NOT NULL,
+    chat_id TEXT NOT NULL,
 
     public_key TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

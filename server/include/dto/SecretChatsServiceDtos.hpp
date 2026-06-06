@@ -1,6 +1,7 @@
 #pragma once
 #include <drogon/drogon.h>
 #include <jsoncpp/json/value.h>
+#include <cinttypes>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -12,15 +13,18 @@ struct SecretChatInitRequestDto : RequestDto {
     int64_t source_user_id;
     int64_t target_user_id;
     std::string initialUserPublicKey;
+    std::string chat_id;
 
     SecretChatInitRequestDto(
         int64_t source_user_id_,
         int64_t target_user_id_,
-        std::string initialUserPublicKey_
+        std::string initialUserPublicKey_,
+        std::string chat_id_
     )
         : source_user_id(source_user_id_),
           target_user_id(target_user_id_),
-          initialUserPublicKey(std::move(initialUserPublicKey_)) {
+          initialUserPublicKey(std::move(initialUserPublicKey_)),
+          chat_id(std::move(chat_id_)) {
     }
 
     SecretChatInitRequestDto(
@@ -30,6 +34,7 @@ struct SecretChatInitRequestDto : RequestDto {
         source_user_id = req->getAttributes()->get<int64_t>("user_id");
         target_user_id = (*request_json)["target_user_id"].asInt64();
         initialUserPublicKey = (*request_json)["public_key"].asString();
+        chat_id = (*request_json)["chat_id"].asString();
     }
 };
 
@@ -49,15 +54,18 @@ struct SecretChatAcceptRequestDto : RequestDto {
     int64_t source_user_id;
     int64_t target_user_id;
     std::string acceptorUserPublicKey;
+    std::string chat_id;
 
     SecretChatAcceptRequestDto(
         int64_t source_user_id_,
         int64_t target_user_id_,
-        std::string acceptorUserPublicKey_
+        std::string acceptorUserPublicKey_,
+        std::string chat_id_
     )
         : source_user_id(source_user_id_),
           target_user_id(target_user_id_),
-          acceptorUserPublicKey(std::move(acceptorUserPublicKey_)) {
+          acceptorUserPublicKey(std::move(acceptorUserPublicKey_)),
+          chat_id(std::move(chat_id_)) {
     }
 
     SecretChatAcceptRequestDto(
@@ -67,6 +75,7 @@ struct SecretChatAcceptRequestDto : RequestDto {
         source_user_id = req->getAttributes()->get<int64_t>("user_id");
         target_user_id = (*request_json)["target_user_id"].asInt64();
         acceptorUserPublicKey = (*request_json)["public_key"].asString();
+        chat_id = (*request_json)["chat_id"].asString();
     }
 };
 
@@ -77,6 +86,42 @@ struct SecretChatAcceptResponseDto : ResponseDto {
         Json::Value response_json;
         response_json["message"] =
             "Secret chat initialization request successfully accepted";
+        return response_json;
+    }
+};
+
+struct DeleteSecretChatRequestDto : RequestDto {
+    int64_t source_user_id;
+    int64_t target_user_id;
+    std::string chat_id;
+
+    DeleteSecretChatRequestDto(
+        int64_t source_user_id_,
+        int64_t target_user_id_,
+        std::string chat_id_
+    )
+        : source_user_id(source_user_id_),
+          target_user_id(target_user_id_),
+          chat_id(std::move(chat_id_)) {
+    }
+
+    DeleteSecretChatRequestDto(
+        drogon::HttpRequestPtr req,
+        std::shared_ptr<Json::Value> request_json
+    ) {
+        source_user_id = req->getAttributes()->get<int64_t>("user_id");
+        target_user_id = (*request_json)["target_user_id"].asInt64();
+        chat_id = (*request_json)["chat_id"].asString();
+    }
+};
+
+struct DeleteSecretChatResponseDto : ResponseDto {
+    DeleteSecretChatResponseDto() = default;
+
+    Json::Value toJson() {
+        Json::Value response_json;
+        response_json["message"] =
+            "Chat deleting info successfully sent to user.";
         return response_json;
     }
 };
