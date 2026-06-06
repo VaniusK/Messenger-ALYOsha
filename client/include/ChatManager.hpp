@@ -76,6 +76,7 @@ signals:
     void chatMemberAdded(const QJsonObject &member);
     void actionSuccess(const QString &message);
     void chatInfoLoaded(const QJsonObject &chat);
+    void incomingSecretPayload(const QJsonObject &envelope);
 
 private slots:
     void onWebSocketConnected();
@@ -89,5 +90,4 @@ private:
     MediaCacheManager *m_mediaCache;
     LocalChatStorage *m_chatStorage;
     QWebSocket *m_webSocket;
-    void handleIncomingSecretPayload(const QJsonObject &payload);
 };

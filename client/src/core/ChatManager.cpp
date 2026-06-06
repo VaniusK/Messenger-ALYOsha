@@ -143,13 +143,8 @@ void ChatManager::fetchChats() {
                 }
             }
 
-            QJsonArray combinedChats = m_chatStorage->getChatPreviews();
-            // TODO LOCAL DB
-            // получить вектор секретных чатов, конвертируем в QJsonObject и
-            // combinedChats.append(secretChat) QML сам сортирует по времени
-            // last_message
-
-            emit chatsUpdated(combinedChats);
+            QJsonArray updatedChats = m_chatStorage->getChatPreviews();
+            emit chatsUpdated(updatedChats);
         } else {
             emit chatError("Fetch chats failed: " + reply->errorString());
         }
@@ -570,18 +565,4 @@ void ChatManager::fetchChatInfo(const QString &chatId) {
             qDebug() << "Fetch chat info error:" << reply->errorString();
         }
     });
-}
-
-void ChatManager::fetchSecretChatHistory(const QString &chatId, int beforeId) {
-    qDebug() << "[SecretChat] Запрос истории для:" << chatId
-             << "до:" << beforeId;
-    // TODO LOCAL DB
-
-    QJsonArray emptyHistory;
-
-    if (beforeId > 0) {
-        emit chatsHistoryPrepended(emptyHistory);
-    } else {
-        emit chatsHistoryLoaded(emptyHistory);
-    }
 }
