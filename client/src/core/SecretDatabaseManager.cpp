@@ -262,6 +262,28 @@ bool SecretDatabaseManager::saveMessage(
     return true;
 }
 
+bool SecretDatabaseManager::deleteMessage(const QString &message_id) {
+    auto db = getDatabase();
+    QSqlQuery query(db);
+    query.prepare("DELETE FROM secret_messages WHERE id = :message_id");
+    query.bindValue(":message_id", message_id);
+
+    if (!query.exec()) {
+        qCritical() << "[SecretDB] Failed to delete message:"
+                    << query.lastError().text();
+        return false;
+    }
+
+    if (query.numRowsAffected() == 0) {
+        qWarning() << "[SecretDB] Message with ID" << message_id
+                   << "was not found for deletion.";
+        return false;
+    }
+
+    // TODO: emit
+    return true;
+}
+
 bool SecretDatabaseManager::saveAttachment(
     const QString &id,
     const QString &message_id,

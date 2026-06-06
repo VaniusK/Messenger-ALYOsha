@@ -48,6 +48,7 @@ public:
         const QString &text,
         qint64 sent_at
     );
+    bool deleteMessage(const QString &message_id);
     bool saveAttachment(
         const QString &id,
         const QString &message_id,

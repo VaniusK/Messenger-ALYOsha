@@ -41,9 +41,15 @@ public:
     Q_INVOKABLE QString sendSecretMessage(
         const QString &chat_id,
         const QString &text,
-        const QString &type,
-        const QJsonArray &attachments = QJsonArray()
+        const QString &messageType
     );
+    Q_INVOKABLE QString sendSecretMessageWithAttachment(
+        const QString &chatId,
+        const QString &localFilePath,
+        const QString &caption,
+        const QString &messageType
+    );
+    Q_INVOKABLE
     Q_INVOKABLE void markChatAsRead(const QString &chat_id);
     Q_INVOKABLE void deleteSecretChat(const QString &chat_id);
 
@@ -69,6 +75,7 @@ private:
         const QString &chat_id
     );
     void handleIncomingSecretMessage(const QJsonObject &envelope);
+    void handleChatRead(const QJsonObject &envelope);
 
     QByteArray m_publicKey;
     QByteArray m_privateKey;
