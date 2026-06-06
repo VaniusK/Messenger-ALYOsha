@@ -34,6 +34,7 @@ bool SecretChatManager::initSession() {
 
     if (!m_dbManager->init(dbPath)) {
         qCritical() << "[SecretChatManager] Failed to init DB at" << dbPath;
+        emit secretChatError("Ошибка инициализации базы данных");
         return false;
     }
     auto user_keys = m_dbManager->getIdentity();
@@ -46,6 +47,7 @@ bool SecretChatManager::initSession() {
         if (!m_dbManager->saveIdentity(newPub, newPriv)) {
             qCritical() << "[SecretChatManager] Failed to save newly generated "
                            "keys to DB!";
+            emit secretChatError("Не удалось сохранить ключи шифрования");
             return false;
         }
 
@@ -73,7 +75,6 @@ void SecretChatManager::logout() {
 
 void SecretChatManager::clearSecretCache() {
     if (!m_stateManager) {
-        // TODO emit
         qCritical() << "[SecretChatManager] StateManager isn't initialized!";
         return;
     }
@@ -82,7 +83,6 @@ void SecretChatManager::clearSecretCache() {
     QDir attachmentsDir(attachmentsPath);
 
     if (!attachmentsDir.exists()) {
-        // TODO emit
         return;
     }
 
@@ -98,10 +98,9 @@ void SecretChatManager::clearSecretCache() {
         qDebug(
         ) << "[SecretChatManager] Cache successfully cleared. Freed bytes:"
           << freedBytes;
-        emit secretChatsUpdated();
     } else {
         qCritical() << "[SecretChatManager] Failed to remove cache directory!";
-        // TODO emit
+        emit secretChatError("Ошибка очистки кэша файлов");
     }
 }
 
@@ -144,7 +143,7 @@ void SecretChatManager::createSecretChatRequest(qint64 target_user_id) {
                             << "\n  HTTP Status:"
                             << (httpStatus.isValid() ? httpStatus.toInt() : 0)
                             << "\n  Server Body:" << serverResponseBody;
-                // TODO emit
+                emit secretChatError("Внутренняя ошибка сервера");
                 return;
             }
             QByteArray responseData = checkReply->readAll();
@@ -159,7 +158,7 @@ void SecretChatManager::createSecretChatRequest(qint64 target_user_id) {
                             << "Parse error:" << parseError.errorString()
                             << "Raw body:" << responseData;
 
-                // TODO emit
+                emit secretChatError("Некорректный ответ сервера");
                 return;
             }
             QJsonObject jsonObj = jsonDoc.object();
@@ -175,12 +174,14 @@ void SecretChatManager::createSecretChatRequest(qint64 target_user_id) {
                 qCritical() << "[SecretChatManager] CRITICAL ERROR: "
                                "Local DB failed "
                                "to save the chat!";
-                // TODO emit
+                emit secretChatError("Ошибка базы данных");
+                return;
             }
             qDebug() << "[SecretChatManager] Chat" << chat_id
                      << "successfully saved to local DB with "
                         "'pending' status.";
-            // TODO emit
+            emit secretChatCreated(chat_id, target_display_name);
+            emit secretChatsUpdated();
 
             QJsonObject requestBody;
             requestBody["target_user_id"] = target_user_id;
@@ -212,7 +213,7 @@ void SecretChatManager::createSecretChatRequest(qint64 target_user_id) {
                             << (httpStatus.isValid() ? httpStatus.toInt() : 0)
                             << "\n  Server Body:" << serverResponseBody;
                         m_dbManager->deleteChat(chat_id);
-                        // TODO emit
+                        emit secretChatError("Ошибка отправки приглашения");
                         return;
                     }
                     qDebug() << "[SecretChatManager] Invite successfully sent "
@@ -251,7 +252,7 @@ void SecretChatManager::acceptSecretChatRequest(
                             << "\n  HTTP Status:"
                             << (httpStatus.isValid() ? httpStatus.toInt() : 0)
                             << "\n  Server Body:" << serverResponseBody;
-                // TODO emit
+                emit secretChatError("Ошибка проверки пользователя");
                 return;
             }
             QByteArray responseData = checkReply->readAll();
@@ -266,7 +267,7 @@ void SecretChatManager::acceptSecretChatRequest(
                             << "Parse error:" << parseError.errorString()
                             << "Raw body:" << responseData;
 
-                // TODO emit
+                emit secretChatError("Некорректный ответ сервера");
                 return;
             }
             QJsonObject jsonObj = jsonDoc.object();
@@ -280,12 +281,13 @@ void SecretChatManager::acceptSecretChatRequest(
                 qCritical() << "[SecretChatManager] CRITICAL ERROR: "
                                "Local DB failed "
                                "to save the chat!";
-                // TODO emit
+                emit secretChatError("Ошибка базы данных");
+                return;
             }
             qDebug() << "[SecretChatManager] Chat" << chat_id
                      << "successfully saved to local DB with "
                         "'pending' status.";
-            // TODO emit
+            emit secretChatsUpdated();
 
             QJsonObject requestBody;
             requestBody["target_user_id"] = target_user_id;
@@ -317,7 +319,7 @@ void SecretChatManager::acceptSecretChatRequest(
                             << (httpStatus.isValid() ? httpStatus.toInt() : 0)
                             << "\n  Server Body:" << serverResponseBody;
                         m_dbManager->deleteChat(chat_id);
-                        // TODO emit
+                        emit secretChatsUpdated();
                         return;
                     }
                     this->initSecretChat(chat_id, other_public_key);
@@ -338,9 +340,11 @@ void SecretChatManager::initSecretChat(
         qCritical() << "[SecretChatManager] Failed to calculate shared secret "
                        "for chat init."
                     << crypto::toString(shared_key_res.error);
+        emit secretChatError("Ошибка инициализации секретного чата");
         return;
     }
     m_dbManager->updateChatStatus(chat_id, "active", shared_key_res.secret);
+    emit secretChatsUpdated();
 }
 
 Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
@@ -360,11 +364,12 @@ Q_INVOKABLE void SecretChatManager::markChatAsRead(const QString &chat_id) {
 }
 
 Q_INVOKABLE void SecretChatManager::deleteSecretChat(const QString &chat_id) {
-    if (!m_dbManager->deleteChat(chat_id)) {
-        qCritical() << "[SecretChatManager] Failed to delete chat.";
-        return;
+    if (m_dbManager->deleteChat(chat_id)) {
+        emit secretChatsUpdated();
+    } else {
+        qCritical() << "[SecretChatManager] Failed to delete chat from DB!";
+        emit secretChatError("Ошибка удаления чата");
     }
-    emit secretChatsUpdated();
 }
 
 void SecretChatManager::processIncomingSecretPayload(const QJsonObject &envelope
@@ -412,7 +417,8 @@ void SecretChatManager::processIncomingSecretPayload(const QJsonObject &envelope
         case api::v1::WebsocketMessageType::SECRET_CHAT_DELETE: {
             QString chatId = envelope["chat_id"].toString();
             m_dbManager->deleteChat(chatId);
-            // TODO emit
+            emit secretChatsUpdated();
+            emit secretChatError("Собеседник удалил секретный чат");
             break;
         }
 

@@ -59,6 +59,33 @@ Rectangle {
         cancelVoiceDialog.open()
     }
 
+    function loadSecretHistory(chatId, beforeTimestamp) {
+        isLoadingHistory = true;
+        var historyStr = SecretChatManager.fetchSecretChatHistory(chatId, beforeTimestamp);
+        
+        try {
+            if (historyStr !== "") {
+                var messages = JSON.parse(historyStr);
+                
+                if (beforeTimestamp === 0) {
+                    chatModel.clear();
+                    for (var i = messages.length - 1; i >= 0; i--) chatModel.append(messages[i]);
+                } else {
+                    for (var k = 0; k < messages.length; k++) chatModel.append(messages[k]);
+                }
+                
+                if (messages.length < 50) hasMoreHistory = false;
+            } else {
+                if (beforeTimestamp === 0) chatModel.clear();
+                hasMoreHistory = false;
+            }
+        } catch (e) {
+            console.error("[ChatArea] Ошибка парсинга истории секретного чата:", e);
+        }
+        
+        Qt.callLater(function() { isLoadingHistory = false; })
+    }
+
     Connections {
         target: MediaLayer
         function onFileDialogOpened() {
@@ -321,12 +348,16 @@ Rectangle {
 
             MouseArea {
                 anchors.fill: parent
-                enabled: activeChatType === "group"
+                enabled: activeChatType === "group" || activeChatType === "direct"
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    ChatLayer.fetchChatMembers(activeChatId)
-                    ChatLayer.fetchChatInfo(activeChatId)
-                    groupInfoPopup.open()
+                    if (activeChatType === "group") {
+                        ChatLayer.fetchChatMembers(activeChatId)
+                        ChatLayer.fetchChatInfo(activeChatId)
+                        groupInfoPopup.open()
+                    } else if (activeChatType === "direct") {
+                        directInfoPopup.open()
+                    }
                 }
             }
             
@@ -408,7 +439,13 @@ Rectangle {
 
                     if (!isNaN(parsedId) && parsedId > 0) {
                         isLoadingHistory = true;
-                        ChatLayer.fetchChatHistory(activeChatId, parsedId);
+                        if (activeChatType === "secret") {
+                            var oldestMsg = chatModel.get(chatModel.count - 1);
+                            var ts = oldestMsg.sent_at ? new Date(oldestMsg.sent_at).getTime() : 0;
+                            chatAreaRoot.loadSecretHistory(activeChatId, ts);
+                        } else {
+                            ChatLayer.fetchChatHistory(activeChatId, parsedId)
+                        }
                     }
                 }
             }
@@ -1012,7 +1049,18 @@ Rectangle {
                                 if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(event.modifiers & Qt.ShiftModifier)) {
                                     event.accepted = true;
                                     if (text.trim() !== "" && isChatActive) {
-                                        ChatLayer.sendMessage(activeChatId, text.trim());
+                                        if (chatAreaRoot.activeChatType === "secret") {
+                                            var newMsgId = SecretChatManager.sendSecretMessage(activeChatId, text.trim(), "text", []);
+                                            
+                                            // Временно запрашиваем перерисовку вручную, пока нет сигналов
+                                            if (newMsgId !== "") {
+                                                ChatLayer.fetchChats(); 
+                                                chatAreaRoot.loadSecretHistory(activeChatId, 0);
+                                            }
+                                        } else {
+                                            ChatLayer.sendMessage(activeChatId, text.trim());
+                                        }
+                                        messageInput.text = "";
                                     }
                                 }
                             }
@@ -1108,7 +1156,11 @@ Rectangle {
                         onClicked: {
                             if (messageInput.text.trim() !== "") {
                                 if (isChatActive) {
-                                    ChatLayer.sendMessage(activeChatId, messageInput.text.trim());
+                                    if (chatAreaRoot.activeChatType === "secret") {
+                                        ChatLayer.sendSecretMessage(activeChatId, messageInput.text.trim());
+                                    } else {
+                                        ChatLayer.sendMessage(activeChatId, messageInput.text.trim());
+                                    }
                                     messageInput.text = "";
                                 }
                             } else {
@@ -2595,6 +2647,180 @@ Rectangle {
                                 chatAreaRoot.activeChatDescription = editDescField.text.trim()
                                 groupSettingsPopup.close()
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: directInfoPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 380
+        height: 350
+        modal: true; dim: true; focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
+
+        contentItem: Item {
+            anchors.fill: parent
+            
+            RowLayout {
+                anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 15
+                
+                Item { Layout.fillWidth: true }
+                
+                Text {
+                    text: "✕"
+                    color: appTheme.textHint
+                    font.pixelSize: 20
+                    
+                    MouseArea {
+                        anchors.fill: parent; anchors.margins: -10
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: directInfoPopup.close() 
+                    }
+                }
+            }
+
+            ColumnLayout {
+                anchors.top: parent.top; anchors.topMargin: 50; anchors.left: parent.left; anchors.right: parent.right; spacing: 10
+                
+                Rectangle { 
+                    width: 90; height: 90; radius: 45
+                    color: "#4a90d9"
+                    Layout.alignment: Qt.AlignHCenter
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: activeChatName ? activeChatName.charAt(0).toUpperCase() : "?"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: 36 
+                    } 
+                }
+                
+                Text {
+                    text: activeChatName
+                    color: appTheme.textMain
+                    font.pixelSize: 20
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
+                    font.family: "Segoe UI" 
+                }
+            }
+
+            Rectangle {
+                anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 20
+                height: 44; radius: 8
+                color: secretHover.pressed ? Qt.alpha(appTheme.accent, 0.2) : (secretHover.containsMouse ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
+                border.color: appTheme.accent; border.width: 1
+                Behavior on color { ColorAnimation { duration: 150 } }
+                
+                RowLayout {
+                    anchors.centerIn: parent; spacing: 10
+                    
+                    Image {
+                        source: "qrc:/messenger_client_uri/assets/icons/person_lock.svg"
+                        width: 20; height: 20; sourceSize: Qt.size(20, 20) 
+                    }
+                    
+                    Text {
+                        text: "Создать секретный чат"
+                        color: appTheme.accent
+                        font.pixelSize: 15
+                        font.family: "Segoe UI"
+                        font.bold: true 
+                    }
+                }
+                
+                MouseArea {
+                    id: secretHover; anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: { directInfoPopup.close(); confirmSecretChatPopup.open() }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: confirmSecretChatPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 320
+        height: 180
+        modal: true; dim: true; focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
+
+        contentItem: ColumnLayout {
+            anchors.fill: parent; anchors.margins: 20; spacing: 20
+            
+            Text {
+                text: "Создать секретный чат с " + activeChatName + "?\n\nСообщения будут зашифрованы и доступны только на этом устройстве."
+                color: appTheme.textMain
+                font.pixelSize: 15
+                font.family: "Segoe UI"
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            
+            RowLayout {
+                Layout.alignment: Qt.AlignRight | Qt.AlignBottom; spacing: 15
+                
+                Rectangle {
+                    width: 80; height: 36; radius: 6
+                    color: cancelSecHover.pressed ? Qt.alpha(appTheme.accent, 0.2) : (cancelSecHover.containsMouse ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Отмена"
+                        color: appTheme.accent
+                        font.pixelSize: 15
+                        font.bold: true
+                        font.family: "Segoe UI" 
+                    }
+                    
+                    MouseArea {
+                        id: cancelSecHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: confirmSecretChatPopup.close() 
+                    }
+                }
+                
+                Rectangle {
+                    width: 90; height: 36; radius: 6
+                    color: startSecHover.pressed ? Qt.darker(appTheme.accent, 1.2) : (startSecHover.containsMouse ? Qt.lighter(appTheme.accent, 1.2) : appTheme.accent)
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Начать"
+                        color: "white"
+                        font.pixelSize: 15
+                        font.bold: true
+                        font.family: "Segoe UI" 
+                    }
+                    
+                    MouseArea {
+                        id: startSecHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        
+                        onClicked: {
+                            SecretChatManager.createSecretRequest(parseInt(activeChatId))
+                            confirmSecretChatPopup.close()
+
+                            var secId = "pendind_" + activeChatId
+                            chatAreaRoot.activeChatType = "secret"
+                            chatAreaRoot.activeChatId = secId
                         }
                     }
                 }

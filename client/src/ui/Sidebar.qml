@@ -27,23 +27,38 @@ Rectangle {
         target: ChatLayer
 
         function onChatsUpdated(chats) {
-            if (!isSearching) {
-                chats.sort(function(a, b) {
-                    if (a.type === "saved") return -1;
-                    if (b.type === "saved") return 1;
+            function onChatsUpdated(chats) {
+                if (!isSearching) {
+                    var secretChatsStr = SecretChatManager.getSecretChatsPreviews();
+                    var secretChats = [];
+                    try {
+                        if (secretChatsStr !== "") {
+                            secretChats = JSON.parse(secretChatsStr);
+                        }
+                    } catch (e) {
+                        console.error("[Sidebar] Ошибка парсинга секретных чатов:", e);
+                    }
 
-                    var strA = a.last_message ? a.last_message.sent_at || "" : "";
-                    var timeA = strA ? new Date(strA.replace(" ", "T") + (strA.indexOf("Z") === -1 ? "Z" : "")).getTime() : 0;
-                    if (isNaN(timeA)) timeA = 0;
+                    var combinedChats = chats.concat(secretChats);
 
-                    var strB = b.last_message ? b.last_message.sent_at || "" : "";
-                    var timeB = strB ? new Date(strB.replace(" ", "T") + (strB.indexOf("Z") === -1 ? "Z" : "")).getTime() : 0;
-                    if (isNaN(timeB)) timeB = 0;
+                    combinedChats.sort(function(a, b) {
+                        if (a.type === "saved") return -1;
+                        if (b.type === "saved") return 1;
+
+                        var strA = a.last_message ? a.last_message.sent_at || "" : "";
+                        var timeA = strA ? new Date(strA.replace(" ", "T") + (strA.indexOf("Z") === -1 ? "Z" : "")).getTime() : 0;
+                        if (isNaN(timeA)) timeA = 0;
+
+                        var strB = b.last_message ? b.last_message.sent_at || "" : "";
+                        var timeB = strB ? new Date(strB.replace(" ", "T") + (strB.indexOf("Z") === -1 ? "Z" : "")).getTime() : 0;
+                        if (isNaN(timeB)) timeB = 0;
+                        
+                        return timeB - timeA;
+                    })
                     
-                    return timeB - timeA;
-                })
-                chatDataList = chats
-                chatList.model = chatDataList
+                    chatDataList = combinedChats;
+                    chatList.model = chatDataList;
+                }
             }
         }
 
@@ -343,22 +358,37 @@ Rectangle {
                         width: parent.width
                         height: 20
 
-                        Text {
-                            text: isSelf
-                            ? "Избранное"
-                            : isSearching
-                                ? (itemData.display_name ?? itemData.handle ?? "")
-                                : (itemData.type === "saved" ? "Избранное" : (itemData.title ?? ""))
-                            font.bold: true
-                            color: chatItem.isActive ? "white" : appTheme.textMain
-                            font.family: "Segoe UI"
-                            font.pixelSize: 15
-                            elide: Text.ElideRight
+                        RowLayout {
                             anchors.left: parent.left
                             anchors.right: timeText.left
                             anchors.rightMargin: 10
                             anchors.top: parent.top
-                            textFormat: Text.PlainText
+                            spacing: 5
+                            
+                            Text {
+                                text: isSelf
+                                ? "Избранное"
+                                : isSearching
+                                    ? (itemData.display_name ?? itemData.handle ?? "")
+                                    : (itemData.type === "saved" ? "Избранное" : (itemData.title ?? ""))
+                                font.bold: true
+                                color: chatItem.isActive ? "white" : appTheme.textMain
+                                font.family: "Segoe UI"
+                                font.pixelSize: 15
+                                elide: Text.ElideRight
+                                textFormat: Text.PlainText
+                                Layout.maximumWidth: parent.width - (lockIcon.visible ? 20 : 0)
+                            }
+
+                            Image {
+                                id: lockIcon
+                                visible: itemData.type === "secret"
+                                source: "qrc:/messenger_client_uri/assets/icons/lock.svg"
+                                width: 14; height: 14; sourceSize: Qt.size(14, 14)
+                                Layout.alignment: Qt.AlignVCenter
+                                layer.enabled: true
+                                layer.effect: ColorOverlay { color: chatItem.isActive ? "white" : "#4fa896" }
+                            }
                         }
 
                         Text {

@@ -27,6 +27,8 @@ Window {
     Component.onCompleted: {
         AppState.loadSession()
         if (AppState.isLoggedIn()) {
+            AppState.initUserEnvironment()
+            SecretChatManager.initSession()
             ChatLayer.connectWebSocket()
             pageLoader.source = "chat.qml"
         }
