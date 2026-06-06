@@ -66,6 +66,7 @@ public:
     );
 
     Q_INVOKABLE QString getChatsJson(qint64 current_user_id);
+    Q_INVOKABLE QString getChat(const QString &chat_id);
     Q_INVOKABLE QString getMessagesJson(
         const QString &chat_id,
         int limit = 50,

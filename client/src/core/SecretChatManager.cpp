@@ -12,6 +12,19 @@
 #include "WebsocketsMessagesTypes.h"
 
 namespace client::core {
+
+SecretChatManager::SecretChatManager(
+    client::db::SecretDatabaseManager *dbManager,
+    StateManager *stateManager,
+    ConnectionManager *connectionManager,
+    QObject *parent
+)
+    : QObject(parent),
+      m_dbManager(dbManager),
+      m_stateManager(stateManager),
+      m_connectionManager(connectionManager) {
+}
+
 bool SecretChatManager::initSession() {
     if (!m_dbManager || !m_stateManager) {
         return false;
@@ -331,6 +344,32 @@ void SecretChatManager::initSecretChat(
         return;
     }
     m_dbManager->updateChatStatus(chat_id, "active", shared_key_res.secret);
+}
+
+Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
+    const QString &chat_id,
+    const QString &text,
+    const QString &type,
+    const QJsonArray &attachments
+) {
+    return "67";
+}
+
+Q_INVOKABLE void SecretChatManager::markChatAsRead(const QString &chat_id) {
+    if (!m_dbManager->markChatAsRead(chat_id, m_stateManager->getUserId())) {
+        qCritical() << "[SecretChatManager] Failed to mark chat as read.";
+    }
+
+    QJsonObject payload;
+}
+
+Q_INVOKABLE void SecretChatManager::deleteSecretChat(const QString &chat_id) {
+    if (!m_dbManager->deleteChat(chat_id)) {
+        qCritical() << "[SecretChatManager] Failed to delete chat.";
+        return;
+    }
+
+    QJsonObject payload;
 }
 
 void SecretChatManager::processIncomingSecretPayload(const QJsonObject &envelope

@@ -496,11 +496,21 @@ bool SecretDatabaseManager::markChatAsRead(
     query.bindValue(":chat_id", chat_id);
     query.bindValue(":my_id", current_user_id);
 
-    if (query.exec() && query.numRowsAffected() > 0) {
-        // TODO : emit for qml
-        return true;
+    if (!query.exec()) {
+        qCritical() << "[SecretDB] Failed to mark chat as read:"
+                    << query.lastError().text();
+        return false;
     }
-    return false;
+
+    if (query.numRowsAffected() == 0) {
+        qWarning() << "[SecretDB] Failed to get messages for marking as read "
+                      "in chat with ID"
+                   << chat_id;
+        return false;
+    }
+
+    // TODO: emit
+    return true;
 }
 
 bool SecretDatabaseManager::deleteChat(const QString &chat_id) {
@@ -555,6 +565,36 @@ bool SecretDatabaseManager::updateChatStatus(
     qDebug() << "[SecretDB] Chat" << chat_id << "status successfully updated to"
              << status;
     return true;
+}
+
+QString SecretDatabaseManager::getChat(const QString &chat_id) {
+    auto db = getDatabase();
+    QSqlQuery query(db);
+
+    query.prepare("SELECT * FROM secret_chats WHERE chat_id = :chat_id");
+    query.bindValue(":chat_id", chat_id);
+
+    if (!query.exec()) {
+        qCritical() << "[SecretDB] Failed to fetch chat:"
+                    << query.lastError().text();
+        return QString();
+    }
+
+    if (query.next()) {
+        QJsonObject chat_obj;
+
+        chat_obj["id"] = query.value("id").toString();
+        chat_obj["type"] = query.value("type").toString();
+        chat_obj["peer_id"] = query.value("peer_id").toLongLong();
+        chat_obj["name"] = query.value("name").toString();
+        chat_obj["status"] = query.value("status").toString();
+
+        QJsonDocument doc(chat_obj);
+        return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+    }
+
+    qWarning() << "[SecretDB] Chat with ID" << chat_id << "not found.";
+    return QString();
 }
 
 }  // namespace client::db
