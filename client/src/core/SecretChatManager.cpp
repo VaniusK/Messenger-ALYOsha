@@ -96,9 +96,9 @@ void SecretChatManager::clearSecretCache() {
 
     if (attachmentsDir.removeRecursively()) {
         attachmentsDir.mkpath(".");
-        qDebug()
-            << "[SecretChatManager] Cache successfully cleared. Freed bytes:"
-            << freedBytes;
+        qDebug(
+        ) << "[SecretChatManager] Cache successfully cleared. Freed bytes:"
+          << freedBytes;
         emit secretChatsUpdated();
     } else {
         qCritical() << "[SecretChatManager] Failed to remove cache directory!";
@@ -424,26 +424,24 @@ Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
     QNetworkReply *reply =
         m_connectionManager->post("/chats/secret/message", bodyData);
 
-    connect(
-        reply, &QNetworkReply::finished, this, [this, reply, messageId]() {
-            reply->deleteLater();
+    connect(reply, &QNetworkReply::finished, this, [this, reply, messageId]() {
+        reply->deleteLater();
 
-            if (reply->error() != QNetworkReply::NoError) {
-                QVariant httpStatus =
-                    reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
-                qCritical()
-                    << "[SecretChatManager] Failed to send message via HTTP."
-                    << "\n Error:" << reply->errorString() << "\n HTTP Status:"
-                    << (httpStatus.isValid() ? httpStatus.toInt() : 0)
-                    << "\n Body:" << reply->readAll();
-                this->m_dbManager->deleteMessage(messageId);
-                return;
-            }
-
-            qDebug() << "[SecretChatManager] Message" << messageId
-                     << "successfully sent to server!";
+        if (reply->error() != QNetworkReply::NoError) {
+            QVariant httpStatus =
+                reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+            qCritical(
+            ) << "[SecretChatManager] Failed to send message via HTTP."
+              << "\n Error:" << reply->errorString() << "\n HTTP Status:"
+              << (httpStatus.isValid() ? httpStatus.toInt() : 0)
+              << "\n Body:" << reply->readAll();
+            this->m_dbManager->deleteMessage(messageId);
+            return;
         }
-    );
+
+        qDebug() << "[SecretChatManager] Message" << messageId
+                 << "successfully sent to server!";
+    });
 
     QJsonObject localMsg = inner_payload;
     localMsg["chat_id"] = chat_id;
@@ -456,8 +454,8 @@ Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
 
 Q_INVOKABLE void SecretChatManager::markChatAsRead(const QString &chat_id) {
     if (!m_dbManager->markChatAsRead(chat_id, m_stateManager->getUserId())) {
-        qCritical()
-            << "[SecretChatManager] Failed to mark chat as read locally.";
+        qCritical(
+        ) << "[SecretChatManager] Failed to mark chat as read locally.";
         return;
     }
     emit secretChatsUpdated();
@@ -491,9 +489,9 @@ Q_INVOKABLE void SecretChatManager::markChatAsRead(const QString &chat_id) {
         crypto::CryptoManager::encryptMessage(innerBytes, sharedSecret);
 
     if (!encryptResult.success) {
-        qCritical()
-            << "[SecretChatManager] Failed to encrypt read receipt payload! "
-            << crypto::toString(encryptResult.error);
+        qCritical(
+        ) << "[SecretChatManager] Failed to encrypt read receipt payload! "
+          << crypto::toString(encryptResult.error);
         return;
     }
 
@@ -514,11 +512,11 @@ Q_INVOKABLE void SecretChatManager::markChatAsRead(const QString &chat_id) {
         if (reply->error() != QNetworkReply::NoError) {
             QVariant httpStatus =
                 reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
-            qCritical()
-                << "[SecretChatManager] Failed to send read receipt via HTTP."
-                << "\n Error:" << reply->errorString() << "\n HTTP Status:"
-                << (httpStatus.isValid() ? httpStatus.toInt() : 0)
-                << "\n Body:" << reply->readAll();
+            qCritical(
+            ) << "[SecretChatManager] Failed to send read receipt via HTTP."
+              << "\n Error:" << reply->errorString() << "\n HTTP Status:"
+              << (httpStatus.isValid() ? httpStatus.toInt() : 0)
+              << "\n Body:" << reply->readAll();
             return;
         }
 
@@ -582,8 +580,7 @@ Q_INVOKABLE void SecretChatManager::deleteSecretChat(const QString &chat_id) {
     });
 }
 
-void SecretChatManager::processIncomingSecretPayload(
-    const QJsonObject &envelope
+void SecretChatManager::processIncomingSecretPayload(const QJsonObject &envelope
 ) {
     int typeInt = envelope["message_type"].toInt();
     auto messageType = static_cast<api::v1::WebsocketMessageType>(typeInt);
