@@ -81,6 +81,18 @@ Task<HttpResponsePtr> SecretChatsController::chatAccept(
     }
 }
 
+Task<HttpResponsePtr> SecretChatsController::deleteChat(const HttpRequestPtr req) {
+    LOG_INFO << "Entered SecretChatsController -> chatAccept";
+    Json::Value response_json;
+    auto request_json = req->getJsonObject();
+    if (utils::find_missed_fields(
+            response_json, request_json, {"target_user_id", "public_key", "chat_id"}
+        )) {
+        RETURN_RESPONSE_CODE_400(response_json)
+    }
+    RETURN_RESPONSE_CODE_200(response_json)
+}
+
 Task<HttpResponsePtr> SecretChatsController::sendMessage(
     const HttpRequestPtr req
 ) {
