@@ -52,7 +52,13 @@ public:
         Post,
         "api::v1::AuthFilter"
     );
-    ADD_METHOD_TO(SecretChatsController::deleteChat, "/v1/chats/secret/delete", Post, "api::v1::AuthFilter", "api::v1::JsonValidatorFilter");
+    ADD_METHOD_TO(
+        SecretChatsController::deleteChat,
+        "/v1/chats/secret/delete",
+        Post,
+        "api::v1::AuthFilter",
+        "api::v1::JsonValidatorFilter"
+    );
     METHOD_LIST_END
     Task<HttpResponsePtr> chatInit(const HttpRequestPtr req);
     Task<HttpResponsePtr> chatAccept(const HttpRequestPtr req);

@@ -22,7 +22,8 @@ enum class WebsocketMessageType : uint16_t {
     SECRET_CHAT_REQUEST = 200,
     SECRET_CHAT_ACCEPT = 201,
     SECRET_NEW_MESSAGE = 202,
-    SECRET_MESSAGE_READ = 203
+    SECRET_MESSAGE_READ = 203,
+    SECRET_CHAT_DELETE = 204
 
     Q_ENUM_NS(WebsocketMessageType)
 };

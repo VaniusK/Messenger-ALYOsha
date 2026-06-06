@@ -86,11 +86,30 @@ Task<HttpResponsePtr> SecretChatsController::deleteChat(const HttpRequestPtr req
     Json::Value response_json;
     auto request_json = req->getJsonObject();
     if (utils::find_missed_fields(
-            response_json, request_json, {"target_user_id", "public_key", "chat_id"}
+            response_json, request_json, {"target_user_id", "chat_id"}
         )) {
         RETURN_RESPONSE_CODE_400(response_json)
     }
-    RETURN_RESPONSE_CODE_200(response_json)
+
+    messenger::dto::DeleteSecretChatRequestDto request_dto(req, request_json);
+    try {
+        auto secret_chats_service = drogon::app().getPlugin<api::v1::SecretChatsService>();
+        auto response_dto = co_await secret_chats_service->deleteChat(std::move(request_dto));
+        response_json = response_dto.toJson();
+        RETURN_RESPONSE_CODE_201(response_json)
+    }
+    catch (messenger::exceptions::NotFoundException &e){
+        response_json["message"] = e.what();
+        RETURN_RESPONSE_CODE_404(response_json)
+    }
+    catch (messenger::exceptions::InternalServerErrorException &e) {
+        response_json["message"] = e.what();
+        RETURN_RESPONSE_CODE_500(response_json)
+    }
+    catch (std::exception &e) {
+        response_json["message"] = std::string("Internal server error: ") + e.what();
+        RETURN_RESPONSE_CODE_500(response_json)
+    }
 }
 
 Task<HttpResponsePtr> SecretChatsController::sendMessage(
