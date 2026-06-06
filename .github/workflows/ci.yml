@@ -57,7 +57,8 @@ jobs:
             gstreamer1.0-plugins-base \
             gstreamer1.0-plugins-good \
             ca-certificates \
-            openssl
+            openssl \
+            libsodium-dev
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt.outputs.cache-hit != 'true'
