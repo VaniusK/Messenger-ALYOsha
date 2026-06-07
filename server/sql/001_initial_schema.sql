@@ -122,7 +122,7 @@ CREATE TABLE e2e.messages_pool (
     message_type INT NOT NULL,
     chat_id TEXT NOT NULL,
 
-    encrypted_payload JSONB NOT NULL,
+    encrypted_payload TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
