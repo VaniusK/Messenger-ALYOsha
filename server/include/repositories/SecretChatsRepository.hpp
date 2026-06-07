@@ -21,7 +21,7 @@ struct EncryptedMessage {
     int64_t sender_id;
     int64_t acceptor_id;
     int32_t message_type;
-    Json::Value payload;
+    std::string payload;
     std::string chat_id;
 };
 
@@ -43,7 +43,7 @@ public:
         int64_t sender_id,
         int64_t acceptor_id,
         int32_t message_type,
-        Json::Value payload,
+        std::string payload,
         std::string chat_id
     ) = 0;
     virtual drogon::Task<std::vector<EncryptedMessage>> popEncryptedMessages(
@@ -69,7 +69,7 @@ public:
         int64_t sender_id,
         int64_t acceptor_id,
         int32_t message_type,
-        Json::Value payload,
+        std::string payload,
         std::string chat_id
     ) override;
     drogon::Task<std::vector<EncryptedMessage>> popEncryptedMessages(

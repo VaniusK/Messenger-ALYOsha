@@ -90,7 +90,7 @@ drogon::Task<void> SecretChatsRepository::saveEncryptedMessage(
     int64_t sender_id,
     int64_t acceptor_id,
     int32_t message_type,
-    Json::Value payload,
+    std::string payload,
     std::string chat_id
 ) {
     auto db_client = getDbClient();
@@ -151,7 +151,7 @@ SecretChatsRepository::popEncryptedMessages(int64_t acceptor_id) {
                 {row["sender_id"].as<int64_t>(),
                  row["acceptor_id"].as<int64_t>(),
                  row["message_type"].as<int32_t>(),
-                 row["encrypted_payload"].as<Json::Value>(),
+                 row["encrypted_payload"].as<std::string>(),
                  row["chat_id"].as<std::string>()}
             );
         }

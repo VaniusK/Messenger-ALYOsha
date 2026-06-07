@@ -44,12 +44,11 @@ private:
         secret_chats_repo;
     std::shared_ptr<S3ServiceInterface> s3_service;
 
-    template <typename PayloadType>
     Json::Value buildWebsocketJson(
         int32_t message_type,
         int64_t sender_id,
         std::string chat_id,
-        const PayloadType &payload,
+        const std::string &payload,
         const std::string &payload_field_name
     ) {
         Json::Value result;
