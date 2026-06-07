@@ -7,6 +7,7 @@
 #include <vector>
 #include "dto/SecretChatsServiceDtos.hpp"
 #include "include/enums/WebsocketsMessagesTypes.h"
+#include "services/ClientNotifier.hpp"
 #include "utils/server_exceptions.hpp"
 
 namespace api::v1 {
@@ -50,10 +51,9 @@ drogon::Task<SecretChatInitResponseDto> SecretChatsService::chatInit(
     }
     Json::Value ws_message_json = buildWebsocketJson(
         static_cast<int32_t>(WebsocketMessageType::SECRET_CHAT_REQUEST),
-        request_dto.source_user_id, request_dto.initialUserPublicKey,
-        "public_key"
+        request_dto.source_user_id, request_dto.chat_id,
+        request_dto.initialUserPublicKey, "public_key"
     );
-    ws_message_json["chat_id"] = request_dto.chat_id;
     auto client_notifier =
         drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
     if (!client_notifier->notifyClient(
@@ -73,10 +73,9 @@ drogon::Task<SecretChatAcceptResponseDto> SecretChatsService::chatAccept(
 ) {
     Json::Value ws_message_json = buildWebsocketJson(
         static_cast<int32_t>(WebsocketMessageType::SECRET_CHAT_ACCEPT),
-        request_dto.source_user_id, request_dto.acceptorUserPublicKey,
-        "public_key"
+        request_dto.source_user_id, request_dto.chat_id,
+        request_dto.acceptorUserPublicKey, "public_key"
     );
-    ws_message_json["chat_id"] = request_dto.chat_id;
 
     auto client_notifier =
         drogon::app().getPlugin<api::v1::WebsocketClientNotifier>();
@@ -120,8 +119,8 @@ drogon::Task<SendSecretMessageResponseDto> SecretChatsService::sendMessage(
 ) {
     Json::Value ws_message_json = buildWebsocketJson(
         static_cast<int32_t>(WebsocketMessageType::SECRET_NEW_MESSAGE),
-        request_dto.source_user_id, request_dto.encrypted_payload,
-        "encrypted_payload"
+        request_dto.source_user_id, request_dto.chat_id,
+        request_dto.encrypted_payload, "encrypted_payload"
     );
 
     auto client_notifier =
@@ -132,7 +131,7 @@ drogon::Task<SendSecretMessageResponseDto> SecretChatsService::sendMessage(
         co_await secret_chats_repo->saveEncryptedMessage(
             request_dto.source_user_id, request_dto.target_user_id,
             static_cast<int32_t>(WebsocketMessageType::SECRET_NEW_MESSAGE),
-            request_dto.encrypted_payload
+            request_dto.encrypted_payload, request_dto.chat_id
         );
     }
     co_return SendSecretMessageResponseDto();
@@ -143,8 +142,8 @@ drogon::Task<ReadSecretMessageResponseDto> SecretChatsService::readMessage(
 ) {
     Json::Value ws_message_json = buildWebsocketJson(
         static_cast<int32_t>(WebsocketMessageType::SECRET_MESSAGE_READ),
-        request_dto.source_user_id, request_dto.encrypted_payload,
-        "encrypted_payload"
+        request_dto.source_user_id, request_dto.chat_id,
+        request_dto.encrypted_payload, "encrypted_payload"
     );
 
     auto client_notifier =
@@ -155,7 +154,7 @@ drogon::Task<ReadSecretMessageResponseDto> SecretChatsService::readMessage(
         co_await secret_chats_repo->saveEncryptedMessage(
             request_dto.source_user_id, request_dto.target_user_id,
             static_cast<int32_t>(WebsocketMessageType::SECRET_MESSAGE_READ),
-            request_dto.encrypted_payload
+            request_dto.encrypted_payload, request_dto.chat_id
         );
     }
     co_return ReadSecretMessageResponseDto();
@@ -204,16 +203,16 @@ drogon::Task<std::vector<std::string>> SecretChatsService::syncOfflineData(
     auto handshakes = co_await secret_chats_repo->popHandshakeSignals(user_id);
     for (const auto &hs : handshakes) {
         offline_data.push_back(buildWebsocketJson(
-                                   hs.message_type, hs.sender_id, hs.public_key,
-                                   "public_key"
+                                   hs.message_type, hs.sender_id, hs.chat_id,
+                                   hs.public_key, "public_key"
         )
                                    .toStyledString());
     }
     auto messages = co_await secret_chats_repo->popEncryptedMessages(user_id);
     for (const auto &msg : messages) {
         offline_data.push_back(buildWebsocketJson(
-                                   msg.message_type, msg.sender_id, msg.payload,
-                                   "encrypted_payload"
+                                   msg.message_type, msg.sender_id, msg.chat_id,
+                                   msg.payload, "encrypted_payload"
         )
                                    .toStyledString());
     }

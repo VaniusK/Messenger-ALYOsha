@@ -14,6 +14,7 @@ struct HandshakeSignal {
     int64_t acceptor_id;
     int32_t message_type;
     std::string public_key;
+    std::string chat_id;
 };
 
 struct EncryptedMessage {
@@ -21,6 +22,7 @@ struct EncryptedMessage {
     int64_t acceptor_id;
     int32_t message_type;
     Json::Value payload;
+    std::string chat_id;
 };
 
 class SecretChatsRepositoryInterface {
@@ -41,7 +43,8 @@ public:
         int64_t sender_id,
         int64_t acceptor_id,
         int32_t message_type,
-        Json::Value payload
+        Json::Value payload,
+        std::string chat_id
     ) = 0;
     virtual drogon::Task<std::vector<EncryptedMessage>> popEncryptedMessages(
         int64_t acceptor_id
@@ -66,7 +69,8 @@ public:
         int64_t sender_id,
         int64_t acceptor_id,
         int32_t message_type,
-        Json::Value payload
+        Json::Value payload,
+        std::string chat_id
     ) override;
     drogon::Task<std::vector<EncryptedMessage>> popEncryptedMessages(
         int64_t acceptor_id
