@@ -119,7 +119,7 @@ drogon::Task<void> SecretChatsRepository::saveEncryptedMessage(
     // Inserting
     try {
         std::string insert_message_query = R"(INSERT INTO e2e.messages_pool
-            (sender_id, acceptor_id, message_type, encrypted_payload)
+            (sender_id, acceptor_id, message_type, chat_id, encrypted_payload)
             VALUES ($1, $2, $3, $4, $5);)";
         auto insert_message_result = co_await db_client->execSqlCoro(
             insert_message_query, sender_id, acceptor_id, message_type, chat_id,
@@ -142,7 +142,7 @@ SecretChatsRepository::popEncryptedMessages(int64_t acceptor_id) {
     try {
         std::string pop_query =
             "DELETE FROM e2e.messages_pool WHERE acceptor_id = $1 RETURNING "
-            "sender_id, acceptor_id, message_type, encrypted_payload;";
+            "sender_id, acceptor_id, message_type, chat_id, encrypted_payload;";
         auto pop_result =
             co_await db_client->execSqlCoro(pop_query, acceptor_id);
         std::vector<EncryptedMessage> result;
