@@ -5,7 +5,6 @@
 #include <vector>
 #include "dto/SecretChatsServiceDtos.hpp"
 #include "repositories/SecretChatsRepository.hpp"
-#include "services/ClientNotifier.hpp"
 #include "services/S3Service.hpp"
 
 using namespace messenger::dto;
@@ -49,12 +48,14 @@ private:
     Json::Value buildWebsocketJson(
         int32_t message_type,
         int64_t sender_id,
+        std::string chat_id,
         const PayloadType &payload,
         const std::string &payload_field_name
     ) {
         Json::Value result;
         result["message_type"] = message_type;
         result["sender_id"] = sender_id;
+        result["chat_id"] = chat_id;
         result[payload_field_name] = payload;
         return result;
     }

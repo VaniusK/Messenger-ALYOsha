@@ -1,7 +1,6 @@
 #pragma once
 #include <drogon/drogon.h>
 #include <jsoncpp/json/value.h>
-#include <cinttypes>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -130,15 +129,18 @@ struct SendSecretMessageRequestDto : RequestDto {
     int64_t source_user_id;
     int64_t target_user_id;
     Json::Value encrypted_payload;
+    std::string chat_id;
 
     SendSecretMessageRequestDto(
         int64_t source_user_id_,
         int64_t target_user_id_,
-        Json::Value encrypted_payload_
+        Json::Value encrypted_payload_,
+        std::string chat_id_
     )
         : source_user_id(source_user_id_),
           target_user_id(target_user_id_),
-          encrypted_payload(std::move(encrypted_payload_)) {
+          encrypted_payload(std::move(encrypted_payload_)),
+          chat_id(std::move(chat_id_)) {
     }
 
     SendSecretMessageRequestDto(
@@ -148,6 +150,7 @@ struct SendSecretMessageRequestDto : RequestDto {
         source_user_id = req->getAttributes()->get<int64_t>("user_id");
         target_user_id = (*request_json)["target_user_id"].asInt64();
         encrypted_payload = (*request_json)["encrypted_payload"];
+        chat_id = (*request_json)["chat_id"].asString();
     }
 };
 
@@ -165,15 +168,18 @@ struct ReadSecretMessageRequestDto : RequestDto {
     int64_t source_user_id;
     int64_t target_user_id;
     Json::Value encrypted_payload;
+    std::string chat_id;
 
     ReadSecretMessageRequestDto(
         int64_t source_user_id_,
         int64_t target_user_id_,
-        Json::Value encrypted_payload_
+        Json::Value encrypted_payload_,
+        std::string chat_id_
     )
         : source_user_id(source_user_id_),
           target_user_id(target_user_id_),
-          encrypted_payload(std::move(encrypted_payload_)) {
+          encrypted_payload(std::move(encrypted_payload_)),
+          chat_id(std::move(chat_id_)) {
     }
 
     ReadSecretMessageRequestDto(
@@ -183,6 +189,7 @@ struct ReadSecretMessageRequestDto : RequestDto {
         source_user_id = req->getAttributes()->get<int64_t>("user_id");
         target_user_id = (*request_json)["target_user_id"].asInt64();
         encrypted_payload = (*request_json)["encrypted_payload"];
+        chat_id = (*request_json)["chat_id"].asString();
     }
 };
 

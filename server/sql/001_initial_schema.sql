@@ -120,6 +120,7 @@ CREATE TABLE e2e.messages_pool (
     sender_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     acceptor_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     message_type INT NOT NULL,
+    chat_id TEXT NOT NULL,
 
     encrypted_payload JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

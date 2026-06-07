@@ -72,7 +72,8 @@ SecretChatsRepository::popHandshakeSignals(int64_t acceptor_id) {
                 {row["sender_id"].as<int64_t>(),
                  row["acceptor_id"].as<int64_t>(),
                  row["message_type"].as<int32_t>(),
-                 row["public_key"].as<std::string>()}
+                 row["public_key"].as<std::string>(),
+                 row["chat_id"].as<std::string>()}
             );
         }
         co_return result;
@@ -89,7 +90,8 @@ drogon::Task<void> SecretChatsRepository::saveEncryptedMessage(
     int64_t sender_id,
     int64_t acceptor_id,
     int32_t message_type,
-    Json::Value payload
+    Json::Value payload,
+    std::string chat_id
 ) {
     auto db_client = getDbClient();
 
@@ -118,9 +120,10 @@ drogon::Task<void> SecretChatsRepository::saveEncryptedMessage(
     try {
         std::string insert_message_query = R"(INSERT INTO e2e.messages_pool
             (sender_id, acceptor_id, message_type, encrypted_payload)
-            VALUES ($1, $2, $3, $4);)";
+            VALUES ($1, $2, $3, $4, $5);)";
         auto insert_message_result = co_await db_client->execSqlCoro(
-            insert_message_query, sender_id, acceptor_id, message_type, payload
+            insert_message_query, sender_id, acceptor_id, message_type, chat_id,
+            payload
         );
         co_return;
     } catch (drogon::orm::DrogonDbException &e) {
@@ -148,7 +151,8 @@ SecretChatsRepository::popEncryptedMessages(int64_t acceptor_id) {
                 {row["sender_id"].as<int64_t>(),
                  row["acceptor_id"].as<int64_t>(),
                  row["message_type"].as<int32_t>(),
-                 row["encrypted_payload"].as<Json::Value>()}
+                 row["encrypted_payload"].as<Json::Value>(),
+                 row["chat_id"].as<std::string>()}
             );
         }
         co_return result;
