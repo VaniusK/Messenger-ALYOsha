@@ -1,8 +1,5 @@
 #pragma once
 
-#include <qglobal.h>
-#include <qjsonobject.h>
-#include <qtmetamacros.h>
 #include <QJsonArray>
 #include <QObject>
 #include "ConnectionManager.hpp"
@@ -33,23 +30,17 @@ public:
 
     Q_INVOKABLE QString getSecretChatsPreviews() const;
     Q_INVOKABLE void createSecretChatRequest(qint64 target_user_id);
-    Q_INVOKABLE QString fetchSecretChatHistory(
-        const QString &chat_id,
-        qint64 before_timestamp = 0
-    ) const;
+    Q_INVOKABLE QString
+    fetchSecretChatHistory(const QString &chat_id, qint64 before_timestamp = 0);
     Q_INVOKABLE QString getOneMessage(const QString &message_id) const;
     Q_INVOKABLE QString sendSecretMessage(
         const QString &chat_id,
         const QString &text,
-        const QString &messageType
+        const QString &messageType,
+        const QVector<QString> &filepaths = QVector<QString>()
     );
-    Q_INVOKABLE QString sendSecretMessageWithAttachment(
-        const QString &chatId,
-        const QString &localFilePath,
-        const QString &caption,
-        const QString &messageType
-    );
-    Q_INVOKABLE
+    Q_INVOKABLE void
+    downloadSecretAttachment(const QString &message_id, const QString &file_id);
     Q_INVOKABLE void markChatAsRead(const QString &chat_id);
     Q_INVOKABLE void deleteSecretChat(const QString &chat_id);
 
@@ -66,14 +57,22 @@ private:
     client::db::SecretDatabaseManager *m_dbManager;
     StateManager *m_stateManager;
     ConnectionManager *m_connectionManager;
+    QSet<QString> m_activeDownloads;
 
     void
     initSecretChat(const QString &chat_id, const QByteArray &other_public_key);
+    void encodeAndUploadSecretFiles(
+        const QString &message_id,
+        const QVector<QString> &filepaths,
+        std::function<void(QJsonArray)> on_complete
+    );
     void acceptSecretChatRequest(
         qint64 target_user_id,
         const QByteArray &other_public_key,
         const QString &chat_id
     );
+    static QString getMimeType(const QString &filePath);
+
     void handleIncomingSecretMessage(const QJsonObject &envelope);
     void handleChatRead(const QJsonObject &envelope);
 

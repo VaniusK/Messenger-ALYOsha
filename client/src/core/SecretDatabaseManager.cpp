@@ -103,8 +103,14 @@ bool SecretDatabaseManager::init(const QString &db_path) {
     db.setDatabaseName(db_path);
 
     if (!db.open()) {
-        qCritical() << "[SecretDB] Failed to open secure database:"
-                    << db.lastError().text();
+        qCritical().noquote()
+            << QString(
+                   "[SecretDB] Failed to open secure database.\n"
+                   "  Path: %1\n"
+                   "  Error: %2"
+               )
+                   .arg(db_path)
+                   .arg(db.lastError().text());
         return false;
     }
 
@@ -121,8 +127,13 @@ bool SecretDatabaseManager::createTables() {
     auto execute_sql =
         [&query](const char *sql, const char *table_name) -> bool {
         if (!query.exec(sql)) {
-            qCritical() << "[SecretDB] Failed to create table" << table_name
-                        << ":" << query.lastError().text();
+            qCritical().noquote() << QString(
+                                         "[SecretDB] Failed to create table.\n"
+                                         "  Table: %1\n"
+                                         "  Error: %2"
+            )
+                                         .arg(table_name)
+                                         .arg(query.lastError().text());
             return false;
         }
         return true;
@@ -160,10 +171,14 @@ bool SecretDatabaseManager::saveIdentity(
     query.bindValue(":priv", private_key);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to save identity:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to save identity.\n"
+                                     "  Error: %1"
+        )
+                                     .arg(query.lastError().text());
         return false;
     }
+    qDebug() << "[SecretDB] User identity saved successfully.";
     return true;
 }
 
@@ -178,6 +193,7 @@ std::optional<UserIdentity> SecretDatabaseManager::getIdentity() {
         UserIdentity identity;
         identity.publicKey = query.value("public_key").toByteArray();
         identity.privateKey = query.value("private_key").toByteArray();
+        qDebug() << "[SecretDB] User identity retrieved successfully.";
         return identity;
     }
     return std::nullopt;
@@ -206,12 +222,26 @@ bool SecretDatabaseManager::createChat(
     query.bindValue(":status", status);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to create chat:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to create chat.\n"
+                                     "  Chat ID: %1\n"
+                                     "  Peer ID: %2\n"
+                                     "  Error: %3"
+        )
+                                     .arg(chat_id)
+                                     .arg(peer_id)
+                                     .arg(query.lastError().text());
         return false;
     }
 
     // TODO : add emit for QML
+    qDebug().noquote() << QString(
+                              "[SecretDB] Chat created successfully.\n"
+                              "  Chat ID: %1\n"
+                              "  Peer ID: %2"
+    )
+                              .arg(chat_id)
+                              .arg(peer_id);
 
     return true;
 }
@@ -252,12 +282,26 @@ bool SecretDatabaseManager::saveMessage(
     query.bindValue(":sent_at", sent_at);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to save message:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to save message.\n"
+                                     "  Message ID: %1\n"
+                                     "  Chat ID: %2\n"
+                                     "  Error: %3"
+        )
+                                     .arg(message_id)
+                                     .arg(chat_id)
+                                     .arg(query.lastError().text());
         return false;
     }
 
     // TODO emit for qml
+    qDebug().noquote() << QString(
+                              "[SecretDB] Message saved successfully.\n"
+                              "  Message ID: %1\n"
+                              "  Chat ID: %2"
+    )
+                              .arg(message_id)
+                              .arg(chat_id);
 
     return true;
 }
@@ -269,8 +313,13 @@ bool SecretDatabaseManager::deleteMessage(const QString &message_id) {
     query.bindValue(":message_id", message_id);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to delete message:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to delete message.\n"
+                                     "  Message ID: %1\n"
+                                     "  Error: %2"
+        )
+                                     .arg(message_id)
+                                     .arg(query.lastError().text());
         return false;
     }
 
@@ -281,6 +330,8 @@ bool SecretDatabaseManager::deleteMessage(const QString &message_id) {
     }
 
     // TODO: emit
+    qDebug() << "[SecretDB] Message deleted successfully. Message ID:"
+             << message_id;
     return true;
 }
 
@@ -324,11 +375,25 @@ bool SecretDatabaseManager::saveAttachment(
     query.bindValue(":key", file_key);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to save attachment:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to save attachment.\n"
+                                     "  Attachment ID: %1\n"
+                                     "  Message ID: %2\n"
+                                     "  Error: %3"
+        )
+                                     .arg(id)
+                                     .arg(message_id)
+                                     .arg(query.lastError().text());
         return false;
     }
 
+    qDebug().noquote() << QString(
+                              "[SecretDB] Attachment saved successfully.\n"
+                              "  Attachment ID: %1\n"
+                              "  Message ID: %2"
+    )
+                              .arg(id)
+                              .arg(message_id);
     return true;
 }
 
@@ -369,8 +434,13 @@ QString SecretDatabaseManager::getChatsJson(qint64 current_user_id) {
     query.bindValue(":my_id", current_user_id);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to get chats:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to get chats JSON.\n"
+                                     "  User ID: %1\n"
+                                     "  Error: %2"
+        )
+                                     .arg(current_user_id)
+                                     .arg(query.lastError().text());
         return "[]";
     }
 
@@ -418,16 +488,25 @@ QString SecretDatabaseManager::getMessagesJson(
     QSqlQuery query(db);
 
     QString sql = R"(
-        SELECT id, sender_id, message_type, text, sent_at, is_read
-        FROM secret_messages 
-        WHERE chat_id = :chat_id 
+        SELECT 
+            m.id AS msg_id, m.sender_id, m.message_type, m.text, m.sent_at, m.is_read,
+            a.id AS att_id, a.file_name, a.file_size_bytes, a.s3_object_key, a.local_path
+        FROM (
+            SELECT id, sender_id, message_type, text, sent_at, is_read
+            FROM secret_messages 
+            WHERE chat_id = :chat_id 
     )";
 
     if (before_timestamp > 0) {
         sql += " AND sent_at < :before_ts ";
     }
 
-    sql += " ORDER BY sent_at DESC LIMIT :limit";
+    sql += R"(
+            ORDER BY sent_at DESC LIMIT :limit
+        ) m
+        LEFT JOIN secret_attachments a ON m.id = a.message_id
+        ORDER BY m.sent_at DESC
+    )";
 
     query.prepare(sql);
     query.bindValue(":chat_id", chat_id);
@@ -437,26 +516,59 @@ QString SecretDatabaseManager::getMessagesJson(
     query.bindValue(":limit", limit);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to get messages:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to get messages JSON.\n"
+                                     "  Chat ID: %1\n"
+                                     "  Error: %2"
+        )
+                                     .arg(chat_id)
+                                     .arg(query.lastError().text());
         return "[]";
     }
 
     QJsonArray messages_array;
+    QJsonObject current_msg;
+    QJsonArray current_attachments;
+    QString last_msg_id = "";
     while (query.next()) {
-        QJsonObject msg_obj;
-        msg_obj["id"] = query.value("id").toString();
-        msg_obj["chat_id"] = chat_id;
-        msg_obj["sender_id"] = query.value("sender_id").toLongLong();
-        msg_obj["message_type"] = query.value("message_type").toString();
-        msg_obj["text"] = query.value("text").toString();
-        msg_obj["is_read"] = query.value("is_read").toInt();
+        QString msg_id = query.value("msg_id").toString();
+        if (msg_id != last_msg_id) {
+            if (!last_msg_id.isEmpty()) {
+                current_msg["attachments"] = current_attachments;
+                messages_array.append(current_msg);
+            }
 
-        qint64 ts_msecs = query.value("sent_at").toLongLong();
-        QDateTime dt = QDateTime::fromMSecsSinceEpoch(ts_msecs, Qt::UTC);
-        msg_obj["sent_at"] = dt.toString(Qt::ISODateWithMs);
+            current_msg = QJsonObject();
+            current_attachments = QJsonArray();
+            last_msg_id = msg_id;
 
-        messages_array.append(msg_obj);
+            current_msg["id"] = msg_id;
+            current_msg["chat_id"] = chat_id;
+            current_msg["sender_id"] = query.value("sender_id").toLongLong();
+            current_msg["message_type"] =
+                query.value("message_type").toString();
+            current_msg["text"] = query.value("text").toString();
+            current_msg["is_read"] = query.value("is_read").toInt();
+
+            qint64 ts_msecs = query.value("sent_at").toLongLong();
+            QDateTime dt = QDateTime::fromMSecsSinceEpoch(ts_msecs, Qt::UTC);
+            current_msg["sent_at"] = dt.toString(Qt::ISODateWithMs);
+        }
+
+        if (!query.value("att_id").isNull()) {
+            QJsonObject att_obj;
+            att_obj["file_id"] = query.value("att_id").toString();
+            att_obj["file_name"] = query.value("file_name").toString();
+            att_obj["file_size_bytes"] =
+                query.value("file_size_bytes").toLongLong();
+            att_obj["s3_object_key"] = query.value("s3_object_key").toString();
+            att_obj["local_path"] = query.value("local_path").toString();
+            current_attachments.append(att_obj);
+        }
+    }
+    if (!last_msg_id.isEmpty()) {
+        current_msg["attachments"] = current_attachments;
+        messages_array.append(current_msg);
     }
 
     return QString::fromUtf8(
@@ -477,8 +589,13 @@ QString SecretDatabaseManager::getMessageJson(const QString &message_id) {
     query.bindValue(":id", message_id);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to get message:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to get message JSON.\n"
+                                     "  Message ID: %1\n"
+                                     "  Error: %2"
+        )
+                                     .arg(message_id)
+                                     .arg(query.lastError().text());
         return "";
     }
 
@@ -497,6 +614,31 @@ QString SecretDatabaseManager::getMessageJson(const QString &message_id) {
     qint64 ts_msecs = query.value("sent_at").toLongLong();
     QDateTime dt = QDateTime::fromMSecsSinceEpoch(ts_msecs, Qt::UTC);
     msg_obj["sent_at"] = dt.toString(Qt::ISODateWithMs);
+
+    QSqlQuery att_query(db);
+    att_query.prepare(
+        "SELECT * FROM secret_attachments WHERE message_id = :msg_id"
+    );
+    att_query.bindValue(":msg_id", msg_obj["id"].toString());
+
+    QJsonArray attachments_array;
+    if (att_query.exec()) {
+        while (att_query.next()) {
+            QJsonObject att_obj;
+            att_obj["file_id"] = att_query.value("id").toString();
+            att_obj["file_name"] = att_query.value("file_name").toString();
+            att_obj["file_size_bytes"] =
+                att_query.value("file_size_bytes").toLongLong();
+            att_obj["s3_object_key"] =
+                att_query.value("s3_object_key").toString();
+            att_obj["local_path"] =
+                att_query.value("local_path").isNull()
+                    ? ""
+                    : att_query.value("local_path").toString();
+            attachments_array.append(att_obj);
+        }
+    }
+    msg_obj["attachments"] = attachments_array;  // Добавляем массив в матрешку!
 
     return QString::fromUtf8(
         QJsonDocument(msg_obj).toJson(QJsonDocument::Compact)
@@ -519,8 +661,13 @@ bool SecretDatabaseManager::markChatAsRead(
     query.bindValue(":my_id", current_user_id);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to mark chat as read:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to mark chat as read.\n"
+                                     "  Chat ID: %1\n"
+                                     "  Error: %2"
+        )
+                                     .arg(chat_id)
+                                     .arg(query.lastError().text());
         return false;
     }
 
@@ -532,6 +679,8 @@ bool SecretDatabaseManager::markChatAsRead(
     }
 
     // TODO: emit
+    qDebug() << "[SecretDB] Chat marked as read successfully. Chat ID:"
+             << chat_id;
     return true;
 }
 
@@ -542,8 +691,13 @@ bool SecretDatabaseManager::deleteChat(const QString &chat_id) {
     query.bindValue(":chat_id", chat_id);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to delete chat:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to delete chat.\n"
+                                     "  Chat ID: %1\n"
+                                     "  Error: %2"
+        )
+                                     .arg(chat_id)
+                                     .arg(query.lastError().text());
         return false;
     }
 
@@ -554,6 +708,7 @@ bool SecretDatabaseManager::deleteChat(const QString &chat_id) {
     }
 
     // TODO: emit
+    qDebug() << "[SecretDB] Chat deleted successfully. Chat ID:" << chat_id;
     return true;
 }
 
@@ -566,15 +721,24 @@ bool SecretDatabaseManager::updateChatStatus(
     QSqlQuery query(db);
     query.prepare(
         "UPDATE secret_chats SET status = :status, shared_secret = "
-        ":shared_secret WHERE chat_id = :chat_id"
+        ":shared_secret "
+        "WHERE id = :chat_id"
     );
     query.bindValue(":status", status);
     query.bindValue(":shared_secret", shared_secret);
     query.bindValue(":chat_id", chat_id);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to update chat status:"
-                    << query.lastError().text();
+        qCritical().noquote()
+            << QString(
+                   "[SecretDB] Failed to update chat status.\n"
+                   "  Chat ID: %1\n"
+                   "  Status: %2\n"
+                   "  Error: %3"
+               )
+                   .arg(chat_id)
+                   .arg(status)
+                   .arg(query.lastError().text());
         return false;
     }
 
@@ -593,12 +757,17 @@ QString SecretDatabaseManager::getChat(const QString &chat_id) {
     auto db = getDatabase();
     QSqlQuery query(db);
 
-    query.prepare("SELECT * FROM secret_chats WHERE chat_id = :chat_id");
+    query.prepare("SELECT * FROM secret_chats WHERE id = :chat_id");
     query.bindValue(":chat_id", chat_id);
 
     if (!query.exec()) {
-        qCritical() << "[SecretDB] Failed to fetch chat:"
-                    << query.lastError().text();
+        qCritical().noquote() << QString(
+                                     "[SecretDB] Failed to fetch chat.\n"
+                                     "  Chat ID: %1\n"
+                                     "  Error: %2"
+        )
+                                     .arg(chat_id)
+                                     .arg(query.lastError().text());
         return QString();
     }
 
@@ -617,6 +786,89 @@ QString SecretDatabaseManager::getChat(const QString &chat_id) {
 
     qWarning() << "[SecretDB] Chat with ID" << chat_id << "not found.";
     return QString();
+}
+
+bool SecretDatabaseManager::updateAttachmentLocalPath(
+    const QString &file_id,
+    const QString &local_path
+) {
+    auto db = getDatabase();
+    QSqlQuery query(db);
+    query.prepare(
+        "UPDATE secret_attachments SET local_path = :local_path WHERE id = "
+        ":file_id"
+    );
+    query.bindValue(":local_path", local_path);
+    query.bindValue(":file_id", file_id);
+
+    if (!query.exec()) {
+        qCritical().noquote()
+            << QString(
+                   "[SecretDB] Failed to update attachment local path.\n"
+                   "  File ID: %1\n"
+                   "  Local path: %2\n"
+                   "  Error: %3"
+               )
+                   .arg(file_id)
+                   .arg(local_path)
+                   .arg(query.lastError().text());
+        return false;
+    }
+    return true;
+}
+
+QString SecretDatabaseManager::getAttachmentInfo(const QString &file_id) {
+    auto db = getDatabase();
+    QSqlQuery query(db);
+
+    query.prepare("SELECT * FROM secret_attachments WHERE id = :file_id");
+    query.bindValue(":file_id", file_id);
+
+    if (!query.exec()) {
+        qCritical().noquote()
+            << QString(
+                   "[SecretDB] Failed to fetch attachment info.\n"
+                   "  File ID: %1\n"
+                   "  Error: %2"
+               )
+                   .arg(file_id)
+                   .arg(query.lastError().text());
+        return QString();
+    }
+    QJsonObject attachment_obj;
+    if (query.next()) {
+        attachment_obj["id"] = query.value("id").toString();
+        attachment_obj["message_id"] = query.value("message_id").toString();
+        attachment_obj["file_name"] = query.value("file_name").toString();
+        attachment_obj["file_size_bytes"] =
+            query.value("file_size_bytes").toLongLong();
+        attachment_obj["file_type"] = query.value("file_type").toString();
+        attachment_obj["s3_object_key"] =
+            query.value("s3_object_key").toString();
+        if (!query.value("local_path").isNull()) {
+            attachment_obj["local_path"] = query.value("local_path").toString();
+        } else {
+            attachment_obj["local_path"] = QJsonValue::Null;
+        }
+        attachment_obj["file_key"] =
+            QString::fromLatin1(query.value("file_key").toByteArray().toBase64()
+            );
+    }
+    return QString::fromUtf8(
+        QJsonDocument(attachment_obj).toJson(QJsonDocument::Compact)
+    );
+}
+
+bool SecretDatabaseManager::clearAllLocalPaths() {
+    auto db = getDatabase();
+    QSqlQuery query(db);
+    if (!query.exec("UPDATE secret_attachments SET local_path = NULL")) {
+        qCritical() << "[SecretDB] Failed to clear local paths:"
+                    << query.lastError().text();
+        return false;
+    }
+    qDebug() << "[SecretDB] All local paths cleared successfully.";
+    return true;
 }
 
 }  // namespace client::db

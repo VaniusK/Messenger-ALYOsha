@@ -249,8 +249,8 @@ DecryptFileResult CryptoManager::decryptFile(
             ) != 0) {
             qWarning() << "[Crypto] File Decrypt failed: MAC mismatch on chunk "
                           "(Corrupted)";
-            out_file.remove();  // Уничтожаем битый файл, чтобы не отдавать
-                                // юзеру мусор
+            out_file.close();
+            out_file.remove();
             return {false, CryptoError::StreamCorrupted};
         }
 

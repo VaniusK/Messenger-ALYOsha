@@ -65,6 +65,12 @@ public:
         const QString &status,
         const QByteArray &shared_secret
     );
+    bool updateAttachmentLocalPath(
+        const QString &file_id,
+        const QString &local_path
+    );
+    bool clearAllLocalPaths();
+    QString getAttachmentInfo(const QString &file_id);
 
     Q_INVOKABLE QString getChatsJson(qint64 current_user_id);
     Q_INVOKABLE QString getChat(const QString &chat_id);

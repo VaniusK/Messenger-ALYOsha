@@ -22,29 +22,6 @@ enum class CryptoError {
     None
 };
 
-inline const char *toString(CryptoError error) {
-    switch (error) {
-        case CryptoError::FileOpenError:
-            return "FileOpenError";
-        case CryptoError::InvalidPayloadSize:
-            return "InvalidPayloadSize";
-        case CryptoError::DecryptionFailed:
-            return "DecryptionFailed";
-        case CryptoError::EncryptionFailed:
-            return "EncryptionFailed";
-        case CryptoError::KeyComputationFailed:
-            return "KeyComputationFailed";
-        case CryptoError::StreamInitFailed:
-            return "StreamInitFailed";
-        case CryptoError::StreamCorrupted:
-            return "StreamCorrupted";
-        case CryptoError::None:
-            return "None";
-        default:
-            return "UnknownError";
-    }
-}
-
 struct SharedSecretResult {
     bool success;
     QByteArray secret;
@@ -75,6 +52,31 @@ struct DecryptFileResult {
 
 class CryptoManager {
 public:
+    static const char *toString(CryptoError error) {
+        switch (error) {
+            case CryptoError::FileOpenError:
+                return "FileOpenError";
+            case CryptoError::InvalidPayloadSize:
+                return "InvalidPayloadSize";
+            case CryptoError::DecryptionFailed:
+                return "DecryptionFailed";
+            case CryptoError::EncryptionFailed:
+                return "EncryptionFailed";
+            case CryptoError::KeyComputationFailed:
+                return "KeyComputationFailed";
+            case CryptoError::StreamInitFailed:
+                return "StreamInitFailed";
+            case CryptoError::StreamCorrupted:
+                return "StreamCorrupted";
+            case CryptoError::InvalidKeySize:
+                return "InvalidKeySize";
+            case CryptoError::None:
+                return "None";
+            default:
+                return "UnknownError";
+        }
+    }
+
     static bool init();
     static KeyPair generateKeyPair();
     static QByteArray generateFileKey();

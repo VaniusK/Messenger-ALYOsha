@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Sql Network WebSockets Test Widgets Multimedia Svg)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Sql Network WebSockets Test Widgets Multimedia Svg Concurrent)
 
 #if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 #    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
@@ -88,7 +88,7 @@ target_include_directories(client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/enums
 )
-target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)
+target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg Qt6::Concurrent)
 
 find_library(SODIUM_LIB sodium REQUIRED)
 target_link_libraries(client PRIVATE ${SODIUM_LIB})
