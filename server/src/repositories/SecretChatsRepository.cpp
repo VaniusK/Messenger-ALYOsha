@@ -62,7 +62,7 @@ SecretChatsRepository::popHandshakeSignals(int64_t acceptor_id) {
     try {
         std::string pop_signals_query = R"(DELETE FROM e2e.handshakes_pool 
             WHERE acceptor_id = $1
-            RETURNING sender_id, acceptor_id, message_type, public_key;)";
+            RETURNING sender_id, acceptor_id, message_type, chat_id, public_key;)";
         auto pop_signals_result =
             co_await db_client->execSqlCoro(pop_signals_query, acceptor_id);
 
