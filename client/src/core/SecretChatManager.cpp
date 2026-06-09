@@ -720,7 +720,7 @@ Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
     localMsg["id"] = messageId;
     localMsg["text"] = text;
     localMsg["chat_id"] = chat_id;
-    localMsg["message_type"] = messageType;
+    localMsg["type"] = messageType;
     localMsg["sent_at"] = dt.toString(Qt::ISODateWithMs);
     localMsg["sender_id"] = m_stateManager->getUserId();
     localMsg["status"] = "pending";
@@ -739,7 +739,7 @@ Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
         inner_payload["id"] = messageId;
         inner_payload["text"] = text;
         inner_payload["chat_id"] = chat_id;
-        inner_payload["message_type"] = messageType;
+        inner_payload["type"] = messageType;
         inner_payload["sent_at"] = timestamp;
         inner_payload["attachments"] = remoteAttachments;
 
@@ -1272,7 +1272,7 @@ void SecretChatManager::handleIncomingSecretMessage(const QJsonObject &envelope
     QJsonObject innerPayload = doc.object();
     QString messageId = innerPayload["id"].toString();
     QString text = innerPayload["text"].toString();
-    QString messageType = innerPayload["message_type"].toString();
+    QString messageType = innerPayload["type"].toString();
     qint64 timestamp = innerPayload["sent_at"].toVariant().toLongLong();
     QDateTime dt = QDateTime::fromMSecsSinceEpoch(timestamp, Qt::UTC);
 
@@ -1322,7 +1322,7 @@ void SecretChatManager::handleIncomingSecretMessage(const QJsonObject &envelope
     localMsg["id"] = messageId;
     localMsg["text"] = text;
     localMsg["chat_id"] = chatId;
-    localMsg["message_type"] = messageType;
+    localMsg["type"] = messageType;
     localMsg["sent_at"] = dt.toString(Qt::ISODateWithMs);
     localMsg["sender_id"] = senderId;
     localMsg["attachments"] = uiAttachments;

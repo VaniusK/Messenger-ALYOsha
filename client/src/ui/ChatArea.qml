@@ -569,6 +569,7 @@ Rectangle {
                 
                 property string resolvedMsgType: model.type !== undefined ? model.type : (model.message_type !== undefined ? model.message_type : "text")
                 property bool isMe: String(model.sender_id) === String(AppState.userId)
+                property bool isSecretChat: chatAreaRoot.activeChatType === "secret"
                 property var msgAttachments: model.attachments !== undefined ? model.attachments : null
                 property var firstAttachment: {
                     if (!msgAttachments) return null;
@@ -581,11 +582,15 @@ Rectangle {
                                              ? firstAttachment.file_type.toLowerCase() : ""
 
                 property bool isVoice: (resolvedMsgType === "voice") || 
-                                       (fileTypeStr.indexOf("audio/") === 0) ||
+                                       (fileTypeStr.indexOf("audio/") === 0 && resolvedMsgType !== "text" && resolvedMsgType !== "document") ||
                                        (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0)
 
-                property bool isImage: !isVoice && fileTypeStr.indexOf("image/") === 0 && resolvedMsgType !== "text"
-                property bool isVideo: !isVoice && fileTypeStr.indexOf("video/") === 0 && resolvedMsgType !== "text"
+                property bool isImage: !isVoice && 
+                       (fileTypeStr.indexOf("image/") === 0) && 
+                       (resolvedMsgType === "media" || (resolvedMsgType !== "text" && resolvedMsgType !== "document"))
+                property bool isVideo: !isVoice && 
+                       (fileTypeStr.indexOf("video/") === 0) && 
+                       (resolvedMsgType === "media" || (resolvedMsgType !== "text" && resolvedMsgType !== "document"))
 
                 property bool hasFileAttachment: firstAttachment !== null && !isVoice && !isImage && !isVideo
 
