@@ -5,6 +5,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QUrlQuery>
+#include "WebsocketsMessagesTypes.h"
 
 ChatManager::ChatManager(
     ConnectionManager *connection,
@@ -105,6 +106,9 @@ void ChatManager::fetchChats() {
              << sm->getUserId();
 #endif
 
+    QJsonArray currentChats = m_chatStorage->getChatPreviews();
+    emit chatsUpdated(currentChats);
+
     QNetworkReply *reply =
         m_connection->get("/chats/user/" + QString::number(sm->getUserId()));
 
@@ -115,8 +119,32 @@ void ChatManager::fetchChats() {
 #ifdef QT_DEBAG
             qDebug() << "[ChatManager] fetchChats RAW JSON: " << responseData;
 #endif
-            QJsonDocument doc = QJsonDocument::fromJson(responseData);
-            emit chatsUpdated(doc.object()["chats"].toArray());
+            QJsonArray previews = (QJsonDocument::fromJson(responseData))
+                                      .object()["chats"]
+                                      .toArray();
+            qDebug() << "[ChatManager] Got previews with size "
+                     << previews.size();
+            m_chatStorage->updateChatPreviews(previews);
+            for (const QJsonValue &preview : previews) {
+                int64_t chat_id = preview["chat_id"].toInt();
+                auto last_saved_message_optional =
+                    m_chatStorage->getLastChatMessage(chat_id);
+                if (!last_saved_message_optional.has_value()) {
+                    continue;
+                }
+                auto last_saved_message = last_saved_message_optional.value();
+                if (last_saved_message["id"].toInt() !=
+                    preview["last_message"]["id"].toInt()) {
+                    m_chatStorage->clearChat(chat_id);
+                    qDebug() << "[ChatManager] last saved id is "
+                             << last_saved_message["id"].toInt();
+                    qDebug() << "yet server sent "
+                             << preview["last_message"]["id"].toInt();
+                }
+            }
+
+            QJsonArray updatedChats = m_chatStorage->getChatPreviews();
+            emit chatsUpdated(updatedChats);
         } else {
             emit chatError("Fetch chats failed: " + reply->errorString());
         }
@@ -284,21 +312,53 @@ void ChatManager::onWebSocketDisconnected() {
 
 void ChatManager::onWebSocketTextMessageReceived(const QString &message) {
     qDebug() << "[ChatManager] WS message:" << message;
-    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
-    if (doc["event_type"] == "NEW_MESSAGE") {
-        QJsonObject msg = doc["data"]["message"].toObject();
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8(), &parseError);
 
-        QJsonValue senderValue = msg["sender_id"];
-        QString senderIdStr =
-            senderValue.isString()
-                ? senderValue.toString()
-                : QString::number(senderValue.toVariant().toLongLong());
-        QString currentUserIdStr = QString::number(m_stateManager->getUserId());
-
-        msg.insert("is_me", (senderIdStr == currentUserIdStr));
-        m_chatStorage->addMessage(msg);
+    if (parseError.error != QJsonParseError::NoError) {
+        qWarning() << "[ChatManager] Failed to parse incoming WebSocket JSON:"
+                   << parseError.errorString();
+        return;
     }
-    emit incomingWebSocketMessage(doc.object());
+
+    QJsonObject jsonObj = doc.object();
+    int typeInt = jsonObj["message_type"].toInt();
+    auto messageType = static_cast<api::v1::WebsocketMessageType>(typeInt);
+
+    switch (messageType) {
+        case api::v1::WebsocketMessageType::COMMON_NEW_MESSAGE: {
+            QJsonObject msg = doc["data"]["message"].toObject();
+
+            QJsonValue senderValue = msg["sender_id"];
+            QString senderIdStr =
+                senderValue.isString()
+                    ? senderValue.toString()
+                    : QString::number(senderValue.toVariant().toLongLong());
+            QString currentUserIdStr =
+                QString::number(m_stateManager->getUserId());
+
+            msg.insert("is_me", (senderIdStr == currentUserIdStr));
+            m_chatStorage->addMessage(msg);
+            emit incomingWebSocketMessage(doc.object());
+            break;
+        }
+        case api::v1::WebsocketMessageType::COMMON_MESSAGE_READ:
+            // TODO
+            break;
+        case api::v1::WebsocketMessageType::SECRET_CHAT_REQUEST:
+        case api::v1::WebsocketMessageType::SECRET_CHAT_ACCEPT:
+        case api::v1::WebsocketMessageType::SECRET_NEW_MESSAGE:
+        case api::v1::WebsocketMessageType::SECRET_MESSAGE_READ:
+        case api::v1::WebsocketMessageType::SECRET_CHAT_DELETE:
+            emit incomingSecretPayload(jsonObj);
+            break;
+
+        default:
+            qWarning(
+            ) << "[ChatManager] WARNING: Unhandled WebSocket message type:"
+              << typeInt;
+            break;
+    }
 }
 
 void ChatManager::clearCache() {
@@ -503,6 +563,28 @@ void ChatManager::fetchChatInfo(const QString &chatId) {
             emit chatInfoLoaded(chat);
         } else {
             qDebug() << "Fetch chat info error:" << reply->errorString();
+        }
+    });
+}
+
+void ChatManager::markChatAsRead(const QString &chatId, qint64 lastMessageId) {
+    if (chatId.isEmpty()) {
+        return;
+    }
+
+    QJsonObject json;
+    json["last_read_message_id"] = lastMessageId;
+    QNetworkReply *reply = m_connection->post(
+        "/chats/" + chatId + "/read", QJsonDocument(json).toJson()
+    );
+    connect(reply, &QNetworkReply::finished, [this, reply, chatId]() {
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            qDebug() << "[ChatManager] Chat" << chatId
+                     << "successfully marked as read on server";
+            this->fetchChats();
+        } else {
+            qDebug() << "[ChatManager] Mark as read error:" << reply->readAll();
         }
     });
 }

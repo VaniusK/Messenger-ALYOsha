@@ -1,4 +1,5 @@
 #pragma once
+#include <qtmetamacros.h>
 #include <QAbstractSocket>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -8,6 +9,7 @@
 #include "ConnectionManager.hpp"
 #include "LocalChatStorage.hpp"
 #include "MediaCacheManager.hpp"
+#include "SecretChatManager.hpp"
 #include "StateManager.hpp"
 
 class ChatManager : public QObject {
@@ -58,6 +60,8 @@ public:
         const QString &newRole
     );
     Q_INVOKABLE void fetchChatInfo(const QString &chatId);
+    Q_INVOKABLE void
+    markChatAsRead(const QString &chatId, qint64 lastMessageId);
 
 signals:
     void usersFound(const QJsonArray &users);
@@ -75,6 +79,7 @@ signals:
     void chatMemberAdded(const QJsonObject &member);
     void actionSuccess(const QString &message);
     void chatInfoLoaded(const QJsonObject &chat);
+    void incomingSecretPayload(const QJsonObject &envelope);
 
 private slots:
     void onWebSocketConnected();

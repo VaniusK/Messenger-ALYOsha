@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Messenger 1.0
 
 Rectangle {
@@ -11,7 +12,7 @@ Rectangle {
     width: 200
     height: itemHeight * itemCount + 16
     radius: 10
-    color: "#242f3d"
+    color: appTheme.bgHeader
     visible: false
 
     signal photoVideoRequested()
@@ -36,18 +37,19 @@ Rectangle {
             width: parent.width
             height: pickerRoot.itemHeight
             radius: 6
-            color: photoArea.containsMouse ? "#2b3a4a" : "transparent"
+            color: photoArea.containsMouse ? appTheme.hoverColor : "transparent"
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: 10
                 spacing: 12
-                Image {
+                IconImage {
                     source: "qrc:/messenger_client_uri/assets/icons/photo.svg"
+                    color: appTheme.textHint
                     width: 20; height: 20; sourceSize: Qt.size(20, 20)
                 }
                 Text {
                     text: "Фото или видео"
-                    color: "white"
+                    color: appTheme.textMain
                     font.pixelSize: 14
                     font.family: "Segoe UI"
                     Layout.fillWidth: true
@@ -69,18 +71,19 @@ Rectangle {
             width: parent.width
             height: pickerRoot.itemHeight
             radius: 6
-            color: docArea.containsMouse ? "#2b3a4a" : "transparent"
+            color: docArea.containsMouse ? appTheme.hoverColor : "transparent"
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: 10
                 spacing: 12
-                Image {
+                IconImage {
                     source: "qrc:/messenger_client_uri/assets/icons/document.svg"
+                    color: appTheme.textHint
                     width: 20; height: 20; sourceSize: Qt.size(20, 20)
                 }
                 Text {
                     text: "Документ"
-                    color: "white"
+                    color: appTheme.textMain
                     font.pixelSize: 14
                     font.family: "Segoe UI"
                     Layout.fillWidth: true

@@ -57,7 +57,8 @@ jobs:
             gstreamer1.0-plugins-base \
             gstreamer1.0-plugins-good \
             ca-certificates \
-            openssl
+            openssl \
+            libsodium-dev
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -76,9 +77,6 @@ jobs:
             -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --parallel
-
-      - name: Test client
-        run: ctest --test-dir build/client --output-on-failure
 
       - name: Download linuxdeploy
         run: |
@@ -143,11 +141,15 @@ jobs:
             --outputdir C:\Qt `
             -m qtwebsockets qtmultimedia
 
+      - name: Install libsodium via vcpkg
+        run: vcpkg install libsodium:x64-windows
+
       - name: Configure & Build client
         run: |
           cmake -B build/client -S client `
-            -DCMAKE_PREFIX_PATH="C:\Qt\6.7.3\msvc2019_64" `
-            -DCMAKE_BUILD_TYPE=Release
+              -DCMAKE_PREFIX_PATH="C:\Qt\6.7.3\msvc2019_64" `
+              -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+              -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --config Release
 
       - name: Bundle Qt DLLs with windeployqt and copy icon
@@ -160,6 +162,7 @@ jobs:
             --no-translations `
             deploy\Messenger-Alesha.exe
           copy common\aleshalogo.ico deploy\app.ico
+          copy "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin\libsodium.dll" deploy\
 
       - name: Create Inno Setup installer
         run: |
@@ -216,11 +219,14 @@ jobs:
       - name: Export Qt path
         run: echo "QT_ROOT=$HOME/Qt/6.7.3/macos" >> $GITHUB_ENV
 
+      - name: Install dependencies (macOS)
+        run: brew install libsodium
+
       - name: Build client
         run: |
           cmake -B build/client -S client \
-            -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
-            -DCMAKE_BUILD_TYPE=Release
+              -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
+              -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --parallel
 
       - name: Bundle with macdeployqt
@@ -246,21 +252,21 @@ jobs:
           </dict></plist>
           EOF
 
+          rm -f ${{ env.QT_ROOT }}/plugins/sqldrivers/libqsqlmimer.dylib
+          rm -f ${{ env.QT_ROOT }}/plugins/sqldrivers/libqsqlpsql.dylib
+          rm -f ${{ env.QT_ROOT }}/plugins/sqldrivers/libqsqlodbc.dylib
+
           ${{ env.QT_ROOT }}/bin/macdeployqt Messenger-Alesha.app \
             -qmldir=client/src
 
           codesign --deep --force --sign - Messenger-Alesha.app
 
+          sleep 5
+
           hdiutil create -volname "Messenger-Alesha" \
             -srcfolder Messenger-Alesha.app \
             -ov -format UDZO \
             Messenger-Alesha.dmg
-
-      - name: Upload macOS DMG
-        uses: actions/upload-artifact@v4
-        with:
-          name: Messenger-Alesha-macOS
-          path: Messenger-Alesha.dmg
 
   run-format:
     runs-on: ubuntu-latest
@@ -318,6 +324,8 @@ jobs:
           ls -la artifacts/
           test -f artifacts/client || (echo "Client binary not found!" && exit 1)
       
+      - name: Run client tests
+        run: docker compose --profile test run test-client
 
       - name: Run server tests
         run: docker compose --profile test run test-server
@@ -341,7 +349,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     steps:
       - name: Execute deployment script via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ${{ secrets.STAGING_SERVER_USER }}
@@ -356,6 +364,6 @@ jobs:
             sed -i 's/api.localhost/api.alyosha-test.ru/g' server/nginx/nginx.conf
             sed -i 's/localhost/alyosha-test.ru/g' server/nginx/nginx.conf
 
-            docker compose down
-            make run_server
+            docker compose down --remove-orphans
+            docker compose --profile prod up -d --build --force-recreate
   

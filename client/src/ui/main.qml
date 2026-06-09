@@ -10,6 +10,10 @@ Window {
     visible: true
     title: "Messenger Alyosha"
 
+    AppTheme {
+        id: appTheme 
+    }
+
     Loader {
         id: pageLoader
         anchors.fill: parent
@@ -23,6 +27,8 @@ Window {
     Component.onCompleted: {
         AppState.loadSession()
         if (AppState.isLoggedIn()) {
+            AppState.initUserEnvironment()
+            SecretChatManager.initSession()
             ChatLayer.connectWebSocket()
             pageLoader.source = "chat.qml"
         }

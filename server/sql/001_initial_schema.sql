@@ -97,3 +97,37 @@ CREATE INDEX idx_attachments_message_id ON attachments(message_id);
 CREATE INDEX idx_messages_reply_to ON messages(reply_to_message_id);
 CREATE UNIQUE INDEX idx_direct_chat_users ON chats(direct_user1_id, direct_user2_id) WHERE type = 'direct';
 CREATE UNIQUE INDEX one_saved_chat_per_user ON chat_members(user_id) WHERE chat_type = 'saved';
+
+
+-- Schemas for e2e logic
+
+CREATE SCHEMA e2e;
+
+CREATE TABLE e2e.handshakes_pool (
+    id BIGSERIAL primary key,
+    sender_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    acceptor_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    message_type INT NOT NULL,
+    chat_id TEXT NOT NULL,
+
+    public_key TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(sender_id, acceptor_id)
+);
+
+CREATE TABLE e2e.messages_pool (
+    id BIGSERIAL primary key,
+    sender_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    acceptor_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    message_type INT NOT NULL,
+    chat_id TEXT NOT NULL,
+
+    encrypted_payload TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_handshake_acceptor ON e2e.handshakes_pool(acceptor_id);
+CREATE INDEX idx_message_acceptor ON e2e.messages_pool(acceptor_id);
+
+
+

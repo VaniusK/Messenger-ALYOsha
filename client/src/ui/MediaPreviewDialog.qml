@@ -75,7 +75,7 @@ Popup {
         height: contentCol.implicitHeight + 40
         anchors.centerIn: parent
         radius: 10
-        color: "#1c2733"
+        color: appTheme.bgPanel
 
         MouseArea { anchors.fill: parent }
 
@@ -113,7 +113,7 @@ Popup {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: "#17212b"
+                    color: appTheme.bgInput
                     radius: 4
                     visible: dialogRoot.sendAsFile || dialogRoot.fileType !== "image"
                 }
@@ -158,7 +158,7 @@ Popup {
                         
                         Text {
                             text: dialogRoot.fileName
-                            color: "white"
+                            color: appTheme.textMain
                             font.pixelSize: 16
                             font.family: "Segoe UI"
                             elide: Text.ElideMiddle
@@ -208,7 +208,7 @@ Popup {
 
                 Text {
                     text: "Отправить как файл"
-                    color: "white"
+                    color: appTheme.textMain
                     font.pixelSize: 15
                     font.family: "Segoe UI"
                 }
@@ -220,7 +220,7 @@ Popup {
                 
                 Text {
                     text: "Подпись"
-                    color: captionInput.activeFocus ? "#5eb5f7" : "#8a96a3"
+                    color: captionInput.activeFocus ? appTheme.accent : appTheme.textHint
                     font.family: "Segoe UI"
                     font.pixelSize: 13
                     font.bold: true
@@ -230,7 +230,7 @@ Popup {
                     id: captionInput
                     width: parent.width
                     height: 32
-                    color: "white"
+                    color: appTheme.textMain
                     font.pixelSize: 16
                     font.family: "Segoe UI"
                     verticalAlignment: TextInput.AlignVCenter
@@ -272,7 +272,7 @@ Popup {
                     height: 40
                     width: 90
                     radius: 4
-                    color: cancelBtnArea.containsMouse ? "#2b3a4a" : "transparent"
+                    color: cancelBtnArea.pressed ? Qt.alpha(appTheme.textMain, 0.1) : (cancelBtnArea.containsMouse ? Qt.alpha(appTheme.textMain, 0.05) : "transparent")
                     
                     Text {
                         text: "Отмена"
@@ -298,7 +298,7 @@ Popup {
                     height: 40
                     width: 110
                     radius: 4
-                    color: sendBtnArea.containsMouse ? "#2b3a4a" : "transparent"
+                    color: sendBtnArea.pressed ? Qt.alpha(appTheme.accent, 0.2) : (sendBtnArea.containsMouse ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
 
                     Text {
                         text: "Отправить" 

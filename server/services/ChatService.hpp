@@ -7,6 +7,7 @@
 #include "repositories/AttachmentRepository.hpp"
 #include "repositories/ChatRepository.hpp"
 #include "repositories/UserRepository.hpp"
+#include "services/ClientNotifier.hpp"
 #include "services/S3Service.hpp"
 
 using namespace drogon;

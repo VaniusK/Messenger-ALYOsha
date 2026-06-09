@@ -10,13 +10,23 @@ services:
         - ./server/sql:/docker-entrypoint-initdb.d
 
   server:
-    build: ./server
+    build: 
+      context: .
+      dockerfile: server/Dockerfile
     env_file:
       - .env
     ports:
       - "8080:8080"
     depends_on:
       - db
+  #     - redis
+  
+  # redis:
+  #   image: redis:7-alpine
+  #   container-name: messenger-alyosha-redis
+  #   ports:
+  #     -"127.0.0.1:6379:6379"
+  #   command: redis-server --save "" --appendonly no
   
   nginx:
     image: nginx:alpine
@@ -41,14 +51,19 @@ services:
       - prod
     
   client-build:
-    build: ./client
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
+      target: base
     volumes:
       - ./artifacts:/output
     profiles:
       - build
 
   test-server:
-    build: ./server
+    build: 
+      context: .
+      dockerfile: server/Dockerfile
     command: ["./server_tests"]
     env_file: .env
     depends_on:
@@ -66,9 +81,37 @@ services:
       S3_SECRET_KEY: minioadmin
       S3_SHOULD_USE_HTTPS: false
   
+  test-client:
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
+      target: test-runner
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      server:
+        condition: service_started
+    profiles:
+      - test
+    environment:
+      POSTGRES_DB: messenger_db_test
+      S3_BASE_URL: minio:9000
+      S3_PRIVATE_BUCKETNAME: messenger-alyosha
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_SHOULD_USE_HTTPS: false
+      API_BASE_URL: http://server:8080/v1
+      API_WS_URL: ws://server:8080/ws/chat
+      SHOULD_RUN_LOAD_TEST: true
+      QT_LOGGING_RULES: "*.debug=false"
+  
   test-server-coverage:
     build:
-      context: ./server
+      context: .
+      dockerfile: server/Dockerfile
       target: coverage
       args:
         ENABLE_COVERAGE: "ON"

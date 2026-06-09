@@ -14,7 +14,7 @@ Popup {
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
     Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
-    background: Rectangle { color: "#1c242f"; radius: 10 }
+    background: Rectangle { color: appTheme.bgPanel; radius: 10 }
     
     padding: 0 
 
@@ -131,7 +131,7 @@ Popup {
                     
                     Text { 
                         text: "Название группы"
-                        color: groupNameField.activeFocus ? "#5eb5f7" : "#8a96a3"
+                        color: groupNameField.activeFocus ? appTheme.accent : appTheme.textHint
                         font.pixelSize: 16
                         font.family: "Segoe UI"
                         font.bold: true
@@ -141,9 +141,10 @@ Popup {
                     TextInput {
                         id: groupNameField
                         Layout.fillWidth: true
-                        color: "white"
+                        color: appTheme.textMain
                         font.pixelSize: 18
                         font.family: "Segoe UI"
+                        maximumLength: 29
                         text: root.groupName
                         clip: true
                         onTextChanged: root.groupName = text
@@ -153,7 +154,7 @@ Popup {
                     Rectangle { 
                         Layout.fillWidth: true
                         height: 2
-                        color: groupNameField.activeFocus ? "#5eb5f7" : "#2b3644" 
+                        color: groupNameField.activeFocus ? appTheme.accent : appTheme.textHint 
                         Behavior on color { ColorAnimation { duration: 150 } }
                     }
                 }
@@ -165,7 +166,7 @@ Popup {
                 
                 Rectangle {
                     width: 80; height: 36; radius: 6
-                    color: cancel1Hover.pressed ? "#305eb5f7" : (cancel1Hover.containsMouse ? "#155eb5f7" : "transparent")
+                    color: cancel1Hover.pressed ? Qt.alpha(appTheme.textMain, 0.1) : (cancel1Hover.containsMouse ? Qt.alpha(appTheme.textMain, 0.05) : "transparent")
                     Behavior on color { ColorAnimation { duration: 150 } }
                     
                     Text { 
@@ -189,7 +190,7 @@ Popup {
                 Rectangle {
                     width: 80; height: 36; radius: 6
                     property bool isValid: groupNameField.text.trim() !== ""
-                    color: (nextHover.pressed && isValid) ? "#305eb5f7" : ((nextHover.containsMouse && isValid) ? "#155eb5f7" : "transparent")
+                    color: (nextHover.pressed && isValid) ? Qt.alpha(appTheme.accent, 0.2) : ((nextHover.containsMouse && isValid) ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
                     opacity: isValid ? 1.0 : 0.5
                     Behavior on color { ColorAnimation { duration: 150 } }
                     Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -222,7 +223,7 @@ Popup {
 
                 Text {
                     text: "Добавить участников"
-                    color: "white"
+                    color: appTheme.textMain
                     font.pixelSize: 18
                     font.bold: true
                     font.family: "Segoe UI" 
@@ -240,7 +241,7 @@ Popup {
             Rectangle {
                 Layout.fillWidth: true; Layout.margins: 15; Layout.topMargin: 0
                 height: 36
-                color: "#17212b"
+                color: appTheme.bgInput
                 radius: 18
 
                 TextInput {
@@ -250,12 +251,12 @@ Popup {
                     verticalAlignment: TextInput.AlignVCenter
                     topPadding: 0; bottomPadding: 0
                     font.pixelSize: 14; font.family: "Segoe UI"
-                    color: "white"
+                    color: appTheme.textMain
                     clip: true
                     
                     Text {
                         text: "Поиск"
-                        color: "#8a96a3"
+                        color: appTheme.textHint
                         font.family: "Segoe UI"
                         visible: !parent.text
                         anchors.verticalCenter: parent.verticalCenter 
@@ -300,7 +301,7 @@ Popup {
                 delegate: Rectangle {
                     width: ListView.view ? ListView.view.width : 0
                     height: 60
-                    color: popupUserHover.containsMouse ? "#202b36" : "transparent"
+                    color: popupUserHover.containsMouse ? appTheme.hoverColor : "transparent"
                     
                     RowLayout {
                         anchors.fill: parent; anchors.margins: 15
@@ -343,7 +344,7 @@ Popup {
                             
                             Text {
                                 text: model.displayName
-                                color: "white"
+                                color: appTheme.textMain
                                 font.pixelSize: 15
                                 font.family: "Segoe UI"
                                 font.bold: true
@@ -378,7 +379,7 @@ Popup {
             }
 
             Rectangle {
-                Layout.fillWidth: true; height: 60; color: "#1c242f"
+                Layout.fillWidth: true; height: 60; color: appTheme.bgPanel
 
                 Rectangle {
                     width: parent.width
@@ -395,7 +396,7 @@ Popup {
                     // КНОПКА НАЗАД
                     Rectangle {
                         width: 80; height: 36; radius: 6
-                        color: cancel2Hover.pressed ? "#305eb5f7" : (cancel2Hover.containsMouse ? "#155eb5f7" : "transparent")
+                        color: cancel2Hover.pressed ? Qt.alpha(appTheme.textMain, 0.1) : (cancel2Hover.containsMouse ? Qt.alpha(appTheme.textMain, 0.05) : "transparent")
                         Behavior on color { ColorAnimation { duration: 150 } }
                         
                         Text {
@@ -419,7 +420,7 @@ Popup {
                     // КНОПКА СОЗДАТЬ
                     Rectangle {
                         width: 90; height: 36; radius: 6
-                        color: createHover.pressed ? "#3782be" : (createHover.containsMouse ? "#6dbcf8" : "#5eb5f7")
+                        color: createHover.pressed ? Qt.darker(appTheme.accent, 1.2) : (createHover.containsMouse ? Qt.lighter(appTheme.accent, 1.2) : appTheme.accent)
                         Behavior on color { ColorAnimation { duration: 150 } }
                         
                         Text {
