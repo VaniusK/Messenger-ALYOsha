@@ -119,13 +119,21 @@ if(BUILD_TESTS)
     
     add_executable(client_tests 
     src/core/AuthManager.cpp
+    include/AuthManager.hpp
     src/core/StateManager.cpp
+    include/StateManager.hpp
     src/core/ChatManager.cpp
+    include/ChatManager.hpp
     src/core/ConnectionManager.cpp
+    include/ConnectionManager.hpp
     src/core/MediaManager.cpp
+    include/MediaManager.hpp
     src/core/VoiceManager.cpp
+    include/VoiceManager.hpp
     src/core/MediaCacheManager.cpp
+    include/MediaCacheManager.hpp
     src/core/LocalChatStorage.cpp
+    include/LocalChatStorage.hpp
     src/core/TestUser.cpp
     tests/test_state_manager.cpp
     tests/mocks/FakeNetworkReply.hpp
@@ -133,8 +141,11 @@ if(BUILD_TESTS)
     tests/test_chat_manager.cpp
     tests/test_integration.cpp
     src/core/CryptoManager.cpp
+    include/CryptoManager.hpp
     src/core/SecretChatManager.cpp
+    include/SecretChatManager.hpp
     src/core/SecretDatabaseManager.cpp
+    include/SecretDatabaseManager.hpp
     )
 
     target_include_directories(client_tests PRIVATE include)
@@ -147,7 +158,7 @@ if(BUILD_TESTS)
     GTest::gmock
     Qt6::Core
     Qt6::Test
-    Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg
+    Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg Qt6::Concurrent
     ${SODIUM_LIBRARIES_TO_LINK}
     )
     
