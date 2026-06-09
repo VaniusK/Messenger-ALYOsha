@@ -19,6 +19,8 @@ Rectangle {
                 console.log("[Login] Authentication successful! Token:", token)
                 AppState.token = token
                 AppState.currentUserHandle = handleField.text
+                AppState.initUserEnvironment()
+                SecretChatManager.initSession()
                 ChatLayer.connectWebSocket()
                 
                 var loader = root.parent

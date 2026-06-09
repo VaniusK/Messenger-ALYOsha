@@ -19,6 +19,8 @@ Rectangle {
     property string activeFullscreenVideoUrl: ""
     property string activeChatType: "direct" // "direct", "group", "saved"
     property string activeChatDescription: ""
+    property string activeChatPeerId: ""
+    property string activeChatStatus: "active" // "active" or "pending"
 
     MediaPlayer {
         id: globalAudioPlayer
@@ -55,8 +57,40 @@ Rectangle {
         return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s
     }
 
+    function getCleanLocalPath(url) {
+        var str = url.toString();
+        return str.replace("file://", "");
+    }
+
     function showCancelPrompt() {
         cancelVoiceDialog.open()
+    }
+
+    function loadSecretHistory(chatId, beforeTimestamp) {
+        isLoadingHistory = true;
+        var historyStr = SecretChatManager.fetchSecretChatHistory(chatId, beforeTimestamp);
+        
+        try {
+            if (historyStr !== "") {
+                var messages = JSON.parse(historyStr)
+                
+                if (beforeTimestamp === 0) {
+                    chatModel.clear()
+                    for (var i = 0; i < messages.length; i++) chatModel.append(messages[i])
+                } else {
+                    for (var k = 0; k < messages.length; k++) chatModel.append(messages[k])
+                }
+                
+                if (messages.length < 50) hasMoreHistory = false
+            } else {
+                if (beforeTimestamp === 0) chatModel.clear()
+                hasMoreHistory = false
+            }
+        } catch (e) {
+            console.error("[ChatArea] Ошибка парсинга истории секретного чата:", e);
+        }
+        
+        Qt.callLater(function() { isLoadingHistory = false; })
     }
 
     Connections {
@@ -91,6 +125,16 @@ Rectangle {
         if (typeof messageInput !== "undefined") {
             messageInput.text = ""
         }
+
+        if (activeChatId !== "") { 
+            if (activeChatType === "secret") {
+                loadSecretHistory(activeChatId, 0)
+            } else {
+                ChatLayer.fetchChatHistory(activeChatId)
+            }
+        } else {
+            chatModel.clear()
+        }
     }
 
     Connections {
@@ -100,7 +144,16 @@ Rectangle {
             isLoadingHistory = true
             chatModel.clear()
             for (var i = messages.length - 1; i >= 0; i--) {
-                chatModel.append(messages[i])
+                var msg = messages[i]
+
+                msg.id = String(msg.id)
+                msg.chat_id = String(msg.chat_id)
+                if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+
+                if (msg.text === undefined) msg.text = ""
+                if (msg.attachments === undefined) msg.attachments = []
+                
+                chatModel.append(msg)
             }
 
             if (messages.length < 50) {
@@ -137,7 +190,16 @@ Rectangle {
             }
 
             for (var i = 0; i < messages.length; i++) {
-                chatModel.append(messages[i])
+                var msg = messages[i]
+
+                msg.id = String(msg.id)
+                msg.chat_id = String(msg.chat_id)
+                if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+
+                if (msg.text === undefined) msg.text = ""
+                if (msg.attachments === undefined) msg.attachments = []
+                
+                chatModel.append(msg)
             }
 
             Qt.callLater(function() {
@@ -149,6 +211,12 @@ Rectangle {
             messageInput.text = ""
             if (!msg) return
 
+            msg.id = String(msg.id)
+            msg.chat_id = String(msg.chat_id)
+            if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+
+            if (msg.text === undefined) msg.text = ""
+            if (msg.attachments === undefined) msg.attachments = []
             chatModel.insert(0, msg)
             
             Qt.callLater(function() {
@@ -157,17 +225,21 @@ Rectangle {
         }
 
         function onIncomingWebSocketMessage(data) {
-            if (data.event_type === "NEW_MESSAGE" && data.data && data.data.message) {
-                var msg = data.data.message
-                if (String(msg.chat_id) === String(activeChatId)) {
-                    msg.is_me = (String(msg.sender_id) === String(AppState.userId))
-                    
-                    chatModel.insert(0, msg)
+            var msg = data.data.message
+            if (String(msg.chat_id) === String(activeChatId)) {
+                msg.is_me = (String(msg.sender_id) === String(AppState.userId))
+                msg.id = String(msg.id);
+                msg.chat_id = String(msg.chat_id)
+                if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+                
+                if (msg.text === undefined) msg.text = ""
+                if (msg.attachments === undefined) msg.attachments = []
+                
+                chatModel.insert(0, msg)
 
-                    Qt.callLater(function() {
-                        messageList.positionViewAtIndex(0, ListView.Beginning)
-                    })
-                }
+                Qt.callLater(function() {
+                    messageList.positionViewAtIndex(0, ListView.Beginning)
+                })
             }
         }
 
@@ -180,10 +252,77 @@ Rectangle {
     }
 
     Connections {
+        target: SecretChatManager
+        
+        function onSecretMessageReceived(msg) {
+            if (String(msg.chat_id) === String(activeChatId)) {
+                msg.is_me = false
+                msg.id = String(msg.id)
+                msg.chat_id = String(msg.chat_id)
+                if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+
+                if (msg.text === undefined) msg.text = ""
+                if (msg.attachments === undefined) msg.attachments = []
+                chatModel.insert(0, msg)
+                
+                Qt.callLater(function() {
+                    messageList.positionViewAtIndex(0, ListView.Beginning);
+                });
+                
+                SecretChatManager.markChatAsRead(activeChatId);
+            }
+        }
+
+        function onAttachmentDownloaded(messageId, fileId, fileUrl) {
+            for (var i = 0; i < chatModel.count; i++) {
+                var item = chatModel.get(i);
+                if (String(item.id) === String(messageId)) {
+                    var msgObj = JSON.parse(JSON.stringify(item)); 
+                    for (var j = 0; j < msgObj.attachments.length; j++) {
+                        if (String(msgObj.attachments[j].file_id) === String(fileId)) {
+                            msgObj.attachments[j].download_url = fileUrl; 
+                        }
+                    }
+                    chatModel.set(i, msgObj)
+                    break
+                }
+            }
+        }
+
+        function onAttachmentDownloadFailed(messageId, fileId) {
+            errorToast.show("Ошибка загрузки/расшифровки секретного файла");
+        }
+
+        function onSecretChatError(errorMsg) {
+            errorToast.show(errorMsg);
+        }
+    }
+
+    Connections {
         target: VoiceLayer
         function onVoiceMessageReady(audioUrl) {
             isUploading = true
-            MediaLayer.uploadFile(activeChatId, audioUrl, false, "", "voice")
+
+            var cleanPath = audioUrl.toString();
+            if (cleanPath.indexOf("file:///") === 0) {
+                cleanPath = cleanPath.substring(7);
+            } else if (cleanPath.indexOf("file://") === 0) {
+                cleanPath = cleanPath.substring(7);
+            }
+            
+            if (activeChatType === "secret") {
+                var msgJsonStr = SecretChatManager.sendSecretMessage(activeChatId, "", "voice", [cleanPath]);
+                if (msgJsonStr !== "") {
+                    var localMsg = JSON.parse(msgJsonStr);
+                    localMsg.is_me = true; 
+                    chatModel.insert(0, localMsg); 
+                    Qt.callLater(function() { messageList.positionViewAtIndex(0, ListView.Beginning); });
+                    SecretChatManager.secretChatsUpdated(); 
+                }
+                isUploading = false;
+            } else {
+                MediaLayer.uploadFile(activeChatId, cleanPath, false, "", "voice")
+            }
         }
     }
 
@@ -321,12 +460,17 @@ Rectangle {
 
             MouseArea {
                 anchors.fill: parent
-                enabled: activeChatType === "group"
+                enabled: activeChatType === "group" || activeChatType === "direct"
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    ChatLayer.fetchChatMembers(activeChatId)
-                    ChatLayer.fetchChatInfo(activeChatId)
-                    groupInfoPopup.open()
+                    if (activeChatType === "group") {
+                        ChatLayer.fetchChatMembers(activeChatId)
+                        ChatLayer.fetchChatInfo(activeChatId)
+                        groupInfoPopup.open()
+                    } else if (activeChatType === "direct") {
+                        ChatLayer.fetchChatMembers(activeChatId)
+                        directInfoPopup.open()
+                    }
                 }
             }
             
@@ -408,7 +552,13 @@ Rectangle {
 
                     if (!isNaN(parsedId) && parsedId > 0) {
                         isLoadingHistory = true;
-                        ChatLayer.fetchChatHistory(activeChatId, parsedId);
+                        if (activeChatType === "secret") {
+                            var oldestMsg = chatModel.get(chatModel.count - 1);
+                            var ts = oldestMsg.sent_at ? new Date(oldestMsg.sent_at).getTime() : 0;
+                            chatAreaRoot.loadSecretHistory(activeChatId, ts);
+                        } else {
+                            ChatLayer.fetchChatHistory(activeChatId, parsedId)
+                        }
                     }
                 }
             }
@@ -417,7 +567,8 @@ Rectangle {
                 id: msgDelegateItem
                 width: messageList.width
                 
-                property bool isMe: model.is_me !== undefined ? model.is_me : false
+                property string resolvedMsgType: model.type !== undefined ? model.type : (model.message_type !== undefined ? model.message_type : "text")
+                property bool isMe: String(model.sender_id) === String(AppState.userId)
                 property var msgAttachments: model.attachments !== undefined ? model.attachments : null
                 property var firstAttachment: {
                     if (!msgAttachments) return null;
@@ -429,12 +580,12 @@ Rectangle {
                 property string fileTypeStr: firstAttachment && typeof firstAttachment.file_type === 'string' 
                                              ? firstAttachment.file_type.toLowerCase() : ""
 
-                property bool isVoice: (model.type === "voice") || 
+                property bool isVoice: (resolvedMsgType === "voice") || 
                                        (fileTypeStr.indexOf("audio/") === 0) ||
                                        (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0)
 
-                property bool isImage: !isVoice && fileTypeStr.indexOf("image/") === 0 && model.type !== "text"
-                property bool isVideo: !isVoice && fileTypeStr.indexOf("video/") === 0 && model.type !== "text"
+                property bool isImage: !isVoice && fileTypeStr.indexOf("image/") === 0 && resolvedMsgType !== "text"
+                property bool isVideo: !isVoice && fileTypeStr.indexOf("video/") === 0 && resolvedMsgType !== "text"
 
                 property bool hasFileAttachment: firstAttachment !== null && !isVoice && !isImage && !isVideo
 
@@ -499,7 +650,14 @@ Rectangle {
 
                         width: (isVoice || isImage || isVideo || hasFileAttachment)
                             ? Math.min(280, parent.width * 0.75) 
-                            : Math.min(Math.max(60, messageText.implicitWidth + timeText.implicitWidth + 30, nameWidth), parent.width * 0.75)
+                            : Math.max(80, Math.min(dummyText.implicitWidth + 32, parent.width * 0.75), nameWidth)
+
+                        Text {
+                            id: dummyText
+                            visible: false
+                            text: messageText.text
+                            font: messageText.font
+                        }
                         
                         height: {
                             if (isVoice) return 60 + nameOffset
@@ -663,7 +821,8 @@ Rectangle {
                             text: (model.text !== undefined && model.text !== null) ? model.text.trim() : ""
                             
                             anchors.top: isImage ? imageContainer.bottom : (isVideo ? videoContainer.bottom : parent.top)
-                            anchors.left: parent.left; width: parent.width - 24
+                            anchors.left: parent.left
+                            width: parent.width - 24
                             anchors.margins: 8
                             anchors.leftMargin: 12
                             anchors.topMargin: (isImage || isVideo) ? 8 : (12 + parent.nameOffset)
@@ -737,14 +896,24 @@ Rectangle {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: 
-                                        if (fileUrl) 
-                                            MediaLayer.downloadFile(
-                                                fileUrl, 
-                                                firstAttachment 
-                                                    ? (firstAttachment.original_filename || firstAttachment.file_name || "file")
-                                                    : "file"
-                                            )
+                                    onClicked: {
+                                        if (fileUrl && fileUrl.indexOf("file://") === 0) {
+                                            Qt.openUrlExternally(fileUrl);
+                                        } else {
+                                            if (chatAreaRoot.activeChatType === "secret") {
+                                                if (firstAttachment && firstAttachment.file_id) {
+                                                    SecretChatManager.downloadSecretAttachment(uniqueId, firstAttachment.file_id);
+                                                }
+                                            } else {
+                                                if (fileUrl) {
+                                                    MediaLayer.downloadFile(
+                                                        fileUrl, 
+                                                        firstAttachment ? (firstAttachment.original_filename || firstAttachment.file_name || "file") : "file"
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -1012,7 +1181,23 @@ Rectangle {
                                 if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(event.modifiers & Qt.ShiftModifier)) {
                                     event.accepted = true;
                                     if (text.trim() !== "" && isChatActive) {
-                                        ChatLayer.sendMessage(activeChatId, text.trim());
+                                        if (chatAreaRoot.activeChatType === "secret") {
+                                            var msgJsonStr = SecretChatManager.sendSecretMessage(activeChatId, text.trim(), "text", []);
+                                            
+                                            if (msgJsonStr !== "") {
+                                                var localMsg = JSON.parse(msgJsonStr)
+                                                localMsg.is_me = true
+                                                
+                                                chatModel.insert(0, localMsg)
+                                                Qt.callLater(function() {
+                                                    messageList.positionViewAtIndex(0, ListView.Beginning)
+                                                });
+                                                SecretChatManager.secretChatsUpdated()
+                                            }
+                                        } else {
+                                            ChatLayer.sendMessage(activeChatId, text.trim())
+                                        }
+                                        messageInput.text = "";
                                     }
                                 }
                             }
@@ -1108,7 +1293,11 @@ Rectangle {
                         onClicked: {
                             if (messageInput.text.trim() !== "") {
                                 if (isChatActive) {
-                                    ChatLayer.sendMessage(activeChatId, messageInput.text.trim());
+                                    if (chatAreaRoot.activeChatType === "secret") {
+                                        ChatLayer.sendSecretMessage(activeChatId, messageInput.text.trim());
+                                    } else {
+                                        ChatLayer.sendMessage(activeChatId, messageInput.text.trim());
+                                    }
                                     messageInput.text = "";
                                 }
                             } else {
@@ -1283,8 +1472,22 @@ Rectangle {
             messageInput.text = ""
             isUploading = true
 
-            var msgType = (asFile || fileType === "document") ? "text" : "media"
-            MediaLayer.uploadFile(activeChatId, filePath, asFile, caption, msgType)
+            var msgType = asFile ? "text" : "media"
+            var cleanPath = chatAreaRoot.getCleanLocalPath(filePath)
+            
+            if (activeChatType === "secret") {
+                var msgJsonStr = SecretChatManager.sendSecretMessage(activeChatId, caption, msgType, [cleanPath])
+                if (msgJsonStr !== "") {
+                    var localMsg = JSON.parse(msgJsonStr)
+                    localMsg.is_me = true
+                    chatModel.insert(0, localMsg)
+                    Qt.callLater(function() { messageList.positionViewAtIndex(0, ListView.Beginning); })
+                    SecretChatManager.secretChatsUpdated()
+                }
+                isUploading = false
+            } else {
+                MediaLayer.uploadFile(activeChatId, cleanPath, asFile, caption, msgType)
+            }
         }
         onCancelRequested: {}
     }
@@ -1640,6 +1843,15 @@ Rectangle {
                     if (String(members[i].user_id) === String(AppState.userId)) {
                         groupInfoPopup.currentUserRole = members[i].role
                         break
+                    }
+                }
+
+                if (activeChatType === "direct") {
+                    for (var j = 0; j < members.length; j++) {
+                        if (String(members[j].user_id) !== String(AppState.userId)) {
+                            activeChatPeerId = String(members[j].user_id)
+                            break
+                        }
                     }
                 }
             }
@@ -2594,6 +2806,184 @@ Rectangle {
                                 chatAreaRoot.activeChatName = editNameField.text.trim()
                                 chatAreaRoot.activeChatDescription = editDescField.text.trim()
                                 groupSettingsPopup.close()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: directInfoPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 380
+        height: 350
+        modal: true; dim: true; focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
+
+        contentItem: Item {
+            anchors.fill: parent
+            
+            RowLayout {
+                anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 15
+                
+                Item { Layout.fillWidth: true }
+                
+                Text {
+                    text: "✕"
+                    color: appTheme.textHint
+                    font.pixelSize: 20
+                    
+                    MouseArea {
+                        anchors.fill: parent; anchors.margins: -10
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: directInfoPopup.close() 
+                    }
+                }
+            }
+
+            ColumnLayout {
+                anchors.top: parent.top; anchors.topMargin: 50; anchors.left: parent.left; anchors.right: parent.right; spacing: 10
+                
+                Rectangle { 
+                    width: 90; height: 90; radius: 45
+                    color: "#4a90d9"
+                    Layout.alignment: Qt.AlignHCenter
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: activeChatName ? activeChatName.charAt(0).toUpperCase() : "?"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: 36 
+                    } 
+                }
+                
+                Text {
+                    text: activeChatName
+                    color: appTheme.textMain
+                    font.pixelSize: 20
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
+                    font.family: "Segoe UI" 
+                }
+            }
+
+            Rectangle {
+                anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 20
+                height: 44; radius: 8
+                color: secretHover.pressed ? Qt.alpha(appTheme.accent, 0.2) : (secretHover.containsMouse ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
+                border.color: appTheme.accent; border.width: 1
+                Behavior on color { ColorAnimation { duration: 150 } }
+                
+                RowLayout {
+                    anchors.centerIn: parent; spacing: 10
+                    
+                    Image {
+                        source: "qrc:/messenger_client_uri/assets/icons/person_lock.svg"
+                        width: 20; height: 20; sourceSize: Qt.size(20, 20) 
+                    }
+                    
+                    Text {
+                        text: "Создать секретный чат"
+                        color: appTheme.accent
+                        font.pixelSize: 15
+                        font.family: "Segoe UI"
+                        font.bold: true 
+                    }
+                }
+                
+                MouseArea {
+                    id: secretHover; anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: { directInfoPopup.close(); confirmSecretChatPopup.open() }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: confirmSecretChatPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 320
+        height: 180
+        modal: true; dim: true; focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
+
+        contentItem: ColumnLayout {
+            anchors.fill: parent; anchors.margins: 20; spacing: 20
+            
+            Text {
+                text: "Создать секретный чат с " + activeChatName + "?\n\nСообщения будут зашифрованы и доступны только на этом устройстве."
+                color: appTheme.textMain
+                font.pixelSize: 15
+                font.family: "Segoe UI"
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            
+            RowLayout {
+                Layout.alignment: Qt.AlignRight | Qt.AlignBottom; spacing: 15
+                
+                Rectangle {
+                    width: 80; height: 36; radius: 6
+                    color: cancelSecHover.pressed ? Qt.alpha(appTheme.accent, 0.2) : (cancelSecHover.containsMouse ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Отмена"
+                        color: appTheme.accent
+                        font.pixelSize: 15
+                        font.bold: true
+                        font.family: "Segoe UI" 
+                    }
+                    
+                    MouseArea {
+                        id: cancelSecHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: confirmSecretChatPopup.close() 
+                    }
+                }
+                
+                Rectangle {
+                    width: 90; height: 36; radius: 6
+                    color: startSecHover.pressed ? Qt.darker(appTheme.accent, 1.2) : (startSecHover.containsMouse ? Qt.lighter(appTheme.accent, 1.2) : appTheme.accent)
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Начать"
+                        color: "white"
+                        font.pixelSize: 15
+                        font.bold: true
+                        font.family: "Segoe UI" 
+                    }
+                    
+                    MouseArea {
+                        id: startSecHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        
+                        onClicked: {
+                            if (activeChatPeerId !== "") {
+                                SecretChatManager.createSecretChatRequest(parseInt(activeChatPeerId))
+                                confirmSecretChatPopup.close()
+
+                                var secId = "pendind_" + activeChatPeerId
+                                chatAreaRoot.activeChatType = "secret"
+                                chatAreaRoot.activeChatId = secId
+                            } else {
+                                errorToast.show("Не удалось определить ID собеседника. Пожалуйста, откройте профиль еще раз.")
                             }
                         }
                     }

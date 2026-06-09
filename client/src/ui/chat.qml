@@ -31,15 +31,16 @@ Rectangle {
             Layout.fillHeight: true
             activeChatId: chatArea.activeChatId
 
-            onChatSelected: function(chatId, chatName, chatType, chatDescription) {
+            onChatSelected: function(chatId, chatName, chatType, chatDescription, chatStatus) {
                 if (VoiceLayer.isRecording) {
                     chatArea.showCancelPrompt()
                     return
                 }
+                chatArea.activeChatType = chatType                
                 chatArea.activeChatId = chatId
                 chatArea.activeChatName = chatName
-                chatArea.activeChatType = chatType
                 chatArea.activeChatDescription = chatDescription || ""
+                chatArea.activeChatStatus = chatStatus || "active"
             }
 
             onSettingsRequested: {
@@ -65,6 +66,22 @@ Rectangle {
             var loader = root.parent
             if (loader) {
                 loader.source = "sign_in.qml"
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        console.log("[Chat] Main chat window loaded.")
+        if (AppState.userId > 0) {
+            SecretChatManager.initSession();
+        }
+    }
+
+    Connections {
+        target: AppState
+        function onUserIdChanged() {
+            if (AppState.userId > 0) {
+                SecretChatManager.initSession();
             }
         }
     }

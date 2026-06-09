@@ -8,7 +8,20 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Sql Network WebSockets Test Widgets Multimedia Svg)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Sql Network WebSockets Test Widgets Multimedia Svg Concurrent)
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(SODIUM QUIET libsodium)
+endif()
+
+if(SODIUM_FOUND)
+    include_directories(${SODIUM_INCLUDE_DIRS})
+    link_directories(${SODIUM_LIBRARY_DIRS})
+    set(SODIUM_LIBRARIES_TO_LINK ${SODIUM_LIBRARIES})
+else()
+    find_library(SODIUM_LIB sodium REQUIRED)
+    set(SODIUM_LIBRARIES_TO_LINK ${SODIUM_LIB})
+endif()
 
 #if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 #    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
@@ -32,6 +45,13 @@ qt_add_executable(client #WIN32
     include/MediaCacheManager.hpp
     src/core/LocalChatStorage.cpp
     include/LocalChatStorage.hpp
+    src/core/CryptoManager.cpp
+    include/CryptoManager.hpp
+    src/core/SecretChatManager.cpp
+    include/SecretChatManager.hpp
+    src/core/SecretDatabaseManager.cpp
+    include/SecretDatabaseManager.hpp
+    ../common/include/enums/WebsocketsMessagesTypes.h
 )
 
 qt_add_qml_module(client
@@ -73,9 +93,15 @@ qt_add_qml_module(client
         assets/icons/owner_shield.svg
         assets/icons/create_group.svg
         assets/icons/change_color.svg
+        assets/icons/lock.svg
+        assets/icons/person_lock.svg
 )
 target_include_directories(client PRIVATE include)
-target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg)
+target_include_directories(client PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/enums
+)
+target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg Qt6::Concurrent ${SODIUM_LIBRARIES_TO_LINK})
 
 # Tests (optional, Qt Test or GTest)
 option(BUILD_TESTS "Build tests" OFF)
@@ -104,9 +130,20 @@ if(BUILD_TESTS)
     tests/mocks/FakeNetworkReply.hpp
     tests/test_auth_manager.cpp
     tests/test_chat_manager.cpp
+    src/core/CryptoManager.cpp
+    include/CryptoManager.hpp
+    src/core/SecretChatManager.cpp
+    include/SecretChatManager.hpp
+    src/core/SecretDatabaseManager.cpp
+    include/SecretDatabaseManager.hpp
+    ../common/include/enums/WebsocketsMessagesTypes.h
     )
 
     target_include_directories(client_tests PRIVATE include)
+    target_include_directories(client_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/enums
+    )
     target_link_libraries(client_tests PRIVATE
     GTest::gtest_main
     GTest::gmock
@@ -114,6 +151,7 @@ if(BUILD_TESTS)
     Qt6::Network
     Qt6::WebSockets
     Qt6::Test
+    ${SODIUM_LIBRARIES_TO_LINK}
     )
     
     include(GoogleTest)
