@@ -18,6 +18,8 @@ protected:
     std::unique_ptr<QCoreApplication> app;
     std::shared_ptr<MockConnectionManager> mockConn;
     std::unique_ptr<StateManager> stateManager;
+    std::unique_ptr<MediaCacheManager> mediaCacheManager;
+    std::unique_ptr<LocalChatStorage> localChatStorage;
     std::unique_ptr<ChatManager> chatManager;
 
     void SetUp() override {
@@ -30,13 +32,18 @@ protected:
 
         mockConn = std::make_shared<MockConnectionManager>();
         stateManager = std::make_unique<StateManager>();
-        chatManager =
-            std::make_unique<ChatManager>(mockConn.get(), stateManager.get());
+        mediaCacheManager = std::make_unique<MediaCacheManager>(mockConn.get());
+        localChatStorage = std::make_unique<LocalChatStorage>(true, "default");
+        chatManager = std::make_unique<ChatManager>(
+            mockConn.get(), stateManager.get(), mediaCacheManager.get(),
+            localChatStorage.get()
+        );
     }
 };
 
 TEST_F(ChatManagerTest, FetchChatsSuccess) {
     stateManager->setUserId(42);
+
     auto *fakeReply = new FakeNetworkReply(
         200, "{\"chats\":[{\"id\":1, \"title\":\"Test chat\"}]}"
     );
@@ -48,8 +55,8 @@ TEST_F(ChatManagerTest, FetchChatsSuccess) {
     chatManager->fetchChats();
     fakeReply->emitFinished();
 
-    EXPECT_EQ(spy.count(), 1);
-    QJsonArray chatsArray = spy.takeFirst().at(0).toJsonArray();
+    EXPECT_EQ(spy.count(), 2);
+    QJsonArray chatsArray = spy.takeLast().at(0).toJsonArray();
     EXPECT_EQ(chatsArray.size(), 1);
     EXPECT_EQ(
         chatsArray[0].toObject()["title"].toString().toStdString(), "Test chat"
@@ -57,21 +64,16 @@ TEST_F(ChatManagerTest, FetchChatsSuccess) {
 }
 
 TEST_F(ChatManagerTest, SendMessageSuccess) {
-    auto *fakePostReply = new FakeNetworkReply(200, "{}");
+    auto *fakePostReply =
+        new FakeNetworkReply(200, "{\"message\": {\"text\": \"hi\"}}");
     EXPECT_CALL(*mockConn, post(QString("/chats/1/messages"), _))
         .WillOnce(Return(fakePostReply));
-
-    auto *fakeHistoryReply = new FakeNetworkReply(200, "{\"messages\":[]}");
-    EXPECT_CALL(*mockConn, get(QString("/chats/1/messages?limit=20")))
-        .WillOnce(Return(fakeHistoryReply));
 
     QSignalSpy spySent(chatManager.get(), &ChatManager::messageSentSuccess);
     QSignalSpy spyHistory(chatManager.get(), &ChatManager::chatsHistoryLoaded);
 
     chatManager->sendMessage("1", "Йоу!");
     fakePostReply->emitFinished();
-    fakeHistoryReply->emitFinished();
 
     EXPECT_EQ(spySent.count(), 1);
-    EXPECT_EQ(spyHistory.count(), 1);
 }

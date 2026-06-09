@@ -5,16 +5,24 @@
 #include <qstandardpaths.h>
 #include <stdexcept>
 
-LocalChatStorage::LocalChatStorage(QObject *parent) : QObject(parent) {
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+LocalChatStorage::LocalChatStorage(
+    bool should_use_in_memory_database,
+    QString connectionName,
+    QObject *parent
+)
+    : m_connectionName(connectionName), QObject(parent) {
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", m_connectionName);
     auto data_location =
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
     QDir data_dir(data_location);
     data_dir.mkpath(".");
 
-    // db.setDatabaseName(":memory:");
-    db.setDatabaseName(data_dir.filePath("chats.db"));
+    if (should_use_in_memory_database) {
+        db.setDatabaseName(":memory:");
+    } else {
+        db.setDatabaseName(data_dir.filePath("chats.db"));
+    }
 
     if (!db.open()) {
         qDebug() << "Error: Could not open DB:" << db.lastError().text();
@@ -30,7 +38,7 @@ LocalChatStorage::LocalChatStorage(QObject *parent) : QObject(parent) {
         json_data   TEXT NOT NULL
     )
 )";
-    QSqlQuery query;
+    QSqlQuery query(QSqlDatabase::database(m_connectionName));
     query.exec(MESSAGES_SCHEMA);
 
     static const char *CHAT_PREVIEWS_SCHEMA = R"(
@@ -39,17 +47,17 @@ LocalChatStorage::LocalChatStorage(QObject *parent) : QObject(parent) {
         json_data   TEXT NOT NULL
     )
 )";
-    QSqlQuery chat_previews_query;
+    QSqlQuery chat_previews_query(QSqlDatabase::database(m_connectionName));
     chat_previews_query.exec(CHAT_PREVIEWS_SCHEMA);
 
-    QSqlQuery indexQuery;
+    QSqlQuery indexQuery(QSqlDatabase::database(m_connectionName));
     indexQuery.prepare("CREATE INDEX idx_field ON messages(chat_id);");
     indexQuery.exec();
 }
 
 void LocalChatStorage::addMessage(QJsonObject message_object) {
     QJsonDocument message(message_object);
-    QSqlQuery query;
+    QSqlQuery query(QSqlDatabase::database(m_connectionName));
     query.prepare(
         "INSERT INTO messages (id, chat_id, text, json_data) VALUES (:id, "
         ":chat_id, "
@@ -71,7 +79,7 @@ void LocalChatStorage::addMessage(QJsonObject message_object) {
 }
 
 QJsonArray LocalChatStorage::getMessagesByChat(int64_t chat_id) {
-    QSqlQuery query;
+    QSqlQuery query(QSqlDatabase::database(m_connectionName));
     query.prepare(
         "SELECT json_data FROM messages WHERE messages.chat_id = :chat_id "
         "ORDER BY messages.chat_id ASC"
@@ -95,7 +103,7 @@ QJsonArray LocalChatStorage::getMessagesByChat(int64_t chat_id) {
 std::optional<QJsonObject> LocalChatStorage::getOldestChatMessage(
     int64_t chat_id
 ) {
-    QSqlQuery query;
+    QSqlQuery query(QSqlDatabase::database(m_connectionName));
     query.prepare(
         "SELECT json_data from messages WHERE messages.chat_id = :chat_id "
         "ORDER BY messages.id ASC LIMIT 1"
@@ -117,7 +125,7 @@ std::optional<QJsonObject> LocalChatStorage::getOldestChatMessage(
 
 std::optional<QJsonObject> LocalChatStorage::getLastChatMessage(int64_t chat_id
 ) {
-    QSqlQuery query;
+    QSqlQuery query(QSqlDatabase::database(m_connectionName));
     query.prepare(
         "SELECT json_data from messages WHERE messages.chat_id = :chat_id "
         "ORDER BY messages.id DESC LIMIT 1"
@@ -138,7 +146,7 @@ std::optional<QJsonObject> LocalChatStorage::getLastChatMessage(int64_t chat_id
 }
 
 void LocalChatStorage::clear() {
-    QSqlQuery messages_query;
+    QSqlQuery messages_query(QSqlDatabase::database(m_connectionName));
     messages_query.prepare("DELETE FROM messages");
     if (!messages_query.exec()) {
         qDebug() << "Error: Could't clear DB messages:"
@@ -147,7 +155,7 @@ void LocalChatStorage::clear() {
         qDebug() << "Clearing DB messages";
     }
 
-    QSqlQuery previews_query;
+    QSqlQuery previews_query(QSqlDatabase::database(m_connectionName));
     previews_query.prepare("DELETE FROM chat_previews");
     if (!previews_query.exec()) {
         qDebug() << "Error: Could't clear DB previews:"
@@ -158,7 +166,7 @@ void LocalChatStorage::clear() {
 }
 
 void LocalChatStorage::clearChat(int64_t chat_id) {
-    QSqlQuery query;
+    QSqlQuery query(QSqlDatabase::database(m_connectionName));
     query.prepare("DELETE FROM messages WHERE messages.chat_id = :chat_id");
     query.bindValue(":chat_id", QVariant::fromValue(chat_id));
     if (!query.exec()) {
@@ -169,17 +177,16 @@ void LocalChatStorage::clearChat(int64_t chat_id) {
 }
 
 void LocalChatStorage::updateChatPreviews(const QJsonArray &chats) {
-    QSqlQuery clear_query;
+    QSqlQuery clear_query(QSqlDatabase::database(m_connectionName));
     clear_query.prepare("DELETE FROM chat_previews");
     if (!clear_query.exec()) {
         qDebug() << "Error: Could't clear Chat Previews DB:"
                  << clear_query.lastError().text();
     }
-    QSqlQuery query;
     for (const QJsonValue &chat_value : chats) {
         QJsonDocument chat;
         chat.setObject(chat_value.toObject());
-        QSqlQuery query;
+        QSqlQuery query(QSqlDatabase::database(m_connectionName));
         query.prepare(
             "INSERT INTO chat_previews (id, json_data) VALUES (:id, "
             ":json_data)"
@@ -198,7 +205,7 @@ void LocalChatStorage::updateChatPreviews(const QJsonArray &chats) {
 }
 
 QJsonArray LocalChatStorage::getChatPreviews() {
-    QSqlQuery query;
+    QSqlQuery query(QSqlDatabase::database(m_connectionName));
     query.prepare("SELECT json_data from chat_previews");
     if (!query.exec()) {
         qDebug() << "Error: Could't read chat previews from DB:"

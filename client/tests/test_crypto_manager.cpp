@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <QByteArray>
 #include <QString>
-#include "../include/CryptoManager.hpp"
+#include "CryptoManager.hpp"
 
 using namespace client::crypto;
 

@@ -78,9 +78,6 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --parallel
 
-      - name: Test client
-        run: ctest --test-dir build/client --output-on-failure
-
       - name: Download linuxdeploy
         run: |
           wget -c -nv https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
@@ -334,6 +331,8 @@ jobs:
           ls -la artifacts/
           test -f artifacts/client || (echo "Client binary not found!" && exit 1)
       
+      - name: Run client tests
+        run: docker compose --profile test run test-client
 
       - name: Run server tests
         run: docker compose --profile test run test-server

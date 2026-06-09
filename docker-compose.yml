@@ -54,6 +54,7 @@ services:
     build:
       context: .
       dockerfile: ./client/Dockerfile
+      target: base
     volumes:
       - ./artifacts:/output
     profiles:
@@ -79,6 +80,33 @@ services:
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_SHOULD_USE_HTTPS: false
+  
+  test-client:
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
+      target: test-runner
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      server:
+        condition: service_started
+    profiles:
+      - test
+    environment:
+      POSTGRES_DB: messenger_db_test
+      S3_BASE_URL: minio:9000
+      S3_PRIVATE_BUCKETNAME: messenger-alyosha
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_SHOULD_USE_HTTPS: false
+      API_BASE_URL: http://server:8080/v1
+      API_WS_URL: ws://server:8080/ws/chat
+      SHOULD_RUN_LOAD_TEST: true
+      QT_LOGGING_RULES: "*.debug=false"
   
   test-server-coverage:
     build:

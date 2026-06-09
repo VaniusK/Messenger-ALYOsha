@@ -1,4 +1,4 @@
-#include "include/CryptoManager.hpp"
+#include "CryptoManager.hpp"
 #include <sodium.h>
 #include <sodium/crypto_box.h>
 #include <sodium/crypto_secretstream_xchacha20poly1305.h>

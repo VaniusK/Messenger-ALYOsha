@@ -6,9 +6,14 @@
 
 ConnectionManager::ConnectionManager(
     std::function<QString()> tokenProvider,
+    QString baseUrl,
+    QString wsUrl,
     QObject *parent
 )
-    : QObject(parent), m_tokenProvider(tokenProvider) {
+    : QObject(parent),
+      m_tokenProvider(tokenProvider),
+      m_baseUrl(baseUrl),
+      m_wsUrl(wsUrl) {
     m_networkManager = new QNetworkAccessManager(this);
 
     connect(

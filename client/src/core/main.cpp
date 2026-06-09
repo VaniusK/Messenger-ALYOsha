@@ -33,11 +33,13 @@ int main(int argc, char *argv[]) {
 
     auto *stateManager = new StateManager(&app);
     auto *connectionManager = new ConnectionManager(
-        [stateManager]() { return stateManager->getToken(); }, &app
+        [stateManager]() { return stateManager->getToken(); },
+        "https://api.alyosha-test.ru/v1", "wss://api.alyosha-test.ru/ws/chat",
+        &app
     );
     auto *authManager = new AuthManager(connectionManager, stateManager, &app);
     auto *mediaCacheManager = new MediaCacheManager(connectionManager, &app);
-    auto *localChatStorage = new LocalChatStorage(&app);
+    auto *localChatStorage = new LocalChatStorage(false, "default", &app);
     auto *chatManager = new ChatManager(
         connectionManager, stateManager, mediaCacheManager, localChatStorage,
         &app

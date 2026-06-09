@@ -1,4 +1,4 @@
-#include "include/SecretDatabaseManager.hpp"
+#include "SecretDatabaseManager.hpp"
 #include <QDateTime>
 #include <QDebug>
 #include <QDir>
