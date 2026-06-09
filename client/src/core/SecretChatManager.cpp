@@ -1,4 +1,4 @@
-#include "include/SecretChatManager.hpp"
+#include "SecretChatManager.hpp"
 #include <QDir>
 #include <QFutureWatcher>
 #include <QJsonArray>
