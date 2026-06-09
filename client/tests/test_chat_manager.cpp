@@ -43,6 +43,7 @@ protected:
 
 TEST_F(ChatManagerTest, FetchChatsSuccess) {
     stateManager->setUserId(42);
+
     auto *fakeReply = new FakeNetworkReply(
         200, "{\"chats\":[{\"id\":1, \"title\":\"Test chat\"}]}"
     );
