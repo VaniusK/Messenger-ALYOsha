@@ -83,7 +83,8 @@ services:
   
   test-client:
     build:
-      context: ./client
+      context: .
+      dockerfile: ./client/Dockerfile
       target: test-runner
     env_file: .env
     depends_on:
