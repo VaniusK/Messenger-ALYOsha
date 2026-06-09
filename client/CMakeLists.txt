@@ -9,17 +9,18 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Sql Network WebSockets Test Widgets Multimedia Svg Concurrent)
-find_package(sodium CONFIG QUIET)
-if(NOT sodium_FOUND)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SODIUM REQUIRED libsodium)
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(SODIUM QUIET libsodium)
+endif()
 
-    if(NOT TARGET sodium::libsodium)
-        add_library(sodium::libsodium INTERFACE IMPORTED)
-        target_include_directories(sodium::libsodium INTERFACE ${SODIUM_INCLUDE_DIRS})
-        target_link_libraries(sodium::libsodium INTERFACE ${SODIUM_LIBRARIES})
-        target_link_directories(sodium::libsodium INTERFACE ${SODIUM_LIBRARY_DIRS})
-    endif()
+if(SODIUM_FOUND)
+    include_directories(${SODIUM_INCLUDE_DIRS})
+    link_directories(${SODIUM_LIBRARY_DIRS})
+    set(SODIUM_LIBRARIES_TO_LINK ${SODIUM_LIBRARIES})
+else()
+    find_library(SODIUM_LIB sodium REQUIRED)
+    set(SODIUM_LIBRARIES_TO_LINK ${SODIUM_LIB})
 endif()
 
 #if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -100,7 +101,7 @@ target_include_directories(client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/enums
 )
-target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg Qt6::Concurrent sodium::libsodium)
+target_link_libraries(client PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Sql Qt6::WebSockets Qt6::Widgets Qt6::Multimedia Qt6::Svg Qt6::Concurrent ${SODIUM_LIBRARIES_TO_LINK})
 
 # Tests (optional, Qt Test or GTest)
 option(BUILD_TESTS "Build tests" OFF)
@@ -139,7 +140,7 @@ if(BUILD_TESTS)
     )
 
     target_include_directories(client_tests PRIVATE include)
-    target_include_directories(client PRIVATE
+    target_include_directories(client_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
         ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/enums
     )
@@ -150,11 +151,8 @@ if(BUILD_TESTS)
     Qt6::Network
     Qt6::WebSockets
     Qt6::Test
-    sodium::libsodium
+    ${SODIUM_LIBRARIES_TO_LINK}
     )
-
-    find_library(SODIUM_LIB sodium REQUIRED)
-    target_link_libraries(client PRIVATE ${SODIUM_LIB})
     
     include(GoogleTest)
     gtest_discover_tests(client_tests)
