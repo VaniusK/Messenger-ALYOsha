@@ -229,7 +229,7 @@ jobs:
       - name: Export Qt path
         run: echo "QT_ROOT=$HOME/Qt/6.7.3/macos" >> $GITHUB_ENV
 
-      - name: Install libsodium (macOS)
+      - name: Install dependencies (macOS)
         run: brew install libsodium
 
       - name: Build client
