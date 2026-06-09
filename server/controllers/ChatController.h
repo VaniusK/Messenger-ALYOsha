@@ -10,6 +10,7 @@
 #include "repositories/MessageRepository.hpp"
 #include "repositories/UserRepository.hpp"
 #include "services/ChatService.hpp"
+#include "services/ClientNotifier.hpp"
 #include "services/S3Service.hpp"
 
 using namespace drogon;

@@ -57,7 +57,8 @@ jobs:
             gstreamer1.0-plugins-base \
             gstreamer1.0-plugins-good \
             ca-certificates \
-            openssl
+            openssl \
+            libsodium-dev
 
       - name: Install Qt via aqtinstall
         if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -140,11 +141,23 @@ jobs:
             --outputdir C:\Qt `
             -m qtwebsockets qtmultimedia
 
+      - name: Install libsodium via vcpkg
+        run: vcpkg install libsodium:x64-windows
+
       - name: Configure & Build client
         run: |
           cmake -B build/client -S client `
-            -DCMAKE_PREFIX_PATH="C:\Qt\6.7.3\msvc2019_64" `
-            -DCMAKE_BUILD_TYPE=Release
+              -DCMAKE_PREFIX_PATH="C:\Qt\6.7.3\msvc2019_64" `
+              -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+              -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/client --config Release
+
+      - name: Configure & Build client
+        run: |
+          cmake -B build/client -S client `
+              -DCMAKE_PREFIX_PATH="C:\Qt\6.7.3\msvc2019_64" `
+              -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+              -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --config Release
 
       - name: Bundle Qt DLLs with windeployqt and copy icon
@@ -213,11 +226,14 @@ jobs:
       - name: Export Qt path
         run: echo "QT_ROOT=$HOME/Qt/6.7.3/macos" >> $GITHUB_ENV
 
+      - name: Install dependencies (macOS)
+        run: brew install libsodium
+
       - name: Build client
         run: |
           cmake -B build/client -S client \
-            -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
-            -DCMAKE_BUILD_TYPE=Release
+              -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
+              -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --parallel
 
       - name: Bundle with macdeployqt

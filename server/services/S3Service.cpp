@@ -93,8 +93,11 @@ S3Service::S3Service(
                 std::cout << "S3Service: bucket created successfully (attempt "
                           << attempt << ")" << std::endl;
                 return;
-            } else if (make_resp.Error().String().find("BucketAlreadyOwnedByYou") != std::string::npos ||
-                       make_resp.Error().String().find("BucketAlreadyExists") != std::string::npos) {
+            } else if (make_resp.Error().String().find(
+                           "BucketAlreadyOwnedByYou"
+                       ) != std::string::npos ||
+                       make_resp.Error().String().find("BucketAlreadyExists") !=
+                           std::string::npos) {
                 std::cout << "S3Service: bucket already exists." << std::endl;
                 return;
             } else {
@@ -233,9 +236,27 @@ std::optional<std::vector<UploadPresignedResult>> S3Service::generateUploadUrl(
     return upload_presigned_results;
 }
 
+std::optional<UploadPresignedResult> S3Service::generateSecretChatUploadUrl() {
+    std::string object_key =
+        "secret_chats/" + drogon::utils::getUuid(false) + ".enc";
+    minio::s3::GetPresignedObjectUrlArgs args;
+    args.bucket = private_bucket_name_;
+    args.object = object_key;
+    args.expiry_seconds = 600;
+    args.method = minio::http::Method::kPut;
+
+    auto result = s3_client_.GetPresignedObjectUrl(args);
+    if (result.url.empty()) {
+        LOG_ERROR << "Failed to generate PUT presigned URL for secret chat: "
+                  << result.status_code << " " << result.message;
+        return std::nullopt;
+    }
+    return UploadPresignedResult{object_key, result.url, "", "", 0};
+}
+
 std::optional<std::string> S3Service::generateDownloadUrl(
     const std::string &object_key,
-    const std::string &original_filename = ""
+    const std::string &original_filename
 ) {
     minio::s3::GetPresignedObjectUrlArgs args;
     args.bucket = private_bucket_name_;

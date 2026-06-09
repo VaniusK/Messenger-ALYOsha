@@ -21,10 +21,13 @@ RUN apt-get update && apt-get install -y \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
     ca-certificates \
     openssl \
+    libsodium-dev \
     && rm -rf /var/lib/apt/lists/*
     
-WORKDIR /usr/src/client
-COPY . .
+WORKDIR /usr/src
+COPY common/ /usr/src/common
+COPY client/ /usr/src/client
+
 ENV QT_QPA_PLATFORM=offscreen
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
 RUN cmake --build build --parallel

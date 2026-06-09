@@ -15,7 +15,9 @@ RUN /opt/vcpkg/bootstrap-vcpkg.sh
 RUN /opt/vcpkg/vcpkg install minio-cpp
 
 WORKDIR /app
-COPY . .
+COPY common/ ./common/
+COPY server/ ./server/
+WORKDIR /app/server
 
 ARG ENABLE_COVERAGE=OFF
 
@@ -29,7 +31,7 @@ RUN cmake --build build --parallel -j2
 # Coverage stage
 FROM builder AS coverage
 
-WORKDIR /app/build
+WORKDIR /app/server/build
 CMD ["bash", "-c", "./server_tests && lcov --capture --directory . -o coverage.info && lcov --remove coverage.info '/usr/*' '*/build/_deps/*' '*/tests/*' '*/models/*' '*/miniocpp/*' -o filtered.info && genhtml filtered.info -o /output/coverage_report --title 'Alesha Coverage'"]
 
 # Runtime stage
@@ -53,19 +55,19 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copy executable
-COPY --from=builder /app/build/alesha_server_app .
+COPY --from=builder /app/server/build/alesha_server_app .
 
 # Copy logs folder, will be empty in non-release
 RUN ["mkdir", "logs"] 
 
 # Copy tests executable
-COPY --from=builder /app/build/server_tests .
+COPY --from=builder /app/server/build/server_tests .
 
 # Copy test data
-COPY --from=builder /app/tests/test_data ./tests/test_data
+COPY --from=builder /app/server/tests/test_data ./tests/test_data
 
 # Copy config files if needed
-COPY --from=builder /app/config.json .
+COPY --from=builder /app/server/config.json .
 
 EXPOSE 8080
 
