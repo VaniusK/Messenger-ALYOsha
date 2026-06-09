@@ -566,3 +566,25 @@ void ChatManager::fetchChatInfo(const QString &chatId) {
         }
     });
 }
+
+void ChatManager::markChatAsRead(const QString &chatId, qint64 lastMessageId) {
+    if (chatId.isEmpty()) {
+        return;
+    }
+
+    QJsonObject json;
+    json["last_read_message_id"] = lastMessageId;
+    QNetworkReply *reply = m_connection->post(
+        "/chats/" + chatId + "/read", QJsonDocument(json).toJson()
+    );
+    connect(reply, &QNetworkReply::finished, [this, reply, chatId]() {
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            qDebug() << "[ChatManager] Chat" << chatId
+                     << "successfully marked as read on server";
+            this->fetchChats();
+        } else {
+            qDebug() << "[ChatManager] Mark as read error:" << reply->readAll();
+        }
+    });
+}

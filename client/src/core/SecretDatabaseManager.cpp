@@ -40,7 +40,7 @@ inline constexpr const char *SCHEMA_MESSAGES = R"(
         id TEXT PRIMARY KEY,
         chat_id TEXT NOT NULL,
         sender_id INTEGER NOT NULL,
-        message_type TEXT NOT NULL,
+        type TEXT NOT NULL,
         text TEXT,
         sent_at INTEGER NOT NULL,
         is_read INTEGER DEFAULT 0,
@@ -287,7 +287,7 @@ bool SecretDatabaseManager::saveMessage(
     QSqlQuery query(db);
 
     query.prepare(
-        R"(INSERT INTO secret_messages (id, chat_id, sender_id, message_type, text, sent_at) VALUES (:id, :chat_id, :sender_id, :message_type, :text, :sent_at))"
+        R"(INSERT INTO secret_messages (id, chat_id, sender_id, type, text, sent_at) VALUES (:id, :chat_id, :sender_id, :message_type, :text, :sent_at))"
     );
     query.bindValue(":id", message_id);
     query.bindValue(":chat_id", chat_id);
@@ -432,7 +432,7 @@ QString SecretDatabaseManager::getChatsJson(qint64 current_user_id) {
             ) AS unread_count,
             m.id AS lm_id, 
             m.sender_id AS lm_sender_id, 
-            m.message_type AS lm_type, 
+            m.type AS lm_type, 
             m.text AS lm_text, 
             m.sent_at AS lm_sent_at,
             m.is_read AS lm_is_read
@@ -476,7 +476,7 @@ QString SecretDatabaseManager::getChatsJson(qint64 current_user_id) {
             last_msg_obj["id"] = query.value("lm_id").toString();
             last_msg_obj["sender_id"] =
                 query.value("lm_sender_id").toLongLong();
-            last_msg_obj["message_type"] = query.value("lm_type").toString();
+            last_msg_obj["type"] = query.value("lm_type").toString();
             last_msg_obj["text"] = query.value("lm_text").toString();
             last_msg_obj["is_read"] = query.value("lm_is_read").toInt();
 
@@ -504,10 +504,10 @@ QString SecretDatabaseManager::getMessagesJson(
 
     QString sql = R"(
         SELECT 
-            m.id AS msg_id, m.sender_id, m.message_type, m.text, m.sent_at, m.is_read,
+            m.id AS msg_id, m.sender_id, m.type, m.text, m.sent_at, m.is_read,
             a.id AS att_id, a.file_name, a.file_size_bytes, a.s3_object_key, a.local_path, a.file_type
         FROM (
-            SELECT id, sender_id, message_type, text, sent_at, is_read
+            SELECT id, sender_id, type, text, sent_at, is_read
             FROM secret_messages 
             WHERE chat_id = :chat_id 
     )";
@@ -560,8 +560,7 @@ QString SecretDatabaseManager::getMessagesJson(
             current_msg["id"] = msg_id;
             current_msg["chat_id"] = chat_id;
             current_msg["sender_id"] = query.value("sender_id").toLongLong();
-            current_msg["message_type"] =
-                query.value("message_type").toString();
+            current_msg["type"] = query.value("type").toString();
             current_msg["text"] = query.value("text").toString();
             current_msg["is_read"] = query.value("is_read").toInt();
 
@@ -597,7 +596,7 @@ QString SecretDatabaseManager::getMessageJson(const QString &message_id) {
     QSqlQuery query(db);
 
     query.prepare(R"(
-        SELECT id, chat_id, sender_id, message_type, text, sent_at, is_read
+        SELECT id, chat_id, sender_id, type, text, sent_at, is_read
         FROM secret_messages 
         WHERE id = :id 
     )");
@@ -623,7 +622,7 @@ QString SecretDatabaseManager::getMessageJson(const QString &message_id) {
     msg_obj["id"] = query.value("id").toString();
     msg_obj["chat_id"] = query.value("chat_id").toString();
     msg_obj["sender_id"] = query.value("sender_id").toLongLong();
-    msg_obj["message_type"] = query.value("message_type").toString();
+    msg_obj["type"] = query.value("type").toString();
     msg_obj["text"] = query.value("text").toString();
     msg_obj["is_read"] = query.value("is_read").toInt();
 
