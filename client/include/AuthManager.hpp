@@ -28,6 +28,7 @@ signals:
     void registerFailed(const QString &errorMsg);
     void loginSuccess(const QString &token);
     void loginFailed(const QString &errorMsg);
+
     void userIdFetched(int userId);
 
 private:
