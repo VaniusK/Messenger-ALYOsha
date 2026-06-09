@@ -225,23 +225,21 @@ Rectangle {
         }
 
         function onIncomingWebSocketMessage(data) {
-            if (data.message_type === ApiEnums.COMMON_NEW_MESSAGE && data.data && data.data.message) {
-                var msg = data.data.message
-                if (String(msg.chat_id) === String(activeChatId)) {
-                    msg.is_me = (String(msg.sender_id) === String(AppState.userId))
-                    msg.id = String(msg.id);
-                    msg.chat_id = String(msg.chat_id)
-                    if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
-                    
-                    if (msg.text === undefined) msg.text = ""
-                    if (msg.attachments === undefined) msg.attachments = []
-                    
-                    chatModel.insert(0, msg)
+            var msg = data.data.message
+            if (String(msg.chat_id) === String(activeChatId)) {
+                msg.is_me = (String(msg.sender_id) === String(AppState.userId))
+                msg.id = String(msg.id);
+                msg.chat_id = String(msg.chat_id)
+                if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+                
+                if (msg.text === undefined) msg.text = ""
+                if (msg.attachments === undefined) msg.attachments = []
+                
+                chatModel.insert(0, msg)
 
-                    Qt.callLater(function() {
-                        messageList.positionViewAtIndex(0, ListView.Beginning)
-                    })
-                }
+                Qt.callLater(function() {
+                    messageList.positionViewAtIndex(0, ListView.Beginning)
+                })
             }
         }
 

@@ -71,9 +71,7 @@ Rectangle {
         }
 
         function onIncomingWebSocketMessage(data) {
-            if (data.message_type === ApiEnums.COMMON_NEW_MESSAGE) {
-                ChatLayer.fetchChats()
-            }
+            ChatLayer.fetchChats()
         }
 
         function onUsersFound(users) {
