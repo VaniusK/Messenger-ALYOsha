@@ -135,6 +135,7 @@ if(BUILD_TESTS)
     src/core/LocalChatStorage.cpp
     include/LocalChatStorage.hpp
     src/core/TestUser.cpp
+    include/TestUser.hpp
     tests/test_state_manager.cpp
     tests/mocks/FakeNetworkReply.hpp
     tests/test_auth_manager.cpp
