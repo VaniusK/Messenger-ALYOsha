@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /usr/src
 COPY common/ /usr/src/common
 COPY client/ /usr/src/client
+WORKDIR /usr/src/client
 
 ENV QT_QPA_PLATFORM=offscreen
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
