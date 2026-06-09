@@ -316,8 +316,10 @@ Rectangle {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
+                    var targetChatId = String(itemData.chat_id ?? itemData.id ?? "")
                     if (isSearching) {
                         ChatLayer.openDirectChat(itemData.id, itemData.display_name ?? itemData.handle ?? "")
+                        ChatManager.markChatAsRead(String(itemData.id))
                     } else {
                         var displayName = (itemData.type === "saved") ? "Избранное" : (itemData.title ? itemData.title : "")
                         sidebarRoot.chatSelected(
@@ -327,6 +329,12 @@ Rectangle {
                             itemData.description || "",
                             itemData.status || "active"
                         )
+
+                        if (itemData.type === "secret") {
+                            SecretChatManager.markChatAsRead(targetChatId);
+                        } else {
+                            ChatLayer.markChatAsRead(targetChatId, itemData.last_message.id);
+                        }
                     }
                 }
             }
@@ -468,92 +476,126 @@ Rectangle {
                         }
                     }
 
-                    RowLayout {
+                    Item { width: 1; height: 4 }
+                    
+                    Item {
                         width: parent.width
-                        visible: !isSearching
-                        spacing: 4
+                        height: Math.max(msgContentLayout.implicitHeight, unreadBadge.visible ? unreadBadge.height : 0)
 
-                        property string senderNameStr: {
-                            if (isSearching || !itemData || !itemData.last_message || itemData.type !== "group") return "";
-                            
-                            var msg = itemData.last_message;
-                            if (String(msg.sender_id) === String(AppState.userId)) return ""; // Если это мы, имя не пишем
+                        RowLayout {
+                            id: msgContentLayout
+                            anchors.left: parent.left
+                            anchors.right: unreadBadge.visible ? unreadBadge.left : parent.right
+                            anchors.rightMargin: unreadBadge.visible ? 8 : 0
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 4
+                            visible: !isSearching
 
-                            // Берем имя из sender_info
-                            var sInfo = msg.sender_info;
-                            var sName = sInfo ? (sInfo.display_name || sInfo.handle || "User") : (msg.sender_name || "User");
-                            
-                            return sName + ":";
-                        }
+                            property string senderNameStr: {
+                                if (isSearching || !itemData || !itemData.last_message || itemData.type !== "group") return "";
+                                
+                                var msg = itemData.last_message;
+                                if (String(msg.sender_id) === String(AppState.userId)) return "";
 
-                        // ТИП ВЛОЖЕНИЯ
-                        property string mediaPrefix: {
-                            if (isSearching || !itemData || !itemData.last_message) return ""
-                            var msg = itemData.last_message
+                                var sInfo = msg.sender_info;
+                                var sName = sInfo ? (sInfo.display_name || sInfo.handle || "User") : (msg.sender_name || "User");
+                                
+                                return sName + ":";
+                            }
 
-                            var mType = msg.message_type || msg.type || "text"
+                            // ТИП ВЛОЖЕНИЯ
+                            property string mediaPrefix: {
+                                if (isSearching || !itemData || !itemData.last_message) return ""
+                                var msg = itemData.last_message
 
-                            if (mType === "voice") return "Голосовое сообщение"
+                                var mType = msg.message_type || msg.type || "text"
 
-                            if (msg.attachments && msg.attachments.length > 0) {
-                                if (mType === "text") return "Файл"
+                                if (mType === "voice") return "Голосовое сообщение"
 
-                                if (mType === "media") {
-                                    var fType = msg.attachments[0].file_type || ""
-                                    if (fType.indexOf("video/") === 0) return "Видео"
-                                    if (fType.indexOf("image/") === 0) return "Фотография"
-                                    return "Медиа"
+                                if (msg.attachments && msg.attachments.length > 0) {
+                                    if (mType === "text") return "Файл"
+
+                                    if (mType === "media") {
+                                        var fType = msg.attachments[0].file_type || ""
+                                        if (fType.indexOf("video/") === 0) return "Видео"
+                                        if (fType.indexOf("image/") === 0) return "Фотография"
+                                        return "Медиа"
+                                    }
+                                    
+                                    return "Файл"
                                 }
                                 
-                                return "Файл"
+                                return ""
                             }
-                            
-                            return ""
-                        }
 
-                        // ИМЯ ОТПРАВИТЕЛЯ
-                        Text {
-                            visible: parent.senderNameStr !== ""
-                            text: parent.senderNameStr
-                            color: chatItem.isActive ? "white" : appTheme.accent
-                            font.pixelSize: 14
-                            font.family: "Segoe UI"
+                            // ИМЯ ОТПРАВИТЕЛЯ
+                            Text {
+                                visible: parent.senderNameStr !== ""
+                                text: parent.senderNameStr
+                                color: chatItem.isActive ? "white" : appTheme.accent
+                                font.pixelSize: 14
+                                font.family: "Segoe UI"
 
-                            Layout.maximumWidth: parent.width * 0.4 
-                            elide: Text.ElideRight
-                        }
+                                Layout.maximumWidth: parent.width * 0.4 
+                                elide: Text.ElideRight
+                            }
 
-                        // МЕДИА-ПРЕФИКС
-                        Text {
-                            visible: parent.mediaPrefix !== ""
-                            text: parent.mediaPrefix
-                            color: chatItem.isActive ? "white" : appTheme.accent
-                            font.pixelSize: 14
-                            font.family: "Segoe UI"
-                        }
+                            // МЕДИА-ПРЕФИКС
+                            Text {
+                                visible: parent.mediaPrefix !== ""
+                                text: parent.mediaPrefix
+                                color: chatItem.isActive ? "white" : appTheme.accent
+                                font.pixelSize: 14
+                                font.family: "Segoe UI"
+                            }
 
-                        // ТЕКСТ СООБЩЕНИЯ
-                        Text {
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
+                            // ТЕКСТ СООБЩЕНИЯ
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
 
-                            color: chatItem.isActive ? "white" : (itemData.status === "pending" ? appTheme.accent : appTheme.textHint)
-                            font.pixelSize: 14
-                            font.family: "Segoe UI"
-                            font.italic: itemData.status === "pending"
-                            
-                            elide: Text.ElideRight
-                            maximumLineCount: 1
-                            textFormat: Text.PlainText
-                            
-                            text: {
-                                if (isSearching || !itemData) return "";
-                                if (!itemData.last_message) {
-                                    if (itemData.unread_count && itemData.unread_count > 0) return "Новое сообщение"
-                                    return itemData.status === "pending" ? "Ожидание подтверждения..." : "Нет сообщений"
+                                color: chatItem.isActive ? "white" : (itemData.status === "pending" ? appTheme.accent : appTheme.textHint)
+                                font.pixelSize: 14
+                                font.family: "Segoe UI"
+                                font.italic: itemData.status === "pending"
+                                
+                                elide: Text.ElideRight
+                                maximumLineCount: 1
+                                textFormat: Text.PlainText
+                                
+                                text: {
+                                    if (isSearching || !itemData) return "";
+                                    if (!itemData.last_message) {
+                                        if (itemData.unread_count && itemData.unread_count > 0) return "Новое сообщение"
+                                        return itemData.status === "pending" ? "Ожидание подтверждения..." : "Нет сообщений"
+                                    }
+
+                                    return itemData.last_message.text ? itemData.last_message.text.trim() : ""
                                 }
+                            }
+                        }
+                        
+                        Rectangle {
+                            id: unreadBadge
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
 
-                                return itemData.last_message.text ? itemData.last_message.text.trim() : ""
+                            visible: !isSearching && itemData && itemData.unread_count !== undefined && itemData.unread_count > 0
+
+                            color: chatItem.isActive ? "white" : appTheme.accent
+                            
+                            height: 18
+                            width: Math.max(height, unreadText.implicitWidth + 10)
+                            radius: height / 2
+
+                            Text {
+                                id: unreadText
+                                text: itemData && itemData.unread_count ? String(itemData.unread_count) : ""
+                                color: chatItem.isActive ? appTheme.accent : "white"
+                                font.pixelSize: 11
+                                font.bold: true
+                                font.family: "Segoe UI"
+                                anchors.centerIn: parent
                             }
                         }
                     }

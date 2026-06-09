@@ -509,16 +509,34 @@ Rectangle {
                 Column {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter
-                        
-                    Text {
-                        text: activeChatName
+
+                    Row {
+                        id: titleRow
                         width: parent.width
-                        elide: Text.ElideRight
-                        font.bold: true
-                        color: appTheme.textMain
-                        font.family: "Segoe UI"
-                        font.pixelSize: 16
-                        textFormat: Text.PlainText
+                        spacing: 6
+
+                        Text {
+                            id: nameText
+                            text: activeChatName
+                            width: Math.min(implicitWidth, parent.width - (secretLockIcon.visible ? secretLockIcon.width + parent.spacing : 0))
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            font.bold: true
+                            color: appTheme.textMain
+                            font.family: "Segoe UI"
+                            font.pixelSize: 16
+                            textFormat: Text.PlainText
+                        }                       
+                        
+                        Image {
+                            id: secretLockIcon
+                            source: "qrc:/messenger_client_uri/assets/icons/lock.svg"
+                            width: 14
+                            height: 14
+                            fillMode: Image.PreserveAspectFit
+                            anchors.verticalCenter: nameText.verticalCenter
+                            visible: isChatActive && activeChatType === "secret"
+                        }
                     }
 
                     Text {

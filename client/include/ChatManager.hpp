@@ -1,4 +1,5 @@
 #pragma once
+#include <qtmetamacros.h>
 #include <QAbstractSocket>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -59,6 +60,8 @@ public:
         const QString &newRole
     );
     Q_INVOKABLE void fetchChatInfo(const QString &chatId);
+    Q_INVOKABLE void
+    markChatAsRead(const QString &chatId, qint64 lastMessageId);
 
 signals:
     void usersFound(const QJsonArray &users);
