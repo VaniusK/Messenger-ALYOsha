@@ -42,6 +42,11 @@ int StateManager::getUserId() const {
 void StateManager::setUserId(int id) {
     if (m_userId != id) {
         m_userId = id;
+
+        if (m_userId > 0) {
+            initUserEnvironment();
+        }
+
         emit userIdChanged();
         if (isLoggedIn() && m_rememberMe) {
             saveSession();
@@ -83,6 +88,10 @@ void StateManager::loadSession() {
     m_theme = settings.value("theme", "classic").toString();
     m_accentColor = settings.value("accentColor", "#5eb5f7").toString();
 
+    if (m_userId > 0) {
+        initUserEnvironment();
+    }
+
     emit tokenChanged();
     emit userIdChanged();
     emit currentUserHandleChanged();
@@ -123,6 +132,10 @@ void StateManager::setAccentColor(const QString &color) {
 }
 
 void StateManager::initUserEnvironment() {
+    if (m_userId <= 0) {
+        return;
+    }
+
     QString app_data_path =
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir baseDir(app_data_path);

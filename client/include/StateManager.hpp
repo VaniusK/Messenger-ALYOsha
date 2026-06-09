@@ -62,7 +62,7 @@ public:
         return m_secretDbPath;
     }
 
-    void initUserEnvironment();
+    Q_INVOKABLE void initUserEnvironment();
 
 signals:
     void tokenChanged();

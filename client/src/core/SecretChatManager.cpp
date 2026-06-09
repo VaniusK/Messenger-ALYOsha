@@ -1,13 +1,12 @@
 #include "include/SecretChatManager.hpp"
-#include <qfuture.h>
-#include <qjsonarray.h>
-#include <qnetworkreply.h>
 #include <QDir>
 #include <QFutureWatcher>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QMimeDatabase>
 #include <QSharedPointer>
+#include <QUrl>
 #include <QUuid>
 #include <QtConcurrent>
 #include <functional>
@@ -32,6 +31,12 @@ SecretChatManager::SecretChatManager(
 
 bool SecretChatManager::initSession() {
     if (!m_dbManager || !m_stateManager) {
+        return false;
+    }
+
+    if (m_stateManager->getUserId() <= 0) {
+        qDebug(
+        ) << "[SecretChatManager] Session init delayed: User ID not set yet.";
         return false;
     }
 
@@ -146,12 +151,13 @@ QString SecretChatManager::fetchSecretChatHistory(
             for (const QJsonValue &attVal : attachments) {
                 QJsonObject att = attVal.toObject();
                 QString localPath = att["local_path"].toString();
-
-                if (!localPath.isEmpty() && !QFile::exists(localPath)) {
-                    qDebug() << "[SecretChatManager] Stale local_path "
-                                "detected! Clearing...";
+                QFileInfo fi(localPath);
+                if (fi.isDir()) {
                     att["local_path"] = "";
-                    localPath = "";
+                }
+
+                if (!localPath.isEmpty() && (!fi.exists() || fi.isDir())) {
+                    att["local_path"] = "";
                 }
 
                 if (localPath.isEmpty()) {
@@ -162,6 +168,9 @@ QString SecretChatManager::fetchSecretChatHistory(
                                 "attachment:"
                              << fileId;
                     this->downloadSecretAttachment(messageId, fileId);
+                } else {
+                    att["download_url"] =
+                        QUrl::fromLocalFile(localPath).toString();
                 }
 
                 updatedAttachments.append(att);
@@ -215,13 +224,14 @@ void SecretChatManager::downloadSecretAttachment(
     QByteArray fileKey =
         QByteArray::fromBase64(attData["file_key"].toString().toLatin1());
     QString finalPath =
-        m_stateManager->getSecretAttachmentsDirectory() + "/" + fileHash;
+        m_stateManager->getSecretAttachmentsDirectory() + "/" + file_id;
 
     if (QFile::exists(finalPath)) {
-        qDebug(
-        ) << "[Download] File already exists by hash! Reusing instantly.";
+        qDebug() << "[Download] File already exists! Reusing instantly.";
         m_dbManager->updateAttachmentLocalPath(file_id, finalPath);
-        // TODO emit
+        emit attachmentDownloaded(
+            message_id, file_id, QUrl::fromLocalFile(finalPath).toString()
+        );
         return;
     }
 
@@ -247,7 +257,7 @@ void SecretChatManager::downloadSecretAttachment(
                 qCritical() << "[Download] Failed to get download URL:"
                             << urlReply->errorString();
                 m_activeDownloads.remove(file_id);
-                // TODO emit attachmentDownloadFailed(message_id, file_id);
+                emit attachmentDownloadFailed(message_id, file_id);
                 return;
             }
 
@@ -260,7 +270,7 @@ void SecretChatManager::downloadSecretAttachment(
                 qCritical()
                     << "[Download] Server returned empty or invalid JSON array";
                 m_activeDownloads.remove(file_id);
-                // TODO emit attachmentDownloadFailed(message_id, file_id);
+                emit attachmentDownloadFailed(message_id, file_id);
                 return;
             }
 
@@ -270,7 +280,7 @@ void SecretChatManager::downloadSecretAttachment(
                 qCritical()
                     << "[Download] download_url is empty in server response!";
                 m_activeDownloads.remove(file_id);
-                // TODO emit attachmentDownloadFailed(message_id, file_id);
+                emit attachmentDownloadFailed(message_id, file_id);
                 return;
             }
 
@@ -308,8 +318,7 @@ void SecretChatManager::downloadSecretAttachment(
                                     << dlReply->errorString();
                         QFile::remove(tempEncPath);
                         m_activeDownloads.remove(file_id);
-                        // TODO emit attachmentDownloadFailed(message_id,
-                        // file_id);
+                        emit attachmentDownloadFailed(message_id, file_id);
                         return;
                     }
 
@@ -337,14 +346,16 @@ void SecretChatManager::downloadSecretAttachment(
                                     file_id, finalPath
                                 );
 
-                                // TODO emit attachmentDownloaded(message_id,
-                                // file_id, finalPath);
+                                emit attachmentDownloaded(
+                                    message_id, file_id,
+                                    QUrl::fromLocalFile(finalPath).toString()
+                                );
                             } else {
                                 qCritical()
                                     << "[Download] File decryption failed!";
-                                // TODO emit
-                                // attachmentDownloadFailed(message_id,
-                                // file_id);
+                                emit attachmentDownloadFailed(
+                                    message_id, file_id
+                                );
                             }
                         }
                     );
@@ -677,7 +688,8 @@ Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
         return QString();
     }
     QString messageId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    qint64 timestamp = QDateTime::currentSecsSinceEpoch();
+    qint64 timestamp = QDateTime::currentMSecsSinceEpoch();
+    QDateTime dt = QDateTime::fromMSecsSinceEpoch(timestamp, Qt::UTC);
     qDebug() << "[SecretChatManager] Generated message ID:" << messageId
              << "- Saving to local DB...";
 
@@ -699,6 +711,8 @@ Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
         attObj["file_name"] = fi.fileName();
         attObj["file_size_bytes"] = fi.size();
         attObj["local_path"] = path;
+        attObj["download_url"] = QUrl::fromLocalFile(path).toString();
+        attObj["file_type"] = SecretChatManager::getMimeType(path);
         uiAttachments.append(attObj);
     }
 
@@ -707,7 +721,7 @@ Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
     localMsg["text"] = text;
     localMsg["chat_id"] = chat_id;
     localMsg["message_type"] = messageType;
-    localMsg["sent_at"] = timestamp;
+    localMsg["sent_at"] = dt.toString(Qt::ISODateWithMs);
     localMsg["sender_id"] = m_stateManager->getUserId();
     localMsg["status"] = "pending";
     localMsg["attachments"] = uiAttachments;
@@ -768,7 +782,7 @@ Q_INVOKABLE QString SecretChatManager::sendSecretMessage(
             jsonObj.value("peer_id").toVariant().toLongLong();
         outerPayload["chat_id"] = chat_id;
         outerPayload["encrypted_payload"] =
-            QString::fromLatin1(encryptResult.envelope.toBase64());
+            QString::fromLatin1(encryptResult.envelope);
 
         QByteArray bodyData =
             QJsonDocument(outerPayload).toJson(QJsonDocument::Compact);
@@ -1112,7 +1126,7 @@ Q_INVOKABLE void SecretChatManager::markChatAsRead(const QString &chat_id) {
     outerPayload["target_user_id"] = targetUserId;
     outerPayload["chat_id"] = chat_id;
     outerPayload["encrypted_payload"] =
-        QString::fromLatin1(encryptResult.envelope.toBase64());
+        QString::fromLatin1(encryptResult.envelope);
 
     QByteArray bodyData =
         QJsonDocument(outerPayload).toJson(QJsonDocument::Compact);
@@ -1223,6 +1237,10 @@ void SecretChatManager::handleIncomingSecretMessage(const QJsonObject &envelope
     QString chatId = envelope["chat_id"].toString();
     qint64 senderId = envelope["sender_id"].toVariant().toLongLong();
 
+    if (senderId == m_stateManager->getUserId()) {
+        return;
+    }
+
     QByteArray sharedSecret = m_dbManager->getSharedSecret(chatId);
     if (sharedSecret.isEmpty()) {
         qCritical() << "[SecretChatManager] Shared secret missing for chat"
@@ -1230,9 +1248,8 @@ void SecretChatManager::handleIncomingSecretMessage(const QJsonObject &envelope
         return;
     }
 
-    QByteArray encryptedPayload = QByteArray::fromBase64(
-        envelope["encrypted_payload"].toString().toLatin1()
-    );
+    QByteArray encryptedPayload =
+        envelope["encrypted_payload"].toString().toLatin1();
     auto decryptResult =
         crypto::CryptoManager::decryptMessage(encryptedPayload, sharedSecret);
     if (!decryptResult.success) {
@@ -1257,6 +1274,7 @@ void SecretChatManager::handleIncomingSecretMessage(const QJsonObject &envelope
     QString text = innerPayload["text"].toString();
     QString messageType = innerPayload["message_type"].toString();
     qint64 timestamp = innerPayload["sent_at"].toVariant().toLongLong();
+    QDateTime dt = QDateTime::fromMSecsSinceEpoch(timestamp, Qt::UTC);
 
     bool saved = m_dbManager->saveMessage(
         messageId, chatId, senderId, messageType, text, timestamp
@@ -1282,15 +1300,11 @@ void SecretChatManager::handleIncomingSecretMessage(const QJsonObject &envelope
         QString fileType = attObj["file_type"].toString();
         QByteArray fileKey =
             QByteArray::fromBase64(attObj["file_key"].toString().toLatin1());
-
-        QString expectedCachePath = cacheDir + "/" + fileHash;
+        QString expectedCachePath = cacheDir + "/" + fileId;
         QString localPath = "";
 
-        if (QFile::exists(expectedCachePath)) {
-            qDebug() << "[SecretChatManager] Attachment" << fileName
-                     << "found in local cache! Skipping download.";
-            localPath = expectedCachePath;
-            fileType = SecretChatManager::getMimeType(localPath);
+        if (fileType.isEmpty()) {
+            fileType = SecretChatManager::getMimeType(expectedCachePath);
         }
 
         m_dbManager->saveAttachment(
@@ -1299,6 +1313,9 @@ void SecretChatManager::handleIncomingSecretMessage(const QJsonObject &envelope
         );
 
         attObj["local_path"] = localPath;
+        if (!localPath.isEmpty()) {
+            attObj["download_url"] = QUrl::fromLocalFile(localPath).toString();
+        }
         uiAttachments.append(attObj);
     }
     QJsonObject localMsg;
@@ -1306,13 +1323,14 @@ void SecretChatManager::handleIncomingSecretMessage(const QJsonObject &envelope
     localMsg["text"] = text;
     localMsg["chat_id"] = chatId;
     localMsg["message_type"] = messageType;
-    localMsg["sent_at"] = timestamp;
+    localMsg["sent_at"] = dt.toString(Qt::ISODateWithMs);
     localMsg["sender_id"] = senderId;
     localMsg["attachments"] = uiAttachments;
 
     qDebug() << "[SecretChatManager] Successfully processed incoming message"
              << messageId;
-    // TODO emit
+    emit secretMessageReceived(localMsg);
+    emit secretChatsUpdated();
 }
 
 void SecretChatManager::handleChatRead(const QJsonObject &envelope) {
@@ -1345,7 +1363,7 @@ void SecretChatManager::handleChatRead(const QJsonObject &envelope) {
 
     qDebug() << "[SecretChatManager] Chat" << chatId
              << "marked as read by peer.";
-    // TODO emit
+    emit secretChatsUpdated();
 }
 
 void SecretChatManager::processIncomingSecretPayload(const QJsonObject &envelope

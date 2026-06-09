@@ -30,7 +30,7 @@ inline constexpr const char *SCHEMA_CHATS = R"(
         type TEXT NOT NULL,
         peer_id INTEGER NOT NULL,
         name TEXT,
-        shared_secret BLOB NOT NULL,
+        shared_secret BLOB,
         status TEXT NOT NULL
     );
 )";
@@ -46,10 +46,14 @@ inline constexpr const char *SCHEMA_MESSAGES = R"(
         is_read INTEGER DEFAULT 0,
         FOREIGN KEY(chat_id) REFERENCES secret_chats(id) ON DELETE CASCADE
     );
+)";
 
+inline constexpr const char *SCHEMA_MESSAGES_INDEX_CHAT_TIME = R"(
     CREATE INDEX IF NOT EXISTS idx_messages_chat_time 
     ON secret_messages (chat_id, sent_at DESC);
+)";
 
+inline constexpr const char *SCHEMA_MESSAGES_INDEX_UNREAD = R"(
     CREATE INDEX IF NOT EXISTS idx_messages_unread 
     ON secret_messages (chat_id, is_read, sender_id);
 )";
@@ -148,6 +152,14 @@ bool SecretDatabaseManager::createTables() {
     if (!execute_sql(SCHEMA_MESSAGES, "secret_messages")) {
         return false;
     }
+    if (!execute_sql(
+            SCHEMA_MESSAGES_INDEX_CHAT_TIME, "idx_messages_chat_time"
+        )) {
+        return false;
+    }
+    if (!execute_sql(SCHEMA_MESSAGES_INDEX_UNREAD, "idx_messages_unread")) {
+        return false;
+    }
     if (!execute_sql(SCHEMA_ATTACHMENTS, "secret_attachments")) {
         return false;
     }
@@ -167,8 +179,8 @@ bool SecretDatabaseManager::saveIdentity(
         "INSERT OR REPLACE INTO user_identity (id, public_key, private_key) "
         "VALUES (1, :pub, :priv)"
     );
-    query.bindValue(":pub", public_key);
-    query.bindValue(":priv", private_key);
+    query.bindValue(":pub", public_key.toBase64());
+    query.bindValue(":priv", private_key.toBase64());
 
     if (!query.exec()) {
         qCritical().noquote() << QString(
@@ -191,8 +203,10 @@ std::optional<UserIdentity> SecretDatabaseManager::getIdentity() {
 
     if (query.exec() && query.next()) {
         UserIdentity identity;
-        identity.publicKey = query.value("public_key").toByteArray();
-        identity.privateKey = query.value("private_key").toByteArray();
+        identity.publicKey =
+            QByteArray::fromBase64(query.value("public_key").toByteArray());
+        identity.privateKey =
+            QByteArray::fromBase64(query.value("private_key").toByteArray());
         qDebug() << "[SecretDB] User identity retrieved successfully.";
         return identity;
     }
@@ -210,7 +224,7 @@ bool SecretDatabaseManager::createChat(
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
     query.prepare(
-        R"(INSERT INTO secret_chats (id, type, peer_id, name, shared_secret, status) 
+        R"(INSERT OR IGNORE INTO secret_chats (id, type, peer_id, name, shared_secret, status) 
                  VALUES (:id, :type, :peer_id, :name, :shared_secret, :status)
     )"
     );
@@ -254,7 +268,8 @@ QByteArray SecretDatabaseManager::getSharedSecret(const QString &chat_id) {
     query.bindValue(":chat_id", chat_id);
 
     if (query.exec() && query.next()) {
-        return query.value("shared_secret").toByteArray();
+        return QByteArray::fromBase64(query.value("shared_secret").toByteArray()
+        );
     }
     qWarning() << "[SecretDB] Shared secret not found for chat:" << chat_id;
     return QByteArray();
@@ -428,7 +443,7 @@ QString SecretDatabaseManager::getChatsJson(qint64 current_user_id) {
             ORDER BY sent_at DESC LIMIT 1
         )
         GROUP BY c.id
-        ORDER BY m.sent_at DESC NULLS LAST
+        ORDER BY IFNULL(m.sent_at, 0) DESC
         )");
 
     query.bindValue(":my_id", current_user_id);
@@ -450,7 +465,7 @@ QString SecretDatabaseManager::getChatsJson(qint64 current_user_id) {
         chat_obj["id"] = query.value("id").toString();
         chat_obj["type"] = query.value("type").toString();
         chat_obj["peer_id"] = query.value("peer_id").toLongLong();
-        chat_obj["name"] = query.value("name").toString();
+        chat_obj["title"] = query.value("name").toString();
         chat_obj["unread_count"] = query.value("unread_count").toInt();
         chat_obj["status"] = query.value("status").toString();
 
@@ -490,7 +505,7 @@ QString SecretDatabaseManager::getMessagesJson(
     QString sql = R"(
         SELECT 
             m.id AS msg_id, m.sender_id, m.message_type, m.text, m.sent_at, m.is_read,
-            a.id AS att_id, a.file_name, a.file_size_bytes, a.s3_object_key, a.local_path
+            a.id AS att_id, a.file_name, a.file_size_bytes, a.s3_object_key, a.local_path, a.file_type
         FROM (
             SELECT id, sender_id, message_type, text, sent_at, is_read
             FROM secret_messages 
@@ -563,6 +578,7 @@ QString SecretDatabaseManager::getMessagesJson(
                 query.value("file_size_bytes").toLongLong();
             att_obj["s3_object_key"] = query.value("s3_object_key").toString();
             att_obj["local_path"] = query.value("local_path").toString();
+            att_obj["file_type"] = query.value("file_type").toString();
             current_attachments.append(att_obj);
         }
     }
@@ -629,6 +645,7 @@ QString SecretDatabaseManager::getMessageJson(const QString &message_id) {
             att_obj["file_name"] = att_query.value("file_name").toString();
             att_obj["file_size_bytes"] =
                 att_query.value("file_size_bytes").toLongLong();
+            att_obj["file_type"] = att_query.value("file_type").toString();
             att_obj["s3_object_key"] =
                 att_query.value("s3_object_key").toString();
             att_obj["local_path"] =
@@ -725,7 +742,7 @@ bool SecretDatabaseManager::updateChatStatus(
         "WHERE id = :chat_id"
     );
     query.bindValue(":status", status);
-    query.bindValue(":shared_secret", shared_secret);
+    query.bindValue(":shared_secret", shared_secret.toBase64());
     query.bindValue(":chat_id", chat_id);
 
     if (!query.exec()) {
@@ -777,7 +794,7 @@ QString SecretDatabaseManager::getChat(const QString &chat_id) {
         chat_obj["id"] = query.value("id").toString();
         chat_obj["type"] = query.value("type").toString();
         chat_obj["peer_id"] = query.value("peer_id").toLongLong();
-        chat_obj["name"] = query.value("name").toString();
+        chat_obj["title"] = query.value("name").toString();
         chat_obj["status"] = query.value("status").toString();
 
         QJsonDocument doc(chat_obj);

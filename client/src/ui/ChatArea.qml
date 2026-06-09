@@ -19,6 +19,8 @@ Rectangle {
     property string activeFullscreenVideoUrl: ""
     property string activeChatType: "direct" // "direct", "group", "saved"
     property string activeChatDescription: ""
+    property string activeChatPeerId: ""
+    property string activeChatStatus: "active" // "active" or "pending"
 
     MediaPlayer {
         id: globalAudioPlayer
@@ -55,6 +57,11 @@ Rectangle {
         return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s
     }
 
+    function getCleanLocalPath(url) {
+        var str = url.toString();
+        return str.replace("file://", "");
+    }
+
     function showCancelPrompt() {
         cancelVoiceDialog.open()
     }
@@ -65,19 +72,19 @@ Rectangle {
         
         try {
             if (historyStr !== "") {
-                var messages = JSON.parse(historyStr);
+                var messages = JSON.parse(historyStr)
                 
                 if (beforeTimestamp === 0) {
-                    chatModel.clear();
-                    for (var i = messages.length - 1; i >= 0; i--) chatModel.append(messages[i]);
+                    chatModel.clear()
+                    for (var i = 0; i < messages.length; i++) chatModel.append(messages[i])
                 } else {
-                    for (var k = 0; k < messages.length; k++) chatModel.append(messages[k]);
+                    for (var k = 0; k < messages.length; k++) chatModel.append(messages[k])
                 }
                 
-                if (messages.length < 50) hasMoreHistory = false;
+                if (messages.length < 50) hasMoreHistory = false
             } else {
-                if (beforeTimestamp === 0) chatModel.clear();
-                hasMoreHistory = false;
+                if (beforeTimestamp === 0) chatModel.clear()
+                hasMoreHistory = false
             }
         } catch (e) {
             console.error("[ChatArea] Ошибка парсинга истории секретного чата:", e);
@@ -118,6 +125,16 @@ Rectangle {
         if (typeof messageInput !== "undefined") {
             messageInput.text = ""
         }
+
+        if (activeChatId !== "") { 
+            if (activeChatType === "secret") {
+                loadSecretHistory(activeChatId, 0)
+            } else {
+                ChatLayer.fetchChatHistory(activeChatId)
+            }
+        } else {
+            chatModel.clear()
+        }
     }
 
     Connections {
@@ -127,7 +144,16 @@ Rectangle {
             isLoadingHistory = true
             chatModel.clear()
             for (var i = messages.length - 1; i >= 0; i--) {
-                chatModel.append(messages[i])
+                var msg = messages[i]
+
+                msg.id = String(msg.id)
+                msg.chat_id = String(msg.chat_id)
+                if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+
+                if (msg.text === undefined) msg.text = ""
+                if (msg.attachments === undefined) msg.attachments = []
+                
+                chatModel.append(msg)
             }
 
             if (messages.length < 50) {
@@ -164,7 +190,16 @@ Rectangle {
             }
 
             for (var i = 0; i < messages.length; i++) {
-                chatModel.append(messages[i])
+                var msg = messages[i]
+
+                msg.id = String(msg.id)
+                msg.chat_id = String(msg.chat_id)
+                if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+
+                if (msg.text === undefined) msg.text = ""
+                if (msg.attachments === undefined) msg.attachments = []
+                
+                chatModel.append(msg)
             }
 
             Qt.callLater(function() {
@@ -176,6 +211,12 @@ Rectangle {
             messageInput.text = ""
             if (!msg) return
 
+            msg.id = String(msg.id)
+            msg.chat_id = String(msg.chat_id)
+            if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+
+            if (msg.text === undefined) msg.text = ""
+            if (msg.attachments === undefined) msg.attachments = []
             chatModel.insert(0, msg)
             
             Qt.callLater(function() {
@@ -188,6 +229,12 @@ Rectangle {
                 var msg = data.data.message
                 if (String(msg.chat_id) === String(activeChatId)) {
                     msg.is_me = (String(msg.sender_id) === String(AppState.userId))
+                    msg.id = String(msg.id);
+                    msg.chat_id = String(msg.chat_id)
+                    if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+                    
+                    if (msg.text === undefined) msg.text = ""
+                    if (msg.attachments === undefined) msg.attachments = []
                     
                     chatModel.insert(0, msg)
 
@@ -207,10 +254,77 @@ Rectangle {
     }
 
     Connections {
+        target: SecretChatManager
+        
+        function onSecretMessageReceived(msg) {
+            if (String(msg.chat_id) === String(activeChatId)) {
+                msg.is_me = false
+                msg.id = String(msg.id)
+                msg.chat_id = String(msg.chat_id)
+                if (msg.sent_at !== undefined) msg.sent_at = String(msg.sent_at)
+
+                if (msg.text === undefined) msg.text = ""
+                if (msg.attachments === undefined) msg.attachments = []
+                chatModel.insert(0, msg)
+                
+                Qt.callLater(function() {
+                    messageList.positionViewAtIndex(0, ListView.Beginning);
+                });
+                
+                SecretChatManager.markChatAsRead(activeChatId);
+            }
+        }
+
+        function onAttachmentDownloaded(messageId, fileId, fileUrl) {
+            for (var i = 0; i < chatModel.count; i++) {
+                var item = chatModel.get(i);
+                if (String(item.id) === String(messageId)) {
+                    var msgObj = JSON.parse(JSON.stringify(item)); 
+                    for (var j = 0; j < msgObj.attachments.length; j++) {
+                        if (String(msgObj.attachments[j].file_id) === String(fileId)) {
+                            msgObj.attachments[j].download_url = fileUrl; 
+                        }
+                    }
+                    chatModel.set(i, msgObj)
+                    break
+                }
+            }
+        }
+
+        function onAttachmentDownloadFailed(messageId, fileId) {
+            errorToast.show("Ошибка загрузки/расшифровки секретного файла");
+        }
+
+        function onSecretChatError(errorMsg) {
+            errorToast.show(errorMsg);
+        }
+    }
+
+    Connections {
         target: VoiceLayer
         function onVoiceMessageReady(audioUrl) {
             isUploading = true
-            MediaLayer.uploadFile(activeChatId, audioUrl, false, "", "voice")
+
+            var cleanPath = audioUrl.toString();
+            if (cleanPath.indexOf("file:///") === 0) {
+                cleanPath = cleanPath.substring(7);
+            } else if (cleanPath.indexOf("file://") === 0) {
+                cleanPath = cleanPath.substring(7);
+            }
+            
+            if (activeChatType === "secret") {
+                var msgJsonStr = SecretChatManager.sendSecretMessage(activeChatId, "", "voice", [cleanPath]);
+                if (msgJsonStr !== "") {
+                    var localMsg = JSON.parse(msgJsonStr);
+                    localMsg.is_me = true; 
+                    chatModel.insert(0, localMsg); 
+                    Qt.callLater(function() { messageList.positionViewAtIndex(0, ListView.Beginning); });
+                    SecretChatManager.secretChatsUpdated(); 
+                }
+                isUploading = false;
+            } else {
+                MediaLayer.uploadFile(activeChatId, cleanPath, false, "", "voice")
+            }
         }
     }
 
@@ -356,6 +470,7 @@ Rectangle {
                         ChatLayer.fetchChatInfo(activeChatId)
                         groupInfoPopup.open()
                     } else if (activeChatType === "direct") {
+                        ChatLayer.fetchChatMembers(activeChatId)
                         directInfoPopup.open()
                     }
                 }
@@ -454,7 +569,8 @@ Rectangle {
                 id: msgDelegateItem
                 width: messageList.width
                 
-                property bool isMe: model.is_me !== undefined ? model.is_me : false
+                property string resolvedMsgType: model.type !== undefined ? model.type : (model.message_type !== undefined ? model.message_type : "text")
+                property bool isMe: String(model.sender_id) === String(AppState.userId)
                 property var msgAttachments: model.attachments !== undefined ? model.attachments : null
                 property var firstAttachment: {
                     if (!msgAttachments) return null;
@@ -466,12 +582,12 @@ Rectangle {
                 property string fileTypeStr: firstAttachment && typeof firstAttachment.file_type === 'string' 
                                              ? firstAttachment.file_type.toLowerCase() : ""
 
-                property bool isVoice: (model.type === "voice") || 
+                property bool isVoice: (resolvedMsgType === "voice") || 
                                        (fileTypeStr.indexOf("audio/") === 0) ||
                                        (typeof model.text === 'string' && model.text.indexOf("VOICE::") === 0)
 
-                property bool isImage: !isVoice && fileTypeStr.indexOf("image/") === 0 && model.type !== "text"
-                property bool isVideo: !isVoice && fileTypeStr.indexOf("video/") === 0 && model.type !== "text"
+                property bool isImage: !isVoice && fileTypeStr.indexOf("image/") === 0 && resolvedMsgType !== "text"
+                property bool isVideo: !isVoice && fileTypeStr.indexOf("video/") === 0 && resolvedMsgType !== "text"
 
                 property bool hasFileAttachment: firstAttachment !== null && !isVoice && !isImage && !isVideo
 
@@ -536,7 +652,14 @@ Rectangle {
 
                         width: (isVoice || isImage || isVideo || hasFileAttachment)
                             ? Math.min(280, parent.width * 0.75) 
-                            : Math.min(Math.max(60, messageText.implicitWidth + timeText.implicitWidth + 30, nameWidth), parent.width * 0.75)
+                            : Math.max(80, Math.min(dummyText.implicitWidth + 32, parent.width * 0.75), nameWidth)
+
+                        Text {
+                            id: dummyText
+                            visible: false
+                            text: messageText.text
+                            font: messageText.font
+                        }
                         
                         height: {
                             if (isVoice) return 60 + nameOffset
@@ -700,7 +823,8 @@ Rectangle {
                             text: (model.text !== undefined && model.text !== null) ? model.text.trim() : ""
                             
                             anchors.top: isImage ? imageContainer.bottom : (isVideo ? videoContainer.bottom : parent.top)
-                            anchors.left: parent.left; width: parent.width - 24
+                            anchors.left: parent.left
+                            width: parent.width - 24
                             anchors.margins: 8
                             anchors.leftMargin: 12
                             anchors.topMargin: (isImage || isVideo) ? 8 : (12 + parent.nameOffset)
@@ -774,14 +898,24 @@ Rectangle {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: 
-                                        if (fileUrl) 
-                                            MediaLayer.downloadFile(
-                                                fileUrl, 
-                                                firstAttachment 
-                                                    ? (firstAttachment.original_filename || firstAttachment.file_name || "file")
-                                                    : "file"
-                                            )
+                                    onClicked: {
+                                        if (fileUrl && fileUrl.indexOf("file://") === 0) {
+                                            Qt.openUrlExternally(fileUrl);
+                                        } else {
+                                            if (chatAreaRoot.activeChatType === "secret") {
+                                                if (firstAttachment && firstAttachment.file_id) {
+                                                    SecretChatManager.downloadSecretAttachment(uniqueId, firstAttachment.file_id);
+                                                }
+                                            } else {
+                                                if (fileUrl) {
+                                                    MediaLayer.downloadFile(
+                                                        fileUrl, 
+                                                        firstAttachment ? (firstAttachment.original_filename || firstAttachment.file_name || "file") : "file"
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -1050,15 +1184,20 @@ Rectangle {
                                     event.accepted = true;
                                     if (text.trim() !== "" && isChatActive) {
                                         if (chatAreaRoot.activeChatType === "secret") {
-                                            var newMsgId = SecretChatManager.sendSecretMessage(activeChatId, text.trim(), "text", []);
+                                            var msgJsonStr = SecretChatManager.sendSecretMessage(activeChatId, text.trim(), "text", []);
                                             
-                                            // Временно запрашиваем перерисовку вручную, пока нет сигналов
-                                            if (newMsgId !== "") {
-                                                ChatLayer.fetchChats(); 
-                                                chatAreaRoot.loadSecretHistory(activeChatId, 0);
+                                            if (msgJsonStr !== "") {
+                                                var localMsg = JSON.parse(msgJsonStr)
+                                                localMsg.is_me = true
+                                                
+                                                chatModel.insert(0, localMsg)
+                                                Qt.callLater(function() {
+                                                    messageList.positionViewAtIndex(0, ListView.Beginning)
+                                                });
+                                                SecretChatManager.secretChatsUpdated()
                                             }
                                         } else {
-                                            ChatLayer.sendMessage(activeChatId, text.trim());
+                                            ChatLayer.sendMessage(activeChatId, text.trim())
                                         }
                                         messageInput.text = "";
                                     }
@@ -1335,8 +1474,22 @@ Rectangle {
             messageInput.text = ""
             isUploading = true
 
-            var msgType = (asFile || fileType === "document") ? "text" : "media"
-            MediaLayer.uploadFile(activeChatId, filePath, asFile, caption, msgType)
+            var msgType = asFile ? "text" : "media"
+            var cleanPath = chatAreaRoot.getCleanLocalPath(filePath)
+            
+            if (activeChatType === "secret") {
+                var msgJsonStr = SecretChatManager.sendSecretMessage(activeChatId, caption, msgType, [cleanPath])
+                if (msgJsonStr !== "") {
+                    var localMsg = JSON.parse(msgJsonStr)
+                    localMsg.is_me = true
+                    chatModel.insert(0, localMsg)
+                    Qt.callLater(function() { messageList.positionViewAtIndex(0, ListView.Beginning); })
+                    SecretChatManager.secretChatsUpdated()
+                }
+                isUploading = false
+            } else {
+                MediaLayer.uploadFile(activeChatId, cleanPath, asFile, caption, msgType)
+            }
         }
         onCancelRequested: {}
     }
@@ -1692,6 +1845,15 @@ Rectangle {
                     if (String(members[i].user_id) === String(AppState.userId)) {
                         groupInfoPopup.currentUserRole = members[i].role
                         break
+                    }
+                }
+
+                if (activeChatType === "direct") {
+                    for (var j = 0; j < members.length; j++) {
+                        if (String(members[j].user_id) !== String(AppState.userId)) {
+                            activeChatPeerId = String(members[j].user_id)
+                            break
+                        }
                     }
                 }
             }
@@ -2815,12 +2977,16 @@ Rectangle {
                         cursorShape: Qt.PointingHandCursor
                         
                         onClicked: {
-                            SecretChatManager.createSecretRequest(parseInt(activeChatId))
-                            confirmSecretChatPopup.close()
+                            if (activeChatPeerId !== "") {
+                                SecretChatManager.createSecretChatRequest(parseInt(activeChatPeerId))
+                                confirmSecretChatPopup.close()
 
-                            var secId = "pendind_" + activeChatId
-                            chatAreaRoot.activeChatType = "secret"
-                            chatAreaRoot.activeChatId = secId
+                                var secId = "pendind_" + activeChatPeerId
+                                chatAreaRoot.activeChatType = "secret"
+                                chatAreaRoot.activeChatId = secId
+                            } else {
+                                errorToast.show("Не удалось определить ID собеседника. Пожалуйста, откройте профиль еще раз.")
+                            }
                         }
                     }
                 }

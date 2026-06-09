@@ -21,45 +21,49 @@ Rectangle {
     }
 
     signal settingsRequested()
-    signal chatSelected(string chatId, string chatName, string chatType, string chatDescription)
+    signal chatSelected(string chatId, string chatName, string chatType, string chatDescription, string chatStatus)
+
+    function parseDateToMSecs(t) {
+        if (!t) return 0
+        if (typeof t === "number") return t < 10000000000 ? t * 1000 : t
+        var d = new Date(String(t).replace(" ", "T") + (String(t).indexOf("Z") === -1 ? "Z" : ""))
+        return isNaN(d.getTime()) ? 0 : d.getTime()
+    }
+
+    function updateCombinedChats(commonChats) {
+        if (isSearching) return
+        var secretChatsStr = SecretChatManager.getSecretChatsPreviews()
+        var secretChats = []
+        try {
+            if (secretChatsStr !== "") secretChats = JSON.parse(secretChatsStr);
+        } catch (e) { console.error("[Sidebar] Ошибка парсинга секретных чатов:", e); }
+
+        var filteredCommon = []
+        for (var i = 0; i < commonChats.length; i++) {
+            if (commonChats[i].type !== "secret") {
+                filteredCommon.push(commonChats[i])
+            }
+        }
+
+        var combinedChats = filteredCommon.concat(secretChats)
+
+        combinedChats.sort(function(a, b) {
+            if (a.type === "saved") return -1
+            if (b.type === "saved") return 1
+            var timeA = a.last_message ? parseDateToMSecs(a.last_message.sent_at) : 0
+            var timeB = b.last_message ? parseDateToMSecs(b.last_message.sent_at) : 0
+            return timeB - timeA
+        })
+        
+        chatDataList = combinedChats
+        chatList.model = chatDataList
+    }
 
     Connections {
         target: ChatLayer
 
         function onChatsUpdated(chats) {
-            function onChatsUpdated(chats) {
-                if (!isSearching) {
-                    var secretChatsStr = SecretChatManager.getSecretChatsPreviews();
-                    var secretChats = [];
-                    try {
-                        if (secretChatsStr !== "") {
-                            secretChats = JSON.parse(secretChatsStr);
-                        }
-                    } catch (e) {
-                        console.error("[Sidebar] Ошибка парсинга секретных чатов:", e);
-                    }
-
-                    var combinedChats = chats.concat(secretChats);
-
-                    combinedChats.sort(function(a, b) {
-                        if (a.type === "saved") return -1;
-                        if (b.type === "saved") return 1;
-
-                        var strA = a.last_message ? a.last_message.sent_at || "" : "";
-                        var timeA = strA ? new Date(strA.replace(" ", "T") + (strA.indexOf("Z") === -1 ? "Z" : "")).getTime() : 0;
-                        if (isNaN(timeA)) timeA = 0;
-
-                        var strB = b.last_message ? b.last_message.sent_at || "" : "";
-                        var timeB = strB ? new Date(strB.replace(" ", "T") + (strB.indexOf("Z") === -1 ? "Z" : "")).getTime() : 0;
-                        if (isNaN(timeB)) timeB = 0;
-                        
-                        return timeB - timeA;
-                    })
-                    
-                    chatDataList = combinedChats;
-                    chatList.model = chatDataList;
-                }
-            }
+            updateCombinedChats(chats)
         }
 
         function onMessageSentSuccess() {
@@ -82,7 +86,7 @@ Rectangle {
         function onDirectChatOpened(chatId, chatTitle) {
             searchInput.text = ""
             isSearching = false
-            sidebarRoot.chatSelected(chatId, chatTitle, "direct", "")
+            sidebarRoot.chatSelected(chatId, chatTitle, "direct", "", "active")
         }
 
         function onGroupChatCreated(chat) {
@@ -94,6 +98,22 @@ Rectangle {
             var cdesc = chat.description || ""
             sidebarRoot.chatSelected(cid, cname, "group", cdesc)
             ChatLayer.fetchChatHistory(cid, 0)
+        }
+    }
+
+    Connections {
+        target: SecretChatManager
+        
+        function onSecretChatsUpdated() {
+            var currentCommonChats = []
+            for (var i = 0; i < chatDataList.length; i++) {
+                if (chatDataList[i].type !== "secret") currentCommonChats.push(chatDataList[i])
+            }
+            updateCombinedChats(currentCommonChats)
+        }
+        
+        function onSecretChatCreated(chatId, title) {
+            sidebarRoot.chatSelected(chatId, title, "secret", "", "pending")
         }
     }
 
@@ -110,6 +130,8 @@ Rectangle {
     Component.onCompleted: {
         console.log("[Sidebar] Component.onCompleted. userId =", AppState.userId)
         if (AppState.userId > 0) {
+            updateCombinedChats([])
+
             ChatLayer.fetchChats()
         }
     }
@@ -301,12 +323,12 @@ Rectangle {
                     } else {
                         var displayName = (itemData.type === "saved") ? "Избранное" : (itemData.title ? itemData.title : "")
                         sidebarRoot.chatSelected(
-                            String(itemData.chat_id),
+                            String(itemData.chat_id ?? itemData.id ?? ""),
                             displayName,
                             itemData.type,
-                            itemData.description || ""
+                            itemData.description || "",
+                            itemData.status || "active"
                         )
-                        ChatLayer.fetchChatHistory(String(itemData.chat_id))
                     }
                 }
             }
@@ -334,6 +356,19 @@ Rectangle {
                         source: "qrc:/messenger_client_uri/assets/icons/bookmark.svg"
                         width: 24; height: 24; sourceSize: Qt.size(24, 24)
                         anchors.centerIn: parent
+                    }
+
+                    Text {
+                        visible: !isSelf && (isSearching || itemData.type !== "saved")
+                        text: isSearching
+                            ? (itemData.display_name ? itemData.display_name.charAt(0).toUpperCase() : "?")
+                            : (itemData.title ? itemData.title.charAt(0).toUpperCase() : "?")
+                        color: "white"
+                        font.bold: true
+                        font.family: "Segoe UI"
+                        font.pixelSize: 22
+                        anchors.centerIn: parent
+                        textFormat: Text.PlainText
                     }
 
                     Text {
@@ -377,7 +412,7 @@ Rectangle {
                                 font.pixelSize: 15
                                 elide: Text.ElideRight
                                 textFormat: Text.PlainText
-                                Layout.maximumWidth: parent.width - (lockIcon.visible ? 20 : 0)
+                                Layout.maximumWidth: parent.width - (lockIcon.visible ? lockIcon.width + parent.spacing : 0)
                             }
 
                             Image {
@@ -386,8 +421,10 @@ Rectangle {
                                 source: "qrc:/messenger_client_uri/assets/icons/lock.svg"
                                 width: 14; height: 14; sourceSize: Qt.size(14, 14)
                                 Layout.alignment: Qt.AlignVCenter
-                                layer.enabled: true
-                                layer.effect: ColorOverlay { color: chatItem.isActive ? "white" : "#4fa896" }
+                            }
+
+                            Item { 
+                                Layout.fillWidth: true 
                             }
                         }
 
@@ -453,28 +490,27 @@ Rectangle {
 
                         // ТИП ВЛОЖЕНИЯ
                         property string mediaPrefix: {
-                            if (isSearching || !itemData || !itemData.last_message) return "";
-                            var msg = itemData.last_message;
-                            
-                            var isImage = msg.type === "media" || msg.type === "image";
-                            var isVideo = msg.type === "video" || msg.type === "round";
-                            var isVoice = msg.type === "voice";
-                            var isDoc = msg.type === "file" || msg.type === "document";
+                            if (isSearching || !itemData || !itemData.last_message) return ""
+                            var msg = itemData.last_message
+
+                            var mType = msg.message_type || msg.type || "text"
+
+                            if (mType === "voice") return "Голосовое сообщение"
 
                             if (msg.attachments && msg.attachments.length > 0) {
-                                var fType = msg.attachments[0].file_type || "";
-                                if (fType.startsWith("image/")) { isImage = true; isVideo = false; isVoice = false; isDoc = false; }
-                                else if (fType.startsWith("video/")) { isVideo = true; isImage = false; isVoice = false; isDoc = false; }
-                                else if (fType.startsWith("audio/")) { isVoice = true; isImage = false; isVideo = false; isDoc = false; }
-                                else { isDoc = true; isImage = false; isVideo = false; isVoice = false; }
-                            }
+                                if (mType === "text") return "Файл"
 
-                            if (isImage) return "Фотография";
-                            if (isVideo) return "Видео";
-                            if (isVoice) return "Голосовое сообщение";
-                            if (isDoc) return "Файл";
+                                if (mType === "media") {
+                                    var fType = msg.attachments[0].file_type || ""
+                                    if (fType.indexOf("video/") === 0) return "Видео"
+                                    if (fType.indexOf("image/") === 0) return "Фотография"
+                                    return "Медиа"
+                                }
+                                
+                                return "Файл"
+                            }
                             
-                            return "";
+                            return ""
                         }
 
                         // ИМЯ ОТПРАВИТЕЛЯ
@@ -502,9 +538,11 @@ Rectangle {
                         Text {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
-                            color: chatItem.isActive ? "white" : appTheme.textHint
+
+                            color: chatItem.isActive ? "white" : (itemData.status === "pending" ? appTheme.accent : appTheme.textHint)
                             font.pixelSize: 14
                             font.family: "Segoe UI"
+                            font.italic: itemData.status === "pending"
                             
                             elide: Text.ElideRight
                             maximumLineCount: 1
@@ -512,13 +550,12 @@ Rectangle {
                             
                             text: {
                                 if (isSearching || !itemData) return "";
-
                                 if (!itemData.last_message) {
-                                    if (itemData.unread_count && itemData.unread_count > 0) return "Новое сообщение";
-                                    return "Нет сообщений";
+                                    if (itemData.unread_count && itemData.unread_count > 0) return "Новое сообщение"
+                                    return itemData.status === "pending" ? "Ожидание подтверждения..." : "Нет сообщений"
                                 }
 
-                                return itemData.last_message.text ? itemData.last_message.text.trim() : "";
+                                return itemData.last_message.text ? itemData.last_message.text.trim() : ""
                             }
                         }
                     }

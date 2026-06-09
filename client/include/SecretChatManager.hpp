@@ -52,6 +52,13 @@ signals:
     void secretChatCreated(const QString &chatId, const QString &title);
     void secretMessageReceived(const QJsonObject &message);
     void secretChatError(const QString &errorMsg);
+    void attachmentDownloaded(
+        const QString &messageId,
+        const QString &fileId,
+        const QString &fileUrl
+    );
+    void
+    attachmentDownloadFailed(const QString &messageId, const QString &fileId);
 
 private:
     client::db::SecretDatabaseManager *m_dbManager;
