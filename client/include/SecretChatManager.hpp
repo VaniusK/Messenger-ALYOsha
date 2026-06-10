@@ -60,7 +60,7 @@ signals:
     );
     void
     attachmentDownloadFailed(const QString &messageId, const QString &fileId);
-    void secretChatDelete(const QString &chatId);
+    void secretChatDeleted(const QString &chatId);
 
 private:
     client::db::SecretDatabaseManager *m_dbManager;
