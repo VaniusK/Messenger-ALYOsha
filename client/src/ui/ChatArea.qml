@@ -112,6 +112,17 @@ Rectangle {
             systemDialogBlocker.close()
         }
         function onFileSelected(filePath, fileType, fileSize, fileName) {
+            var maxSizeBytes = 1024 * 1024 * 1024
+            
+            if (fileSize <= 0) {
+                errorToast.show("Выбранный файл пуст")
+                return
+            }
+            if (fileSize > maxSizeBytes) {
+                errorToast.show("Файл слишком большой (максимальный размер - 1 ГБ)")
+                return
+            }
+
             mediaPreview.openWith(filePath, fileType, fileSize, fileName, messageInput.text.trim())
         }
         function onUploadFinished() {
