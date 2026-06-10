@@ -59,7 +59,17 @@ Rectangle {
 
     function getCleanLocalPath(url) {
         var str = url.toString();
-        return str.replace("file://", "");
+        if (str.indexOf("file:///") === 0) {
+            if (str.charAt(9) === ':') {
+                return decodeURIComponent(str.substring(8));
+            } else {
+                return decodeURIComponent(str.substring(7));
+            }
+        }
+        if (str.indexOf("file://") === 0) {
+            return decodeURIComponent(str.substring(7));
+        }
+        return decodeURIComponent(str);
     }
 
     function showCancelPrompt() {
@@ -303,12 +313,7 @@ Rectangle {
         function onVoiceMessageReady(audioUrl) {
             isUploading = true
 
-            var cleanPath = audioUrl.toString();
-            if (cleanPath.indexOf("file:///") === 0) {
-                cleanPath = cleanPath.substring(7);
-            } else if (cleanPath.indexOf("file://") === 0) {
-                cleanPath = cleanPath.substring(7);
-            }
+            var cleanPath = chatAreaRoot.getCleanLocalPath(audioUrl)
             
             if (activeChatType === "secret") {
                 var msgJsonStr = SecretChatManager.sendSecretMessage(activeChatId, "", "voice", [cleanPath]);
