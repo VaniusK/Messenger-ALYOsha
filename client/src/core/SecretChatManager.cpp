@@ -1177,6 +1177,7 @@ Q_INVOKABLE void SecretChatManager::deleteSecretChat(const QString &chat_id) {
         qDebug(
         ) << "[SecretChatManager] Chat removed from local DB successfully.";
         emit secretChatsUpdated();
+        emit secretChatDelete(chat_id);
     } else {
         qCritical() << "[SecretChatManager] Failed to delete chat from DB!";
         emit secretChatError("Ошибка удаления чата");
@@ -1434,6 +1435,7 @@ void SecretChatManager::processIncomingSecretPayload(const QJsonObject &envelope
               << chatId;
             m_dbManager->deleteChat(chatId);
             emit secretChatsUpdated();
+            emit secretChatDelete(chatId);
             emit secretChatError("Собеседник удалил секретный чат");
             break;
         }

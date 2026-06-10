@@ -306,6 +306,13 @@ Rectangle {
         function onSecretChatError(errorMsg) {
             errorToast.show(errorMsg);
         }
+
+        function onSecretChatDeleted(chatId) {
+            if (String(chatId) === String(activeChatId)) {
+                activeChatId = ""; 
+            }
+        }
+
     }
 
     Connections {
