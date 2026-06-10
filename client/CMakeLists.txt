@@ -19,15 +19,17 @@ if(SODIUM_FOUND)
     link_directories(${SODIUM_LIBRARY_DIRS})
     set(SODIUM_LIBRARIES_TO_LINK ${SODIUM_LIBRARIES})
 else()
+    find_path(SODIUM_INCLUDE_DIR sodium.h REQUIRED)
     find_library(SODIUM_LIB sodium REQUIRED)
+    include_directories(${SODIUM_INCLUDE_DIR})
     set(SODIUM_LIBRARIES_TO_LINK ${SODIUM_LIB})
 endif()
 
-#if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-#    add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
-#endif()
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+   add_compile_definitions(QT_NO_DEBUG_OUTPUT QT_NO_INFO_OUTPUT QT_NO_WARNING_OUTPUT)
+endif()
 
-qt_add_executable(client #WIN32
+qt_add_executable(client WIN32
     src/core/main.cpp
     src/core/AuthManager.cpp
     include/AuthManager.hpp

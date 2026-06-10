@@ -235,7 +235,7 @@ jobs:
       - name: Build client
         run: |
           cmake -B build/client -S client \
-              -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT }} \
+              -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT }};/opt/homebrew" \
               -DCMAKE_BUILD_TYPE=Release
           cmake --build build/client --parallel
 
@@ -277,6 +277,12 @@ jobs:
             -srcfolder Messenger-Alesha.app \
             -ov -format UDZO \
             Messenger-Alesha.dmg
+
+      - name: Upload macOS DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Messenger-Alesha-macOS
+          path: Messenger-Alesha.dmg
 
   run-format:
     runs-on: ubuntu-latest
