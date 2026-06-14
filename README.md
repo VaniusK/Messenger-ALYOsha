@@ -63,10 +63,11 @@
 ### Запуск сервера и БД
 Для автоматической сборки Docker-образов и поднятия инфраструктуры выполните:
 ```bash
-make run_docker
+make run_server
 ```
 
 ### Сборка клиента
+Клиент собранный локально запускается только при наличии нужных динамических библиотек QT. Ubuntu 22.04 точно нужным набором не обладает, на 24.04 все точно запускается.
 Для компиляции клиентского приложения:
 ```bash
 make build_client
@@ -77,9 +78,9 @@ make build_client
 ### Troubleshooting
 После обновления клиента может понадобится очистить кеш. Для этого удалите следующие папки:
 
-* Windows: `%appdata\AlyoshaTeam\Alyosha`
-* Linux: `~/.cache/AlyoshaTeam/Alyosha`
-* MacOS: `~/Library/Caches/AlyoshaTeam/Alyosha`
+* Windows: `%appdata\local\AlyoshaTeam\Alyosha`. `AppData\Roaming\AlyoshaTeam\Alyosha`
+* Linux: `~/.cache/AlyoshaTeam/Alyosha`, `~/.local/share/AlyoshaTeam/Alyosha`
+* MacOS: `~/Library/Caches/AlyoshaTeam/Alyosha`. `~/Library/Application Support/AlyoshaTeam/Alyosha`, `/Library/Application Support/AlyoshaTeam/Alyosha`
 ---
 
 ## Структура проекта
