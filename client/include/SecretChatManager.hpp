@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qglobal.h>
 #include <QJsonArray>
 #include <QObject>
 #include "ConnectionManager.hpp"
@@ -59,6 +60,7 @@ signals:
     );
     void
     attachmentDownloadFailed(const QString &messageId, const QString &fileId);
+    void secretChatDeleted(const QString &chatId);
 
 private:
     client::db::SecretDatabaseManager *m_dbManager;

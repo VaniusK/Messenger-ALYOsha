@@ -933,6 +933,19 @@ void SecretChatManager::encodeAndUploadSecretFiles(
                     state->pending = jobs.size();
 
                     for (const auto &job : jobs) {
+                        qDebug() << "[SecretChatManager] Saving attachment "
+                                    "info to local db "
+                                 << job.file_name;
+                        bool success = m_dbManager->saveAttachment(
+                            job.id, message_id, job.file_name,
+                            job.file_size_bytes, job.file_type,
+                            job.s3_object_key, job.cache_path, job.file_key
+                        );
+                        if (!success) {
+                            qCritical() << "[SecretChatManager] Failed to save "
+                                           "attachment info to local db";
+                            continue;
+                        }
                         qDebug() << "[SecretChatManager] Uploading encrypted "
                                     "file to S3:"
                                  << job.file_name
@@ -963,12 +976,6 @@ void SecretChatManager::encodeAndUploadSecretFiles(
                                     qDebug() << "[SecretChatManager] "
                                                 "Successfully uploaded file:"
                                              << job.file_name;
-                                    m_dbManager->saveAttachment(
-                                        job.id, message_id, job.file_name,
-                                        job.file_size_bytes, job.file_type,
-                                        job.s3_object_key, job.cache_path,
-                                        job.file_key
-                                    );
 
                                     QJsonObject attJson;
                                     attJson["file_id"] = job.id;
@@ -1170,6 +1177,7 @@ Q_INVOKABLE void SecretChatManager::deleteSecretChat(const QString &chat_id) {
         qDebug(
         ) << "[SecretChatManager] Chat removed from local DB successfully.";
         emit secretChatsUpdated();
+        emit secretChatDeleted(chat_id);
     } else {
         qCritical() << "[SecretChatManager] Failed to delete chat from DB!";
         emit secretChatError("Ошибка удаления чата");
@@ -1427,6 +1435,7 @@ void SecretChatManager::processIncomingSecretPayload(const QJsonObject &envelope
               << chatId;
             m_dbManager->deleteChat(chatId);
             emit secretChatsUpdated();
+            emit secretChatDeleted(chatId);
             emit secretChatError("Собеседник удалил секретный чат");
             break;
         }

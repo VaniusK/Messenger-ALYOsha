@@ -59,7 +59,17 @@ Rectangle {
 
     function getCleanLocalPath(url) {
         var str = url.toString();
-        return str.replace("file://", "");
+        if (str.indexOf("file:///") === 0) {
+            if (str.charAt(9) === ':') {
+                return decodeURIComponent(str.substring(8));
+            } else {
+                return decodeURIComponent(str.substring(7));
+            }
+        }
+        if (str.indexOf("file://") === 0) {
+            return decodeURIComponent(str.substring(7));
+        }
+        return decodeURIComponent(str);
     }
 
     function showCancelPrompt() {
@@ -102,6 +112,17 @@ Rectangle {
             systemDialogBlocker.close()
         }
         function onFileSelected(filePath, fileType, fileSize, fileName) {
+            var maxSizeBytes = 1024 * 1024 * 1024
+            
+            if (fileSize <= 0) {
+                errorToast.show("Выбранный файл пуст")
+                return
+            }
+            if (fileSize > maxSizeBytes) {
+                errorToast.show("Файл слишком большой (максимальный размер - 1 ГБ)")
+                return
+            }
+
             mediaPreview.openWith(filePath, fileType, fileSize, fileName, messageInput.text.trim())
         }
         function onUploadFinished() {
@@ -296,6 +317,13 @@ Rectangle {
         function onSecretChatError(errorMsg) {
             errorToast.show(errorMsg);
         }
+
+        function onSecretChatDeleted(chatId) {
+            if (String(chatId) === String(activeChatId)) {
+                activeChatId = ""; 
+            }
+        }
+
     }
 
     Connections {
@@ -303,12 +331,7 @@ Rectangle {
         function onVoiceMessageReady(audioUrl) {
             isUploading = true
 
-            var cleanPath = audioUrl.toString();
-            if (cleanPath.indexOf("file:///") === 0) {
-                cleanPath = cleanPath.substring(7);
-            } else if (cleanPath.indexOf("file://") === 0) {
-                cleanPath = cleanPath.substring(7);
-            }
+            var cleanPath = chatAreaRoot.getCleanLocalPath(audioUrl)
             
             if (activeChatType === "secret") {
                 var msgJsonStr = SecretChatManager.sendSecretMessage(activeChatId, "", "voice", [cleanPath]);
@@ -460,7 +483,7 @@ Rectangle {
 
             MouseArea {
                 anchors.fill: parent
-                enabled: activeChatType === "group" || activeChatType === "direct"
+                enabled: activeChatType === "group" || activeChatType === "direct" || activeChatType === "secret"
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     if (activeChatType === "group") {
@@ -470,6 +493,8 @@ Rectangle {
                     } else if (activeChatType === "direct") {
                         ChatLayer.fetchChatMembers(activeChatId)
                         directInfoPopup.open()
+                    } else if (activeChatType === "secret") {
+                        secretInfoPopup.open()
                     }
                 }
             }
@@ -3007,6 +3032,195 @@ Rectangle {
                                 chatAreaRoot.activeChatId = secId
                             } else {
                                 errorToast.show("Не удалось определить ID собеседника. Пожалуйста, откройте профиль еще раз.")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: secretInfoPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 380
+        height: 350
+        modal: true; dim: true; focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
+
+        contentItem: Item {
+            anchors.fill: parent
+            
+            RowLayout {
+                anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 15
+                
+                Item { Layout.fillWidth: true }
+                
+                Text {
+                    text: "✕"
+                    color: appTheme.textHint
+                    font.pixelSize: 20
+                    
+                    MouseArea {
+                        anchors.fill: parent; anchors.margins: -10
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: secretInfoPopup.close() 
+                    }
+                }
+            }
+
+            ColumnLayout {
+                anchors.top: parent.top; anchors.topMargin: 50; anchors.left: parent.left; anchors.right: parent.right; spacing: 10
+                
+                Rectangle { 
+                    width: 90; height: 90; radius: 45
+                    color: "#4a90d9"
+                    Layout.alignment: Qt.AlignHCenter
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: activeChatName ? activeChatName.charAt(0).toUpperCase() : "?"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: 36 
+                    } 
+                }
+                
+                Text {
+                    text: activeChatName
+                    color: appTheme.textMain
+                    font.pixelSize: 20
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
+                    font.family: "Segoe UI" 
+                }
+
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 6
+                    Image {
+                        source: "qrc:/messenger_client_uri/assets/icons/lock.svg"
+                        width: 14; height: 14; fillMode: Image.PreserveAspectFit
+                    }
+                    Text {
+                        text: "Секретный чат"
+                        color: appTheme.textHint
+                        font.pixelSize: 14
+                        font.family: "Segoe UI"
+                    }
+                }
+            }
+
+            Rectangle {
+                anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; anchors.margins: 20
+                height: 44; radius: 8
+                color: deleteSecretBtnArea.pressed ? Qt.alpha("#ff4d4f", 0.2) : (deleteSecretBtnArea.containsMouse ? Qt.alpha("#ff4d4f", 0.1) : "transparent")
+                border.color: "#ff4d4f"; border.width: 1
+                Behavior on color { ColorAnimation { duration: 150 } }
+                
+                RowLayout {
+                    anchors.centerIn: parent; spacing: 10
+                    
+                    Image {
+                        source: "qrc:/messenger_client_uri/assets/icons/delete_user.svg"
+                        width: 20; height: 20; sourceSize: Qt.size(20, 20) 
+                    }
+                    
+                    Text {
+                        text: "Удалить секретный чат"
+                        color: "#ff4d4f"
+                        font.pixelSize: 15
+                        font.family: "Segoe UI"
+                        font.bold: true 
+                    }
+                }
+                
+                MouseArea {
+                    id: deleteSecretBtnArea; anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: { secretInfoPopup.close(); confirmDeleteSecretChatPopup.open() }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: confirmDeleteSecretChatPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 320
+        height: 200
+        modal: true; dim: true; focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
+        background: Rectangle { color: appTheme.bgPanel; radius: 10 }
+
+        contentItem: ColumnLayout {
+            anchors.fill: parent; anchors.margins: 20; spacing: 20
+            
+            Text {
+                text: "Удалить данный секретный чат с " + activeChatName + "?\n\nЭтот чат и вся его история будут безвозвратно удалены у обоих собеседников."
+                color: appTheme.textMain
+                font.pixelSize: 15
+                font.family: "Segoe UI"
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            
+            RowLayout {
+                Layout.alignment: Qt.AlignRight | Qt.AlignBottom; spacing: 15
+                
+                Rectangle {
+                    width: 80; height: 36; radius: 6
+                    color: cancelDeleteSecHover.pressed ? Qt.alpha(appTheme.accent, 0.2) : (cancelDeleteSecHover.containsMouse ? Qt.alpha(appTheme.accent, 0.1) : "transparent")
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Отмена"
+                        color: appTheme.accent
+                        font.pixelSize: 15
+                        font.bold: true
+                        font.family: "Segoe UI" 
+                    }
+                    
+                    MouseArea {
+                        id: cancelDeleteSecHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: confirmDeleteSecretChatPopup.close() 
+                    }
+                }
+                
+                Rectangle {
+                    width: 90; height: 36; radius: 6
+                    color: startDeleteSecHover.pressed ? "#a22026" : (startDeleteSecHover.containsMouse ? "#d9363e" : "#ff4d4f")
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Удалить"
+                        color: "white"
+                        font.pixelSize: 15
+                        font.bold: true
+                        font.family: "Segoe UI" 
+                    }
+                    
+                    MouseArea {
+                        id: startDeleteSecHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        
+                        onClicked: {
+                            if (activeChatId !== "") {
+                                SecretChatManager.deleteSecretChat(activeChatId)
+                                confirmDeleteSecretChatPopup.close()
+
+                                chatAreaRoot.activeChatId = "" 
                             }
                         }
                     }
