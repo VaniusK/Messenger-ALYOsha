@@ -1,5 +1,3 @@
-![alt text](https://github.com/VaniusK/Messenger-ALYOsha/raw/dev/docs/alesha_sticker_1.png "Стикер 1")
-
 ![Version](https://img.shields.io/github/v/tag/VaniusK/Messenger-ALYOsha?label=version)
 ![Build](https://img.shields.io/github/actions/workflow/status/VaniusK/Messenger-ALYOsha/ci.yml)
 ![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
@@ -102,3 +100,5 @@ make build_client
 ### Ментор, сенсей, вдохновитель проекта — [Сергей Дунаев](https://github.com/swerg110)
 
 ### [Подробнее про проект](https://disk.360.yandex.ru/i/7xGxOUKU24L6aw)
+
+![](docs/alesha_sticker_9.png)
